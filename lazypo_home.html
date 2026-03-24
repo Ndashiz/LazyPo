@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LazyPO — PO Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0c0c0c;
+  --sidebar:  #111111;
+  --surface:  #161616;
+  --surface2: #1c1c1c;
+  --border:   #222222;
+  --border2:  #2a2a2a;
+  --accent:   #3b82f6;
+  --accent2:  #60a5fa;
+  --glow:     rgba(59,130,246,0.15);
+  --text:     #f0f0f0;
+  --muted:    #6b6b6b;
+  --faint:    #2e2e2e;
+  --r:        10px;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+}
+
+/* ════════════════════════════════
+   SIDEBAR
+════════════════════════════════ */
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  height: 100vh;
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 28px 16px 24px;
+  position: relative;
+  z-index: 10;
+}
+
+/* subtle vertical glow line on right edge */
+.sidebar::after {
+  content: '';
+  position: absolute; top: 15%; right: -1px; bottom: 15%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(59,130,246,0.4), transparent);
+}
+
+.logo-wrap {
+  padding: 0 8px;
+  margin-bottom: 36px;
+}
+.logo-graffiti {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 28px;
+  color: #fff;
+  letter-spacing: 1px;
+  line-height: 1;
+  text-shadow: 2px 2px 0 rgba(59,130,246,0.5), -1px -1px 0 rgba(255,255,255,0.06);
+  transform: rotate(-1.5deg);
+  display: inline-block;
+}
+.logo-graffiti span { color: #60a5fa; }
+
+/* nav section label */
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 12px;
+  margin-bottom: 8px;
+  margin-top: 4px;
+}
+
+.nav-items { display: flex; flex-direction: column; gap: 3px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: var(--r);
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  position: relative;
+  border: 1px solid transparent;
+}
+.nav-item:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+.nav-item.active {
+  color: var(--text);
+  background: var(--surface2);
+  border-color: var(--border2);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 20%; bottom: 20%;
+  width: 2px;
+  background: var(--accent2);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--accent2);
+}
+
+.nav-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  background: var(--faint);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.nav-item.active .nav-icon {
+  background: rgba(59,130,246,0.15);
+}
+.nav-item:hover .nav-icon {
+  background: var(--border2);
+}
+
+.nav-label { flex: 1; }
+
+.nav-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+.badge-live   { background: rgba(59,130,246,0.15); color: var(--accent2); border: 1px solid rgba(96,165,250,0.25); }
+.badge-soon   { background: rgba(80,80,80,0.3);    color: #888;           border: 1px solid #333; }
+.badge-wip    { background: rgba(245,158,11,0.1);  color: #f59e0b;        border: 1px solid rgba(245,158,11,0.2); }
+
+.nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 4px;
+}
+
+.sidebar-spacer { flex: 1; }
+
+/* version pill at bottom */
+.sidebar-footer {
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.version-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent2);
+  box-shadow: 0 0 8px var(--accent2);
+  animation: pulse 2.5s ease infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.7); }
+}
+.sidebar-footer-text { font-size: 12px; color: var(--muted); }
+.sidebar-footer-text strong { color: #555; }
+
+
+/* ════════════════════════════════
+   MAIN CONTENT
+════════════════════════════════ */
+.main {
+  flex: 1;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* dark radial background + grid */
+.main-bg {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 60% at 60% 40%, rgba(20,40,80,0.45) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 90% 10%, rgba(30,58,110,0.2) 0%, transparent 60%);
+}
+.main-grid {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black, transparent);
+}
+
+.content {
+  position: relative; z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 64px;
+  max-width: 760px;
+}
+
+/* status pill */
+.status-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 12px; font-weight: 500; color: var(--muted);
+  margin-bottom: 32px;
+  width: fit-content;
+}
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent2);
+  box-shadow: 0 0 8px var(--accent2);
+  animation: pulse 2.5s ease infinite;
+}
+
+/* big title */
+.hero-title {
+  font-family: 'Permanent Marker', cursive;
+  font-size: clamp(64px, 9vw, 104px);
+  line-height: 0.95;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-shadow: 4px 4px 0 rgba(59,130,246,0.25);
+  transform: rotate(-1deg);
+  display: inline-block;
+  margin-bottom: 28px;
+}
+.hero-title span { color: var(--accent2); }
+
+.hero-desc {
+  font-size: 17px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 460px;
+  margin-bottom: 40px;
+  font-weight: 400;
+}
+.hero-desc strong { color: #a0a0a0; font-weight: 600; }
+
+/* CTA buttons */
+.cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 56px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 700;
+  padding: 13px 28px;
+  border-radius: var(--r);
+  border: none; cursor: pointer;
+  text-decoration: none;
+  transition: all 0.18s;
+  letter-spacing: 0.02em;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 24px rgba(59,130,246,0.3);
+}
+.btn-primary:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 32px rgba(59,130,246,0.45);
+}
+.btn-ghost {
+  background: transparent;
+  color: #666;
+  border: 1px solid var(--border2);
+}
+.btn-ghost:hover {
+  color: var(--text);
+  border-color: #444;
+  background: var(--surface);
+}
+
+/* stats row */
+.stats-row {
+  display: flex;
+  gap: 40px;
+  align-items: center;
+}
+.stat { }
+.stat-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--accent2);
+  display: block;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stats-sep {
+  width: 1px; height: 32px;
+  background: var(--border2);
+}
+
+/* ── ANIMATIONS ── */
+.content > * {
+  animation: fadeUp 0.55s ease both;
+}
+.status-pill   { animation-delay: 0.05s; }
+.hero-title    { animation-delay: 0.12s; }
+.hero-desc     { animation-delay: 0.20s; }
+.cta-row       { animation-delay: 0.27s; }
+.stats-row     { animation-delay: 0.34s; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sidebar .nav-items .nav-item {
+  animation: slideIn 0.4s ease both;
+}
+.nav-item:nth-child(1) { animation-delay: 0.05s; }
+.nav-item:nth-child(2) { animation-delay: 0.10s; }
+.nav-item:nth-child(3) { animation-delay: 0.15s; }
+.nav-item:nth-child(4) { animation-delay: 0.20s; }
+.nav-item:nth-child(5) { animation-delay: 0.25s; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+
+  <div class="logo-wrap">
+    <div class="logo-graffiti">LazyPO <span>✦</span></div>
+  </div>
+
+  <div class="nav-section-label">Outils</div>
+
+  <nav class="nav-items">
+
+    <a href="lazypo_generator.html" class="nav-item active">
+      <div class="nav-icon">✉️</div>
+      <span class="nav-label">SoW Email</span>
+      <span class="nav-badge badge-live">Live</span>
+    </a>
+
+    <a href="#" class="nav-item" onclick="return false;">
+      <div class="nav-icon">📋</div>
+      <span class="nav-label">Release Notes</span>
+      <span class="nav-badge badge-soon">Bientôt</span>
+    </a>
+
+    <a href="#" class="nav-item" onclick="return false;">
+      <div class="nav-icon">🎫</div>
+      <span class="nav-label">Jira Request</span>
+      <span class="nav-badge badge-wip">En cours</span>
+    </a>
+
+  </nav>
+
+  <div class="nav-divider"></div>
+
+  <div class="nav-section-label">Général</div>
+
+  <nav class="nav-items">
+    <a href="#" class="nav-item" onclick="return false;">
+      <div class="nav-icon">⚙️</div>
+      <span class="nav-label">Paramètres</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-spacer"></div>
+
+  <div class="sidebar-footer">
+    <div class="version-dot"></div>
+    <div class="sidebar-footer-text">v2.0 · <strong>100% local</strong></div>
+  </div>
+
+</aside>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+  <div class="main-bg"></div>
+  <div class="main-grid"></div>
+
+  <div class="content">
+
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      Toolkit actif · Aucune donnée envoyée
+    </div>
+
+    <div class="hero-title">Lazy<span>PO</span></div>
+
+    <p class="hero-desc">
+      Le toolkit du PO qui n'a pas de temps à perdre.<br>
+      Génère tes emails, release notes et Jira requests<br>
+      en quelques clics. <strong>100% offline.</strong>
+    </p>
+
+    <div class="cta-row">
+      <a href="lazypo_generator.html" class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Ouvrir le générateur
+      </a>
+      <a href="#" class="btn btn-ghost" onclick="return false;">
+        En savoir +
+      </a>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat">
+        <span class="stat-val">3</span>
+        <div class="stat-label">Outils</div>
+      </div>
+      <div class="stats-sep"></div>
+      <div class="stat">
+        <span class="stat-val">0</span>
+        <div class="stat-label">API requise</div>
+      </div>
+      <div class="stats-sep"></div>
+      <div class="stat">
+        <span class="stat-val">.eml</span>
+        <div class="stat-label">Prêt Outlook</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+</body>
+</html>
