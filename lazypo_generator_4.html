@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LazyPO — SoW Email Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --navy: #002060; --navy-mid: #0a3575; --blue: #1e3a6e;
+  --accent: #3b82f6; --accent-light: #dbeafe;
+  --bg: #f1f5fb; --surface: #ffffff; --border: #e2e8f2;
+  --text: #0f172a; --text-muted: #64748b; --text-faint: #94a3b8;
+  --tag-bg: #eff6ff; --tag-text: #1d4ed8;
+  --danger: #ef4444; --success: #10b981;
+  --apr-bg: #fae8ff; --apr-text: #86198f;
+  --may-bg: #fff7ed; --may-text: #c2410c;
+  --r: 10px; --r-sm: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+
+header {
+  background: var(--navy); padding: 14px 28px;
+  display: flex; align-items: center; gap: 20px;
+  border-bottom: 3px solid #0a3575; position: sticky; top: 0; z-index: 100;
+}
+.logo-graffiti {
+  font-family: 'Permanent Marker', cursive; font-size: 26px; color: #fff;
+  letter-spacing: 1px; line-height: 1;
+  text-shadow: 3px 3px 0 rgba(59,130,246,.4), -1px -1px 0 rgba(255,255,255,.1);
+  transform: rotate(-1.5deg); display: inline-block;
+}
+.logo-graffiti span { color: #60a5fa; }
+.header-sub { font-size: 12px; color: #93c5fd; margin-top: 2px; }
+header .spacer { flex: 1; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+.btn {
+  padding: 9px 18px; border: none; border-radius: var(--r-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #2563eb; }
+.btn-ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.2); }
+.btn-ghost:hover { background: rgba(255,255,255,.2); }
+.btn-success { background: #10b981; color: #fff; }
+.btn-success:hover { background: #059669; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; pointer-events: none; }
+
+.status-pill {
+  display: none; align-items: center; gap: 6px;
+  background: rgba(16,185,129,.15); color: #6ee7b7; border: 1px solid rgba(110,231,177,.3);
+  border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 500;
+  animation: fadeIn .3s ease;
+}
+.status-pill.visible { display: inline-flex; }
+
+.main { display: flex; height: calc(100vh - 63px); overflow: hidden; }
+
+.left-panel {
+  width: 52%; overflow-y: auto; padding: 20px 24px;
+  border-right: 1px solid var(--border); background: var(--surface);
+}
+
+.right-panel { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); }
+
+.preview-bar {
+  display: flex; align-items: center; gap: 8px; padding: 10px 20px;
+  background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-r { background: #ef4444; } .dot-y { background: #f59e0b; } .dot-g { background: #10b981; }
+.preview-bar-label { font-size: 12px; color: var(--text-muted); margin-left: 6px; }
+
+.preview-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; color: var(--text-faint); text-align: center; padding: 48px 32px;
+}
+.preview-empty-icon { font-size: 48px; opacity: .3; }
+.preview-empty p { font-size: 13px; line-height: 1.6; }
+.preview-empty strong { color: var(--text-muted); font-weight: 600; }
+
+#preview-frame { flex: 1; border: none; background: #fff; display: none; }
+
+.section { margin-bottom: 22px; }
+.section-header {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-faint); padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+}
+.field { margin-bottom: 10px; }
+.field label { display: block; font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; }
+input[type="text"], select, textarea {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text);
+  background: var(--surface); transition: border-color .15s; outline: none;
+}
+textarea { resize: vertical; min-height: 58px; line-height: 1.5; }
+input[type="text"]:focus, select:focus, textarea:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,.08);
+}
+.row { display: flex; gap: 8px; }
+.row .field { flex: 1; }
+
+.drop-zone {
+  border: 2px dashed var(--border); border-radius: var(--r);
+  padding: 18px; text-align: center; cursor: pointer;
+  transition: all .2s; background: #fafbfd; margin-bottom: 14px; position: relative;
+}
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: var(--accent-light); }
+.drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: none; padding: 0; }
+.drop-icon { font-size: 28px; margin-bottom: 6px; }
+.drop-zone p { font-size: 12px; color: var(--text-muted); }
+.drop-zone p strong { color: var(--accent); }
+.drop-hint { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+.drop-status { font-size: 12px; color: var(--success); font-weight: 500; margin-top: 6px; display: none; }
+
+.obj-item { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; animation: fadeIn .2s ease; }
+.obj-num { width: 20px; height: 20px; background: var(--navy); color: #fff; border-radius: 50%; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.obj-item input { flex: 1; }
+
+.epic-card {
+  border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px;
+  overflow: hidden; transition: box-shadow .15s; animation: fadeIn .2s ease; background: var(--surface);
+}
+.epic-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+.epic-card.dragging { opacity: .35; }
+.epic-card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); }
+.epic-head {
+  display: flex; align-items: center; gap: 7px; padding: 8px 10px;
+  background: #f8fafd; border-bottom: 1px solid var(--border); cursor: grab;
+}
+.epic-head:active { cursor: grabbing; }
+.drag-dots { color: var(--text-faint); font-size: 13px; flex-shrink: 0; letter-spacing: -1px; }
+.epic-idx { width: 18px; height: 18px; background: var(--blue); color: #fff; border-radius: 50%; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.epic-head input { flex: 1; border: none; background: transparent; font-weight: 600; font-size: 13px; color: var(--navy); outline: none; padding: 0; box-shadow: none; }
+.del-btn { background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 17px; line-height: 1; padding: 0 2px; transition: color .1s; flex-shrink: 0; }
+.del-btn:hover { color: var(--danger); }
+.epic-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.epic-row { display: flex; gap: 8px; }
+.epic-field { flex: 1; }
+.epic-field label { display: block; font-size: 10.5px; font-weight: 500; color: var(--text-faint); margin-bottom: 3px; }
+.epic-field input, .epic-field select { font-size: 12px; padding: 6px 9px; }
+.epic-field textarea { font-size: 12px; padding: 6px 9px; min-height: 52px; }
+
+.release-preview { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 600; padding: 2px 9px; border-radius: 20px; margin-top: 3px; }
+.rel-apr { background: var(--apr-bg); color: var(--apr-text); }
+.rel-may { background: var(--may-bg); color: var(--may-text); }
+.rel-other { background: #f1f5f9; color: #475569; }
+
+.tags-wrap {
+  display: flex; flex-wrap: wrap; gap: 4px; border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 4px 7px; min-height: 32px; cursor: text;
+  align-items: center; background: var(--surface); transition: border-color .15s;
+}
+.tags-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,.08); }
+.tag { background: var(--tag-bg); color: var(--tag-text); font-size: 10.5px; font-weight: 500; padding: 2px 7px; border-radius: 20px; display: flex; align-items: center; gap: 3px; animation: fadeIn .15s ease; }
+.tag-x { cursor: pointer; font-size: 13px; line-height: 1; opacity: .6; }
+.tag-x:hover { opacity: 1; }
+.tag-input { border: none; outline: none; background: transparent; font-size: 11.5px; font-family: 'DM Sans', sans-serif; color: var(--text); min-width: 70px; flex: 1; padding: 0; box-shadow: none; }
+
+.add-btn {
+  width: 100%; border: 1px dashed var(--border); border-radius: var(--r-sm);
+  background: none; padding: 7px; font-size: 11.5px; font-family: 'DM Sans', sans-serif;
+  color: var(--text-muted); cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.add-btn:hover { background: var(--bg); border-color: var(--accent); color: var(--accent); }
+.small-add-btn { width: auto; padding: 3px 10px; font-size: 10.5px; }
+
+/* ── THEME PICKER ── */
+.theme-section {
+  background: var(--bg); border-radius: var(--r); padding: 14px 16px; margin-bottom: 22px;
+  border: 1px solid var(--border);
+}
+.theme-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.theme-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.theme-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.theme-swatch {
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 3px solid transparent; transition: all .15s; position: relative;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+}
+.theme-swatch:hover { transform: scale(1.12); }
+.theme-swatch.active { border-color: #fff; box-shadow: 0 0 0 2.5px var(--accent), 0 1px 6px rgba(0,0,0,.25); }
+.theme-swatch[title]:hover::after {
+  content: attr(title); position: absolute; bottom: calc(100% + 6px); left: 50%;
+  transform: translateX(-50%); background: #1e293b; color: #fff;
+  font-size: 10px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+  padding: 3px 8px; border-radius: 4px; white-space: nowrap; pointer-events: none; z-index: 10;
+}
+.theme-sep { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo-graffiti">LazyPO <span>✦</span></div>
+    <div class="header-sub">SoW Email Generator</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="header-actions">
+    <div class="status-pill" id="status-pill">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Email généré !
+    </div>
+    <button class="btn btn-ghost" id="copy-btn" onclick="copyEmailHtml()" disabled>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      Copier HTML
+    </button>
+    <button class="btn btn-success" id="eml-btn" onclick="downloadEml()" disabled>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Télécharger .eml
+    </button>
+    <button class="btn btn-primary" onclick="generate()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Générer
+    </button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- FORM -->
+  <div class="left-panel">
+
+    <!-- THEME PICKER -->
+    <div class="theme-section">
+      <div class="theme-row">
+        <span class="theme-label">🎨 Thème</span>
+        <div class="theme-swatches" id="theme-swatches"></div>
+        <div class="theme-sep"></div>
+        <div class="field" style="margin:0;flex:1;min-width:120px;">
+          <input type="text" id="email-title" placeholder="Titre (ex: DPnxt CLM)" value="DPnxt CLM" style="font-size:12px;padding:5px 9px;" />
+        </div>
+        <div class="field" style="margin:0;flex:1.5;min-width:160px;">
+          <input type="text" id="email-subtitle" placeholder="Sous-titre" value="Onboarding · CLM NXT · PB Digital" style="font-size:12px;padding:5px 9px;" />
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        Import Excel
+        <span style="font-size:10px;color:var(--text-faint);text-transform:none;letter-spacing:0;">Jira · Epic Name · Description · Benefits · Release</span>
+      </div>
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" accept=".xlsx,.xls,.csv" id="file-input" />
+        <div class="drop-icon">📊</div>
+        <p><strong>Glisse ton fichier Excel ici</strong> ou clique pour parcourir</p>
+        <p class="drop-hint">.xlsx · .xls · .csv</p>
+        <div class="drop-status" id="drop-status"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">Général</div>
+      <div class="row">
+        <div class="field"><label>PI en cours</label><input type="text" id="pi-current" value="Q1 26'" /></div>
+        <div class="field"><label>Prochain PI</label><input type="text" id="pi-next" value="Q2 26'" /></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Deadline prioritisation</label><input type="text" id="deadline" value="11/05" /></div>
+        <div class="field"><label>Sujet email</label><input type="text" id="email-subject" value="DPnxt CLM - Scope of Work Q1/Q2 26'" /></div>
+      </div>
+      <div class="field">
+        <label>Texte d'introduction</label>
+        <textarea id="intro-text">We are pleased to inform you the PI Planning for Q2 26' has successfully concluded today. Objectives have been defined based on backlog review sessions and aligned with the overall product strategy &amp; roadmap.</textarea>
+      </div>
+      <div class="field">
+        <label>Message bloc "Next PI" (texte bleu clair)</label>
+        <textarea id="backlog-text">The backlog review sessions to assess all requests priority will start at the end of May.</textarea>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        Objectifs PI
+        <button class="add-btn small-add-btn" onclick="addObj()">+ Ajouter</button>
+      </div>
+      <div id="objectives-list">
+        <div class="obj-item">
+          <div class="obj-num obj-counter">1</div>
+          <input type="text" value="Streamline the onboarding process and get ready for a soft launch to accommodate a substantial client base." />
+          <button class="del-btn" onclick="removeObj(this)">×</button>
+        </div>
+        <div class="obj-item">
+          <div class="obj-num obj-counter">2</div>
+          <input type="text" value="DPnxt end-to-end onboarding procedure to prepare Oneflow migration." />
+          <button class="del-btn" onclick="removeObj(this)">×</button>
+        </div>
+        <div class="obj-item">
+          <div class="obj-num obj-counter">3</div>
+          <input type="text" value="Minimize manual efforts related to both Soft launch onboarding (migration &amp; activations of existing clients) to DP Nxt and support activities." />
+          <button class="del-btn" onclick="removeObj(this)">×</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        Epics / Features
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">↕ glisser pour réordonner</span>
+      </div>
+      <div id="epics-list"></div>
+      <button class="add-btn" onclick="addEpic()">+ Ajouter un epic</button>
+    </div>
+
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="right-panel">
+    <div class="preview-bar">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      <span class="preview-bar-label">Aperçu email</span>
+      <div style="flex:1"></div>
+      <button class="btn" style="font-size:11px;padding:5px 12px;background:transparent;color:var(--text-muted);border:1px solid var(--border);" onclick="generate()">↻ Rafraîchir</button>
+    </div>
+    <div class="preview-empty" id="preview-empty">
+      <div class="preview-empty-icon">✉️</div>
+      <p><strong>Clique sur "Générer"</strong> pour voir l'aperçu de l'email<br>et débloquer le téléchargement <code style="background:var(--bg);padding:1px 6px;border-radius:4px;font-size:12px;">.eml</code></p>
+    </div>
+    <iframe id="preview-frame"></iframe>
+  </div>
+
+</div>
+
+<script>
+// ── THEMES ──
+const THEMES = [
+  // Blues foncés
+  { id:'navy',      label:'Navy (défaut)',     header:'#002060', headerMid:'#0a3575', table:'#1e3a6e', pill:'#0a3575', pillBorder:'#1e5799', accent:'#0078d4', objBg:'#f0f6ff', benefitBg:'#e0f2fe', benefitText:'#0369a1' },
+  { id:'royal',     label:'Royal Blue',        header:'#003399', headerMid:'#0d47a1', table:'#1565c0', pill:'#0d47a1', pillBorder:'#1565c0', accent:'#1976d2', objBg:'#e3f2fd', benefitBg:'#bbdefb', benefitText:'#0d47a1' },
+  { id:'steel',     label:'Steel Blue',        header:'#1a3a5c', headerMid:'#1e4976', table:'#235789', pill:'#1e4976', pillBorder:'#235789', accent:'#2196f3', objBg:'#e8f4fd', benefitBg:'#d0eaf9', benefitText:'#1565c0' },
+  // Blues clairs
+  { id:'sky',       label:'Sky Blue',          header:'#0369a1', headerMid:'#0284c7', table:'#0284c7', pill:'#0369a1', pillBorder:'#0284c7', accent:'#38bdf8', objBg:'#f0f9ff', benefitBg:'#bae6fd', benefitText:'#0369a1' },
+  { id:'cerulean',  label:'Cerulean',          header:'#0e7490', headerMid:'#0891b2', table:'#0891b2', pill:'#0e7490', pillBorder:'#0891b2', accent:'#22d3ee', objBg:'#ecfeff', benefitBg:'#a5f3fc', benefitText:'#0e7490' },
+  { id:'slate',     label:'Slate',             header:'#334155', headerMid:'#475569', table:'#475569', pill:'#334155', pillBorder:'#475569', accent:'#64748b', objBg:'#f8fafc', benefitBg:'#e2e8f0', benefitText:'#334155' },
+  // Autres couleurs
+  { id:'emerald',   label:'Emerald',           header:'#065f46', headerMid:'#047857', table:'#059669', pill:'#047857', pillBorder:'#059669', accent:'#10b981', objBg:'#ecfdf5', benefitBg:'#a7f3d0', benefitText:'#065f46' },
+  { id:'violet',    label:'Violet',            header:'#4c1d95', headerMid:'#5b21b6', table:'#6d28d9', pill:'#5b21b6', pillBorder:'#6d28d9', accent:'#7c3aed', objBg:'#f5f3ff', benefitBg:'#ddd6fe', benefitText:'#5b21b6' },
+  { id:'rose',      label:'Rose',              header:'#881337', headerMid:'#9f1239', table:'#be123c', pill:'#9f1239', pillBorder:'#be123c', accent:'#f43f5e', objBg:'#fff1f2', benefitBg:'#fecdd3', benefitText:'#9f1239' },
+];
+
+let currentTheme = THEMES[0];
+
+function renderThemeSwatches() {
+  const container = document.getElementById('theme-swatches');
+  container.innerHTML = '';
+  THEMES.forEach(t => {
+    const sw = document.createElement('div');
+    sw.className = 'theme-swatch' + (t.id === currentTheme.id ? ' active' : '');
+    sw.style.background = t.header;
+    sw.title = t.label;
+    sw.addEventListener('click', () => {
+      currentTheme = t;
+      document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      if (lastEmailHtml) generate();
+    });
+    container.appendChild(sw);
+  });
+}
+
+const RELEASE_OPTIONS = ['1/04/26 (16 Apr)','April (16 Apr)','21/05/26 (21 May)','May (21 May)','June 26','July 26',"Q2 26'","Q3 26'",'TBD'];
+
+const DEFAULT_EPICS = [
+  { name:'Oneflow Documentation', ticket:'CRM-4860', desc:'Document validated Oneflow CLM GAPs; DPnxt must document digital E2E onboarding', benefits:['Oneflow Prerequisite'], release:'1/04/26 (16 Apr)' },
+  { name:'Simple Electronic Signature (SES)', ticket:'CRM-4244', desc:'Enable simple e-signature in onboarding portal eliminating Connective; send signed contract via email', benefits:['Stability','Reduce Onboarding Time'], release:'April (16 Apr)' },
+  { name:'Onboarding Bug Fixing', ticket:'CRM-4812', desc:'Identify & fix minor improvements since pilot phase to streamline DPnxt onboarding', benefits:['↓ Client Issues','↓ Support Workload','↑ Client Experience'], release:'May (21 May)' },
+  { name:'CC Client Migration (V2)', ticket:'CRM-4300', desc:'V2 improving/automating container switch process from CC to DPnxt', benefits:['↓ Transfer Time','↓ Servicing Costs'], release:'May (21 May)' },
+  { name:'AML Updates & Dealbreaker Alignment', ticket:'CRM-4336', desc:'Minor AML changes & revised dealbreakers for consistency between existing and new clients', benefits:['Regulatory Compliance','Consistency'], release:'May (21 May)' },
+  { name:'Funnel Mgmt — Analytics Tags', ticket:'CRM-3682', desc:'Google Analytics tag integration for onboarding portal; Analysis in progress', benefits:['Data-Driven Decisions','↑ Client Satisfaction'], release:'May (21 May)' },
+  { name:'Redesign V2', ticket:'CRM-4379', desc:'Q2 V2 with copywriter feedback & design system alignment', benefits:['Brand Consistency','↑ Client Satisfaction'], release:'May (21 May)' },
+  { name:'DPnxt ONB — Capital Gain Tax', ticket:'CRM-4843', desc:'Phase 1: Manual process via CC for existing clients to opt out; Phase 2: Opt-in/opt-out selection integrated in DPnxt onboarding', benefits:['Regulatory Feature'], release:'May (21 May)' },
+];
+
+let epics = JSON.parse(JSON.stringify(DEFAULT_EPICS));
+let dragSrc = null;
+let lastEmailHtml = '';
+
+function relClass(r) {
+  const l = r.toLowerCase();
+  if (l.includes('apr') || l.includes('1/04')) return 'rel-apr';
+  if (l.includes('may') || l.includes('21/05')) return 'rel-may';
+  return 'rel-other';
+}
+function relLabel(r) {
+  const l = r.toLowerCase();
+  if (l.includes('1/04') || l.includes('apr')) return '📅 16 Apr';
+  if (l.includes('21/05') || l.includes('may')) return '📅 21 May';
+  return '📅 ' + r;
+}
+function matchRelease(raw) {
+  if (!raw) return 'TBD';
+  const s = String(raw).toLowerCase().trim();
+  if (s.includes('apr') || s.includes('04/')) return '1/04/26 (16 Apr)';
+  if (s.includes('may') || s.includes('05/')) return 'May (21 May)';
+  if (s.includes('jun')) return 'June 26';
+  if (s.includes('jul')) return 'July 26';
+  if (s.includes('q2')) return "Q2 26'";
+  if (s.includes('q3')) return "Q3 26'";
+  const d = new Date(raw);
+  if (!isNaN(d)) {
+    const m = d.getMonth();
+    if (m === 3) return '1/04/26 (16 Apr)';
+    if (m === 4) return 'May (21 May)';
+    if (m === 5) return 'June 26';
+    if (m === 6) return 'July 26';
+  }
+  return 'TBD';
+}
+
+function parseExcel(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    if (!rows.length) return;
+    const colMap = {};
+    Object.keys(rows[0]).forEach(k => {
+      const kl = k.toLowerCase().trim();
+      if (kl.includes('jira') || kl.includes('ticket') || kl.includes('crm')) colMap.ticket = k;
+      if (kl.includes('epic') || kl.includes('name')) colMap.name = k;
+      if (kl.includes('desc')) colMap.desc = k;
+      if (kl.includes('benefit')) colMap.benefits = k;
+      if (kl.includes('release') || kl.includes('date')) colMap.release = k;
+    });
+    const imported = rows
+      .filter(r => String(r[colMap.name] || '').trim())
+      .map(r => ({
+        name: String(r[colMap.name] || '').trim(),
+        ticket: String(r[colMap.ticket] || '').trim(),
+        desc: String(r[colMap.desc] || '').trim(),
+        benefits: String(r[colMap.benefits] || '').split(/[,;|]/).map(b => b.trim()).filter(Boolean),
+        release: matchRelease(r[colMap.release] || '')
+      }));
+    if (imported.length) {
+      epics = imported; renderEpics();
+      const st = document.getElementById('drop-status');
+      st.style.display = 'block';
+      st.textContent = `✓ ${imported.length} epic${imported.length>1?'s':''} importé${imported.length>1?'s':''}`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+const dz = document.getElementById('drop-zone');
+const fi = document.getElementById('file-input');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); if (e.dataTransfer.files[0]) parseExcel(e.dataTransfer.files[0]); });
+fi.addEventListener('change', e => { if (e.target.files[0]) parseExcel(e.target.files[0]); });
+
+function renderEpics() {
+  const list = document.getElementById('epics-list');
+  list.innerHTML = '';
+  epics.forEach((ep, i) => {
+    const card = document.createElement('div');
+    card.className = 'epic-card'; card.draggable = true; card.dataset.idx = i;
+    const optsHtml = RELEASE_OPTIONS.map(o => `<option value="${o}"${ep.release===o?' selected':''}>${o}</option>`).join('');
+    card.innerHTML = `
+      <div class="epic-head">
+        <span class="drag-dots">⠿</span>
+        <div class="epic-idx">${i+1}</div>
+        <input type="text" class="epic-name-input" value="${(ep.name||'').replace(/"/g,'&quot;')}" />
+        <button class="del-btn">×</button>
+      </div>
+      <div class="epic-body">
+        <div class="epic-row">
+          <div class="epic-field" style="max-width:110px;"><label>Ticket</label><input type="text" class="epic-ticket" value="${ep.ticket||''}" /></div>
+          <div class="epic-field"><label>Description <span style="font-weight:400;color:var(--text-faint)">(sépare les points par " ; ")</span></label><textarea class="epic-desc">${(ep.desc||'').replace(/</g,'&lt;')}</textarea></div>
+        </div>
+        <div class="epic-row" style="align-items:flex-end;">
+          <div class="epic-field">
+            <label>Bénéfices <span style="font-weight:400;color:var(--text-faint)">(Entrée pour ajouter)</span></label>
+            <div class="tags-wrap" id="tw-${i}">
+              ${ep.benefits.map((b,bi)=>`<span class="tag">${b}<span class="tag-x" data-i="${i}" data-bi="${bi}">×</span></span>`).join('')}
+              <input class="tag-input" placeholder="Ajouter..." data-idx="${i}" />
+            </div>
+          </div>
+          <div class="epic-field" style="max-width:155px;">
+            <label>Release</label>
+            <select class="epic-release">${optsHtml}</select>
+            <span class="release-preview ${relClass(ep.release)}">${relLabel(ep.release)}</span>
+          </div>
+        </div>
+      </div>`;
+
+    card.querySelector('.del-btn').addEventListener('click', () => { epics.splice(i,1); renderEpics(); });
+    card.querySelector('.epic-name-input').addEventListener('input', e => { epics[i].name = e.target.value; });
+    card.querySelector('.epic-ticket').addEventListener('input', e => { epics[i].ticket = e.target.value; });
+    card.querySelector('.epic-desc').addEventListener('input', e => { epics[i].desc = e.target.value; });
+    card.querySelector('.epic-release').addEventListener('change', e => {
+      epics[i].release = e.target.value;
+      const p = card.querySelector('.release-preview');
+      p.className = `release-preview ${relClass(e.target.value)}`;
+      p.textContent = relLabel(e.target.value);
+    });
+    card.querySelector('.tag-input').addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ',') && e.target.value.trim()) {
+        e.preventDefault(); epics[i].benefits.push(e.target.value.trim()); e.target.value = ''; renderEpics();
+        setTimeout(() => document.querySelector(`#tw-${i} .tag-input`)?.focus(), 0);
+      }
+      if (e.key === 'Backspace' && !e.target.value && epics[i].benefits.length) {
+        epics[i].benefits.pop(); renderEpics();
+        setTimeout(() => document.querySelector(`#tw-${i} .tag-input`)?.focus(), 0);
+      }
+    });
+    card.querySelectorAll('.tag-x').forEach(x => x.addEventListener('click', () => { epics[i].benefits.splice(+x.dataset.bi,1); renderEpics(); }));
+    card.addEventListener('dragstart', e => { dragSrc = i; card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      e.preventDefault(); card.classList.remove('drag-over');
+      if (dragSrc !== null && dragSrc !== i) { const m = epics.splice(dragSrc,1)[0]; epics.splice(i,0,m); renderEpics(); }
+    });
+    list.appendChild(card);
+  });
+  // Re-attach live listeners whenever epics are re-rendered
+  attachLiveListeners();
+}
+
+function removeObj(btn) { btn.closest('.obj-item').remove(); updateObjNums(); }
+function updateObjNums() { document.querySelectorAll('#objectives-list .obj-counter').forEach((el,i) => el.textContent = i+1); }
+function addObj() {
+  const list = document.getElementById('objectives-list');
+  const item = document.createElement('div');
+  item.className = 'obj-item';
+  item.innerHTML = `<div class="obj-num obj-counter">${list.children.length+1}</div><input type="text" placeholder="Nouvel objectif..." /><button class="del-btn" onclick="removeObj(this)">×</button>`;
+  list.appendChild(item); item.querySelector('input').focus();
+}
+function addEpic() {
+  epics.push({ name:'Nouvel Epic', ticket:'CRM-XXXX', desc:'Description...', benefits:['Bénéfice'], release:'May (21 May)' });
+  renderEpics();
+  setTimeout(() => { const inputs = document.querySelectorAll('.epic-name-input'); inputs[inputs.length-1]?.focus(); inputs[inputs.length-1]?.select(); }, 50);
+}
+
+function syncEpics() {
+  document.querySelectorAll('.epic-name-input').forEach((el,i) => { if(epics[i]) epics[i].name = el.value; });
+  document.querySelectorAll('.epic-ticket').forEach((el,i) => { if(epics[i]) epics[i].ticket = el.value; });
+  document.querySelectorAll('.epic-desc').forEach((el,i) => { if(epics[i]) epics[i].desc = el.value; });
+  epics.forEach((ep,i) => {
+    const tags = document.querySelectorAll(`#tw-${i} .tag`);
+    if (tags.length) ep.benefits = [...tags].map(t => t.textContent.replace('×','').trim());
+  });
+}
+
+// ── HTML EMAIL BUILDER ──
+function buildEmailHtml() {
+  syncEpics();
+  const piC      = document.getElementById('pi-current').value.trim();
+  const piN      = document.getElementById('pi-next').value.trim();
+  const dl       = document.getElementById('deadline').value.trim();
+  const intro    = document.getElementById('intro-text').value.trim();
+  const backlog  = document.getElementById('backlog-text').value.trim();
+  const titleTxt = document.getElementById('email-title').value.trim() || 'DPnxt CLM';
+  const subTxt   = document.getElementById('email-subtitle').value.trim() || 'Onboarding · CLM NXT · PB Digital';
+  const objs = [...document.querySelectorAll('#objectives-list input[type="text"]')].map(el => el.value.trim()).filter(Boolean);
+
+  // Theme shorthand
+  const T = currentTheme;
+
+  // Safe HTML escape (leave existing &amp; etc. intact)
+  const esc = s => String(s).replace(/&(?!(amp|lt|gt|quot|#\d+|#x[\da-f]+);)/gi,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Objectives (table-based circles, Outlook-safe)
+  const objsHtml = objs.map((o, i) => `
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+    <tr>
+      <td width="28" valign="top">
+        <table cellpadding="0" cellspacing="0" border="0"><tr>
+          <td width="24" height="24" bgcolor="${T.header}" align="center" valign="middle"
+              style="background-color:${T.header};border-radius:12px;mso-padding-alt:0;width:24px;height:24px;text-align:center;">
+            <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12px;font-weight:bold;color:#ffffff;line-height:24px;">${i+1}</span>
+          </td>
+        </tr></table>
+      </td>
+      <td style="padding-left:8px;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;color:#1f2937;line-height:1.5;">${esc(o)}</td>
+    </tr>
+  </table>`).join('');
+
+  // Epic rows
+  const epicRows = epics.map((ep, i) => {
+    const bg = i % 2 === 0 ? '#ffffff' : '#f9fafb';
+
+    // Description: split by " ; " into bullet points
+    const parts = ep.desc.split(/\s*;\s*/).map(s => s.trim()).filter(Boolean);
+    const descHtml = parts.map(d =>
+      `<p style="margin:0 0 4px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12px;font-style:italic;color:#4b5563;">&#8226; ${esc(d)}</p>`
+    ).join('');
+
+    // Benefits pills (theme-colored)
+    const benefitsHtml = ep.benefits.map(b => `
+  <table cellpadding="2" cellspacing="0" border="0" style="margin-bottom:4px;">
+    <tr><td bgcolor="${T.benefitBg}" style="background-color:${T.benefitBg};padding:2px 8px;border-radius:8px;">
+      <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;color:${T.benefitText};">${esc(b)}</span>
+    </td></tr>
+  </table>`).join('');
+
+    // Release badge
+    const rel = ep.release.toLowerCase();
+    let relBg = '#f1f5f9', relColor = '#475569', relText = '&#128197; ' + esc(ep.release);
+    if (rel.includes('apr') || rel.includes('1/04')) { relBg = '#fae8ff'; relColor = '#86198f'; relText = '&#128197; 16 Apr'; }
+    else if (rel.includes('may') || rel.includes('21/05')) { relBg = '#fff7ed'; relColor = '#c2410c'; relText = '&#128197; 21 May'; }
+
+    return `
+  <tr bgcolor="${bg}" style="background-color:${bg};border-bottom:1px solid #f3f4f6;">
+    <td align="center" valign="top" style="padding:10px 8px;border-bottom:1px solid #f3f4f6;">
+      <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:15px;font-weight:bold;color:#1e3a6e;">${i+1}</span>
+    </td>
+    <td valign="top" style="padding:10px;border-bottom:1px solid #f3f4f6;">
+      <p style="margin:0 0 2px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;font-weight:bold;color:#1e3a6e;">${esc(ep.name)}</p>
+      <p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-style:italic;color:#6b7280;">${esc(ep.ticket)}</p>
+    </td>
+    <td valign="top" style="padding:10px;border-bottom:1px solid #f3f4f6;">${descHtml}</td>
+    <td valign="top" style="padding:10px;border-bottom:1px solid #f3f4f6;">${benefitsHtml}</td>
+    <td valign="top" style="padding:10px;border-bottom:1px solid #f3f4f6;">
+      <table cellpadding="0" cellspacing="0" border="0"><tr>
+        <td bgcolor="${relBg}" style="background-color:${relBg};padding:5px 10px;border-radius:20px;">
+          <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:${relColor};">${relText}</span>
+        </td>
+      </tr></table>
+    </td>
+  </tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+<style>body,table,td{font-family:'Segoe UI',Calibri,Arial,sans-serif;}body{margin:0;padding:0;background-color:#f0f4f8;}img{border:0;outline:none;text-decoration:none;}table{border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;}</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f0f4f8;">
+<!--[if mso]><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f0f4f8"><![endif]-->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0f4f8;">
+<tr><td align="center" style="padding:24px 16px;">
+
+<table width="660" cellpadding="0" cellspacing="0" border="0" style="max-width:660px;background-color:#ffffff;">
+
+
+
+  <!-- ACCENT BAR -->
+  <tr><td height="4" bgcolor="${T.accent}" style="background-color:${T.accent};font-size:0;line-height:0;">&nbsp;</td></tr>
+
+  <!-- HEADER -->
+  <!--[if mso]><tr><td bgcolor="${T.header}"><v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:660px;height:110px;"><v:fill type="solid" color="${T.header}"/><v:textbox inset="30px,28px,30px,28px"><![endif]-->
+  <tr>
+    <td bgcolor="${T.header}" style="background-color:${T.header};padding:28px 32px 24px 32px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td>
+          <table cellpadding="0" cellspacing="0" border="0"><tr>
+            <td bgcolor="${T.pill}" style="background-color:${T.pill};border:1px solid ${T.pillBorder};padding:4px 14px;border-radius:20px;">
+              <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:10px;font-weight:bold;color:#93c5fd;letter-spacing:1px;text-transform:uppercase;">PI PLANNING &middot; ${esc(piC)}&ndash;${esc(piN)}</span>
+            </td>
+          </tr></table>
+        </td></tr>
+        <tr><td height="12" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td><p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:24px;font-weight:bold;color:#ffffff;line-height:1.2;">${esc(titleTxt)} &mdash; Scope of Work</p></td></tr>
+        <tr><td height="6" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td><p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;color:#93c5fd;">${esc(subTxt)}</p></td></tr>
+      </table>
+    </td>
+  </tr>
+  <!--[if mso]></v:textbox></v:rect></td></tr><![endif]-->
+
+  <!-- BODY -->
+  <tr><td style="padding:32px 32px 0 32px;">
+
+    <p style="margin:0 0 12px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:16px;font-weight:bold;color:${T.header};">Dear Colleagues,</p>
+    <p style="margin:0 0 28px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;color:#374151;line-height:1.6;">${esc(intro)}</p>
+
+    <!-- OBJECTIVES -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+      <tr>
+        <td width="4" bgcolor="${T.header}" style="background-color:${T.header};border-radius:4px 0 0 4px;">&nbsp;</td>
+        <td bgcolor="${T.objBg}" style="background-color:${T.objBg};padding:20px 22px;border-radius:0 8px 8px 0;">
+          <p style="margin:0 0 8px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;font-weight:bold;color:${T.header};">&#127919; PI ${esc(piC)} OBJECTIVES &mdash; ${esc(titleTxt)}</p>
+          <p style="margin:0 0 14px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12px;font-style:italic;color:#4b5563;">Objectives defined from backlog review sessions, aligned with product strategy &amp; roadmap.</p>
+          ${objsHtml}
+        </td>
+      </tr>
+    </table>
+
+    <!-- FEATURES LABEL -->
+    <p style="margin:0 0 14px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#6b7280;">PI ${esc(piN)} &mdash; KEY FEATURES</p>
+
+    <!-- FEATURES TABLE -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;border:1px solid #e5e7eb;">
+      <tr>
+        <td width="36" bgcolor="${T.table}" align="center" style="background-color:${T.table};padding:10px 8px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">#</span></td>
+        <td width="130" bgcolor="${T.table}" style="background-color:${T.table};padding:10px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">EPIC NAME</span></td>
+        <td bgcolor="${T.table}" style="background-color:${T.table};padding:10px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">DESCRIPTION</span></td>
+        <td width="120" bgcolor="${T.table}" style="background-color:${T.table};padding:10px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">BENEFITS</span></td>
+        <td width="90" bgcolor="${T.table}" style="background-color:${T.table};padding:10px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">RELEASE</span></td>
+      </tr>
+      ${epicRows}
+    </table>
+
+    <!-- NEXT PI -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+      <tr>
+        <td bgcolor="${T.header}" style="background-color:${T.header};padding:20px 24px;border-radius:8px;">
+          <p style="margin:0 0 8px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;font-weight:bold;color:#ffffff;">&#128197; Next PI &mdash; ${esc(piN)}</p>
+          <p style="margin:0 0 6px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;color:#bfdbfe;">${esc(backlog)}</p>
+          <p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;font-weight:bold;color:#fca5a5;">&#9888; Prioritization requests for ${esc(piN)} cannot be accepted after ${esc(dl)}.</p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 16px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;color:#374151;">Best regards,</p>
+
+  </td></tr>
+
+  <!-- DIVIDER -->
+  <tr><td style="padding:0 32px;"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#e5e7eb" style="background-color:#e5e7eb;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
+
+  <!-- SIGNATURE -->
+  <tr><td style="padding:20px 32px 24px 32px;">
+    <p style="margin:0 0 2px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:15px;font-weight:bold;color:${T.table};">Simon Goffin</p>
+    <p style="margin:0 0 8px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;color:#4b5563;">Product Owner CLM PB &amp; DPnxt Onboarding &middot; PB Digital</p>
+    <p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12px;color:#0369a1;">
+      &#128222; +32 2 662 86 64 &nbsp;&middot;&nbsp; &#128241; +32 479 48 76 08 &nbsp;&middot;&nbsp;
+      <a href="mailto:s.goffin@degroofpetercam.com" style="color:#0369a1;text-decoration:none;">s.goffin@degroofpetercam.com</a>
+    </p>
+  </td></tr>
+
+  <!-- FOOTER -->
+  <tr><td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:16px 32px;border-top:1px solid #e5e7eb;">
+    <p style="margin:0 0 4px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;color:#9ca3af;text-align:center;">
+      <strong>Bank | Banque Degroof Petercam nv | sa</strong><br>
+      Rue de l&rsquo;Industrie 44 Nijverheidsstraat | 1040 Brussels<br>
+      BTW | TVA BE 0403 212 172 &nbsp;&middot;&nbsp; RPR Brussel | RPM Bruxelles &ndash; FSMA 040460 A
+    </p>
+  </td></tr>
+
+</table>
+
+</td></tr></table>
+<!--[if mso]></td></tr></table><![endif]-->
+</body>
+</html>`;
+}
+
+// ── LIVE PREVIEW ──
+let _liveTimer = null;
+function liveRefresh() {
+  if (!lastEmailHtml) return; // don't auto-show before first manual generate
+  clearTimeout(_liveTimer);
+  _liveTimer = setTimeout(() => generate(), 120);
+}
+
+function attachLiveListeners() {
+  // All text inputs, selects, textareas in the left panel
+  document.querySelectorAll('.left-panel input, .left-panel select, .left-panel textarea').forEach(el => {
+    el.addEventListener('input', liveRefresh);
+    el.addEventListener('change', liveRefresh);
+  });
+}
+
+// ── INJECT INTO IFRAME (preserves scroll position) ──
+let _previewReady = false;
+function injectPreview(html) {
+  const frame = document.getElementById('preview-frame');
+  frame.style.display = 'block';
+  document.getElementById('preview-empty').style.display = 'none';
+  if (!_previewReady) {
+    frame.srcdoc = html;
+    frame.addEventListener('load', () => { _previewReady = true; }, { once: true });
+  } else {
+    try {
+      const win = frame.contentWindow;
+      const scrollY = win.scrollY || 0;
+      win.document.open(); win.document.write(html); win.document.close();
+      requestAnimationFrame(() => { try { win.scrollTo(0, scrollY); } catch(e) {} });
+    } catch(e) { frame.srcdoc = html; }
+  }
+}
+
+// ── GENERATE ──
+function generate() {
+  lastEmailHtml = buildEmailHtml();
+  injectPreview(lastEmailHtml);
+
+  // Enable action buttons
+  document.getElementById('copy-btn').disabled = false;
+  document.getElementById('eml-btn').disabled = false;
+
+  // Flash status pill only on manual trigger (not debounced live refresh)
+  if (!_liveTimer) {
+    const pill = document.getElementById('status-pill');
+    pill.classList.add('visible');
+    setTimeout(() => pill.classList.remove('visible'), 2500);
+  }
+}
+
+// ── COPY HTML ──
+function copyEmailHtml() {
+  navigator.clipboard.writeText(lastEmailHtml).then(() => {
+    const btn = document.getElementById('copy-btn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copié !`;
+    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  });
+}
+
+// ── DOWNLOAD .EML ──
+function downloadEml() {
+  if (!lastEmailHtml) return;
+  const subj = document.getElementById('email-subject').value.trim();
+  const piC  = document.getElementById('pi-current').value.trim();
+  const piN  = document.getElementById('pi-next').value.trim();
+  const dl   = document.getElementById('deadline').value.trim();
+  const objs = [...document.querySelectorAll('#objectives-list input[type="text"]')].map(el => el.value.trim()).filter(Boolean);
+
+  // Plain-text fallback
+  const plain = [
+    'Dear Colleagues,', '',
+    document.getElementById('intro-text').value.trim(), '',
+    `PI ${piC} OBJECTIVES - CLM NXT (Onboarding)`,
+    ...objs.map((o,i) => `${i+1}. ${o}`), '',
+    `PI ${piN} — KEY FEATURES`,
+    ...epics.map((ep,i) => `${i+1}. ${ep.name} (${ep.ticket}) - Release: ${ep.release}`), '',
+    `NEXT PI (${piN})`,
+    document.getElementById('backlog-text').value.trim(),
+    `Prioritization requests cannot be accepted after ${dl}.`, '',
+    'Best regards,', 'Simon Goffin',
+    'Product Owner CLM PB & DPnxt Onboarding | PB Digital',
+    'T +32 2 662 86 64 | M +32 479 48 76 08', 's.goffin@degroofpetercam.com',
+  ].join('\n');
+
+  const boundary = '----=_AltPart_DPnxt_CLM_' + Date.now();
+  const date = new Date().toUTCString();
+
+  // base64 encode (handles UTF-8)
+  const toB64 = str => btoa(unescape(encodeURIComponent(str)));
+
+  const eml = [
+    'MIME-Version: 1.0',
+    `Date: ${date}`,
+    'From: Simon Goffin <s.goffin@degroofpetercam.com>',
+    'To: Colleagues <colleagues@degroofpetercam.com>',
+    `Subject: ${subj}`,
+    `Content-Type: multipart/alternative;`,
+    `\tboundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="utf-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    toB64(plain),
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset="utf-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    toB64(lastEmailHtml),
+    '',
+    `--${boundary}--`,
+  ].join('\r\n');
+
+  const blob = new Blob([eml], { type: 'message/rfc822' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = subj.replace(/[^a-zA-Z0-9_\-' ]/g,'_').replace(/\s+/g,'_') + '.eml';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+renderThemeSwatches();
+renderEpics();
+attachLiveListeners();
+</script>
+</body>
+</html>
