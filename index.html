@@ -3,459 +3,1196 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LazyPO — PO Toolkit</title>
-<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>LazyPO — SoW Email Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
-  --bg:       #0c0c0c;
-  --sidebar:  #111111;
-  --surface:  #161616;
-  --surface2: #1c1c1c;
-  --border:   #222222;
-  --border2:  #2a2a2a;
-  --accent:   #3b82f6;
-  --accent2:  #60a5fa;
-  --glow:     rgba(59,130,246,0.15);
-  --text:     #f0f0f0;
-  --muted:    #6b6b6b;
-  --faint:    #2e2e2e;
-  --r:        10px;
+  --navy: #002060; --navy-mid: #0a3575; --blue: #1e3a6e;
+  --accent: #3b82f6; --accent-light: #dbeafe;
+  --bg: #f1f5fb; --surface: #ffffff; --border: #e2e8f2;
+  --text: #0f172a; --text-muted: #64748b; --text-faint: #94a3b8;
+  --tag-bg: #eff6ff; --tag-text: #1d4ed8;
+  --danger: #ef4444; --success: #10b981;
+  --apr-bg: #fae8ff; --apr-text: #86198f;
+  --may-bg: #fff7ed; --may-text: #c2410c;
+  --r: 10px; --r-sm: 6px;
 }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
 
-html, body { height: 100%; overflow: hidden; }
-
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  display: flex;
-}
-
-/* ════════════════════════════════
-   SIDEBAR
-════════════════════════════════ */
-.sidebar {
-  width: 260px;
-  min-width: 260px;
-  height: 100vh;
-  background: var(--sidebar);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: 28px 16px 24px;
-  position: relative;
-  z-index: 10;
-}
-
-/* subtle vertical glow line on right edge */
-.sidebar::after {
-  content: '';
-  position: absolute; top: 15%; right: -1px; bottom: 15%;
-  width: 1px;
-  background: linear-gradient(to bottom, transparent, rgba(59,130,246,0.4), transparent);
-}
-
-.logo-wrap {
-  padding: 0 8px;
-  margin-bottom: 36px;
+header {
+  background: var(--navy); padding: 14px 28px;
+  display: flex; align-items: center; gap: 20px;
+  border-bottom: 3px solid #0a3575; position: sticky; top: 0; z-index: 100;
 }
 .logo-graffiti {
-  font-family: 'Permanent Marker', cursive;
-  font-size: 28px;
-  color: #fff;
-  letter-spacing: 1px;
-  line-height: 1;
-  text-shadow: 2px 2px 0 rgba(59,130,246,0.5), -1px -1px 0 rgba(255,255,255,0.06);
-  transform: rotate(-1.5deg);
-  display: inline-block;
+  font-family: 'Permanent Marker', cursive; font-size: 26px; color: #fff;
+  letter-spacing: 1px; line-height: 1;
+  text-shadow: 3px 3px 0 rgba(59,130,246,.4), -1px -1px 0 rgba(255,255,255,.1);
+  transform: rotate(-1.5deg); display: inline-block;
 }
 .logo-graffiti span { color: #60a5fa; }
-
-/* nav section label */
-.nav-section-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding: 0 12px;
-  margin-bottom: 8px;
-  margin-top: 4px;
-}
-
-.nav-items { display: flex; flex-direction: column; gap: 3px; }
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 10px 12px;
-  border-radius: var(--r);
-  cursor: pointer;
-  text-decoration: none;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.15s ease;
-  position: relative;
-  border: 1px solid transparent;
-}
-.nav-item:hover {
-  color: var(--text);
-  background: var(--surface);
-}
-.nav-item.active {
-  color: var(--text);
-  background: var(--surface2);
-  border-color: var(--border2);
-}
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 20%; bottom: 20%;
-  width: 2px;
-  background: var(--accent2);
-  border-radius: 2px;
-  box-shadow: 0 0 8px var(--accent2);
-}
-
-.nav-icon {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px;
-  background: var(--faint);
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-.nav-item.active .nav-icon {
-  background: rgba(59,130,246,0.15);
-}
-.nav-item:hover .nav-icon {
-  background: var(--border2);
-}
-
-.nav-label { flex: 1; }
-
-.nav-badge {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 2px 7px;
-  border-radius: 20px;
-  text-transform: uppercase;
-}
-.badge-live   { background: rgba(59,130,246,0.15); color: var(--accent2); border: 1px solid rgba(96,165,250,0.25); }
-.badge-soon   { background: rgba(80,80,80,0.3);    color: #888;           border: 1px solid #333; }
-.badge-wip    { background: rgba(245,158,11,0.1);  color: #f59e0b;        border: 1px solid rgba(245,158,11,0.2); }
-
-.nav-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 14px 4px;
-}
-
-.sidebar-spacer { flex: 1; }
-
-/* version pill at bottom */
-.sidebar-footer {
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.version-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent2);
-  box-shadow: 0 0 8px var(--accent2);
-  animation: pulse 2.5s ease infinite;
-  flex-shrink: 0;
-}
-@keyframes pulse {
-  0%,100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.5; transform: scale(0.7); }
-}
-.sidebar-footer-text { font-size: 12px; color: var(--muted); }
-.sidebar-footer-text strong { color: #555; }
-
-
-/* ════════════════════════════════
-   MAIN CONTENT
-════════════════════════════════ */
-.main {
-  flex: 1;
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-/* dark radial background + grid */
-.main-bg {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(ellipse 70% 60% at 60% 40%, rgba(20,40,80,0.45) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 40% at 90% 10%, rgba(30,58,110,0.2) 0%, transparent 60%);
-}
-.main-grid {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
-  background-size: 52px 52px;
-  mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black, transparent);
-}
-
-.content {
-  position: relative; z-index: 1;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 48px 64px;
-  max-width: 760px;
-}
-
-/* status pill */
-.status-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border2);
-  border-radius: 20px;
-  padding: 6px 16px;
-  font-size: 12px; font-weight: 500; color: var(--muted);
-  margin-bottom: 32px;
-  width: fit-content;
-}
-.status-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent2);
-  box-shadow: 0 0 8px var(--accent2);
-  animation: pulse 2.5s ease infinite;
-}
-
-/* big title */
-.hero-title {
-  font-family: 'Permanent Marker', cursive;
-  font-size: clamp(64px, 9vw, 104px);
-  line-height: 0.95;
-  color: #ffffff;
-  letter-spacing: 1px;
-  text-shadow: 4px 4px 0 rgba(59,130,246,0.25);
-  transform: rotate(-1deg);
-  display: inline-block;
-  margin-bottom: 28px;
-}
-.hero-title span { color: var(--accent2); }
-
-.hero-desc {
-  font-size: 17px;
-  color: var(--muted);
-  line-height: 1.7;
-  max-width: 460px;
-  margin-bottom: 40px;
-  font-weight: 400;
-}
-.hero-desc strong { color: #a0a0a0; font-weight: 600; }
-
-/* CTA buttons */
-.cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 56px; }
+.header-sub { font-size: 12px; color: #93c5fd; margin-top: 2px; }
+header .spacer { flex: 1; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
 
 .btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px; font-weight: 700;
-  padding: 13px 28px;
-  border-radius: var(--r);
-  border: none; cursor: pointer;
-  text-decoration: none;
-  transition: all 0.18s;
-  letter-spacing: 0.02em;
+  padding: 9px 18px; border: none; border-radius: var(--r-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
 }
-.btn-primary {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 0 24px rgba(59,130,246,0.3);
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #2563eb; }
+.btn-ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.2); }
+.btn-ghost:hover { background: rgba(255,255,255,.2); }
+.btn-success { background: #10b981; color: #fff; }
+.btn-success:hover { background: #059669; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; pointer-events: none; }
+
+.status-pill {
+  display: none; align-items: center; gap: 6px;
+  background: rgba(16,185,129,.15); color: #6ee7b7; border: 1px solid rgba(110,231,177,.3);
+  border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 500;
+  animation: fadeIn .3s ease;
 }
-.btn-primary:hover {
-  background: #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 32px rgba(59,130,246,0.45);
-}
-.btn-ghost {
-  background: transparent;
-  color: #666;
-  border: 1px solid var(--border2);
-}
-.btn-ghost:hover {
-  color: var(--text);
-  border-color: #444;
-  background: var(--surface);
+.status-pill.visible { display: inline-flex; }
+
+.main { display: flex; height: calc(100vh - 63px); overflow: hidden; }
+
+.left-panel {
+  width: 52%; overflow-y: auto; padding: 20px 24px;
+  border-right: 1px solid var(--border); background: var(--surface);
 }
 
-/* stats row */
-.stats-row {
-  display: flex;
-  gap: 40px;
-  align-items: center;
+.right-panel { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); }
+
+.preview-bar {
+  display: flex; align-items: center; gap: 8px; padding: 10px 20px;
+  background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
-.stat { }
-.stat-val {
-  font-family: 'DM Mono', monospace;
-  font-size: 26px;
-  font-weight: 500;
-  color: var(--accent2);
-  display: block;
-  line-height: 1;
-  margin-bottom: 4px;
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-r { background: #ef4444; } .dot-y { background: #f59e0b; } .dot-g { background: #10b981; }
+.preview-bar-label { font-size: 12px; color: var(--text-muted); margin-left: 6px; }
+
+.preview-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; color: var(--text-faint); text-align: center; padding: 48px 32px;
 }
-.stat-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
+.preview-empty-icon { font-size: 48px; opacity: .3; }
+.preview-empty p { font-size: 13px; line-height: 1.6; }
+.preview-empty strong { color: var(--text-muted); font-weight: 600; }
+
+#preview-frame { flex: 1; border: none; background: #fff; display: none; }
+
+.section { margin-bottom: 22px; }
+.section-header {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-faint); padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
 }
-.stats-sep {
-  width: 1px; height: 32px;
-  background: var(--border2);
+.field { margin-bottom: 10px; }
+.field label { display: block; font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; }
+input[type="text"], select, textarea {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text);
+  background: var(--surface); transition: border-color .15s; outline: none;
+}
+textarea { resize: vertical; min-height: 58px; line-height: 1.5; }
+input[type="text"]:focus, select:focus, textarea:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,.08);
+}
+.row { display: flex; gap: 8px; }
+.row .field { flex: 1; }
+
+.drop-zone {
+  border: 2px dashed var(--border); border-radius: var(--r);
+  padding: 18px; text-align: center; cursor: pointer;
+  transition: all .2s; background: #fafbfd; margin-bottom: 14px; position: relative;
+}
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: var(--accent-light); }
+.drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: none; padding: 0; }
+.drop-icon { font-size: 28px; margin-bottom: 6px; }
+.drop-zone p { font-size: 12px; color: var(--text-muted); }
+.drop-zone p strong { color: var(--accent); }
+.drop-hint { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+.drop-status { font-size: 12px; color: var(--success); font-weight: 500; margin-top: 6px; display: none; }
+
+.obj-item { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; animation: fadeIn .2s ease; }
+.obj-num { width: 20px; height: 20px; background: var(--navy); color: #fff; border-radius: 50%; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.obj-item input { flex: 1; }
+.obj-arrows { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+.obj-arrow { background: none; border: 1px solid var(--border); border-radius: 3px; cursor: pointer; color: var(--text-faint); font-size: 10px; line-height: 1; padding: 1px 4px; transition: all .1s; }
+.obj-arrow:hover { background: var(--bg); border-color: var(--accent); color: var(--accent); }
+
+.epic-card {
+  border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px;
+  overflow: hidden; transition: box-shadow .15s; animation: fadeIn .2s ease; background: var(--surface);
+}
+.epic-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+.epic-card.dragging { opacity: .35; }
+.epic-card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); }
+.epic-head {
+  display: flex; align-items: center; gap: 7px; padding: 8px 10px;
+  background: #f8fafd; border-bottom: 1px solid var(--border); cursor: grab;
+}
+.epic-head:active { cursor: grabbing; }
+.drag-dots { color: var(--text-faint); font-size: 13px; flex-shrink: 0; letter-spacing: -1px; }
+.epic-idx { width: 18px; height: 18px; background: var(--blue); color: #fff; border-radius: 50%; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.epic-head input { flex: 1; border: none; background: transparent; font-weight: 600; font-size: 13px; color: var(--navy); outline: none; padding: 0; box-shadow: none; }
+.del-btn { background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 17px; line-height: 1; padding: 0 2px; transition: color .1s; flex-shrink: 0; }
+.del-btn:hover { color: var(--danger); }
+.epic-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.epic-row { display: flex; gap: 8px; }
+.epic-field { flex: 1; }
+.epic-field label { display: block; font-size: 10.5px; font-weight: 500; color: var(--text-faint); margin-bottom: 3px; }
+.epic-field input, .epic-field select { font-size: 12px; padding: 6px 9px; }
+.epic-field textarea { font-size: 12px; padding: 6px 9px; min-height: 52px; }
+
+.release-preview { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 600; padding: 2px 9px; border-radius: 20px; margin-top: 3px; }
+.rel-apr { background: var(--apr-bg); color: var(--apr-text); }
+.rel-may { background: var(--may-bg); color: var(--may-text); }
+.rel-other { background: #f1f5f9; color: #475569; }
+
+.tags-wrap {
+  display: flex; flex-wrap: wrap; gap: 4px; border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 4px 7px; min-height: 32px; cursor: text;
+  align-items: center; background: var(--surface); transition: border-color .15s;
+}
+.tags-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,.08); }
+.tag { background: var(--tag-bg); color: var(--tag-text); font-size: 10.5px; font-weight: 500; padding: 2px 7px; border-radius: 20px; display: flex; align-items: center; gap: 3px; animation: fadeIn .15s ease; }
+.tag-x { cursor: pointer; font-size: 13px; line-height: 1; opacity: .6; }
+.tag-x:hover { opacity: 1; }
+.tag-input { border: none; outline: none; background: transparent; font-size: 11.5px; font-family: 'DM Sans', sans-serif; color: var(--text); min-width: 70px; flex: 1; padding: 0; box-shadow: none; }
+
+.add-btn {
+  width: 100%; border: 1px dashed var(--border); border-radius: var(--r-sm);
+  background: none; padding: 7px; font-size: 11.5px; font-family: 'DM Sans', sans-serif;
+  color: var(--text-muted); cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.add-btn:hover { background: var(--bg); border-color: var(--accent); color: var(--accent); }
+.small-add-btn { width: auto; padding: 3px 10px; font-size: 10.5px; }
+
+/* ── THEME PICKER ── */
+.theme-section {
+  background: var(--bg); border-radius: var(--r); padding: 14px 16px; margin-bottom: 22px;
+  border: 1px solid var(--border);
+}
+.theme-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.theme-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.theme-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.theme-swatch {
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 3px solid transparent; transition: all .15s; position: relative;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+}
+.theme-swatch:hover { transform: scale(1.12); }
+.theme-swatch.active { border-color: #fff; box-shadow: 0 0 0 2.5px var(--accent), 0 1px 6px rgba(0,0,0,.25); }
+.theme-swatch[title]:hover::after {
+  content: attr(title); position: absolute; bottom: calc(100% + 6px); left: 50%;
+  transform: translateX(-50%); background: #1e293b; color: #fff;
+  font-size: 10px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+  padding: 3px 8px; border-radius: 4px; white-space: nowrap; pointer-events: none; z-index: 10;
+}
+.theme-sep { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
+
+/* ── TOGGLE SWITCH ── */
+.toggle-wrap { display: flex; align-items: center; gap: 8px; }
+.toggle-label { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0; background: var(--border); border-radius: 20px;
+  cursor: pointer; transition: .2s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px;
+  background: #fff; border-radius: 50%; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+.toggle input:checked + .toggle-slider { background: var(--accent); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+/* ── MOBILE TAB BAR ── */
+.mobile-tabs {
+  display: none; background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0; flex-shrink: 0;
+}
+.mobile-tabs button {
+  flex: 1; padding: 10px 0; border: none; background: none; font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all .15s;
+}
+.mobile-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .left-panel { width: 55%; }
 }
 
-/* ── ANIMATIONS ── */
-.content > * {
-  animation: fadeUp 0.55s ease both;
-}
-.status-pill   { animation-delay: 0.05s; }
-.hero-title    { animation-delay: 0.12s; }
-.hero-desc     { animation-delay: 0.20s; }
-.cta-row       { animation-delay: 0.27s; }
-.stats-row     { animation-delay: 0.34s; }
+@media (max-width: 768px) {
+  header { padding: 10px 16px; gap: 12px; flex-wrap: wrap; }
+  .logo-graffiti { font-size: 20px; }
+  .header-sub { font-size: 10px; }
+  .header-actions { gap: 6px; flex-wrap: wrap; }
+  .header-actions .btn { padding: 7px 12px; font-size: 12px; }
+  .header-actions .status-pill { font-size: 10px; padding: 4px 8px; }
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  .main { flex-direction: column; height: auto; min-height: calc(100vh - 90px); overflow: visible; }
+  .mobile-tabs { display: flex; }
+
+  .left-panel {
+    width: 100%; border-right: none; overflow-y: visible;
+    padding: 16px; height: auto;
+  }
+  .left-panel.hidden { display: none; }
+
+  .right-panel { height: 70vh; min-height: 400px; }
+  .right-panel.hidden { display: none; }
+
+  .row { flex-direction: column; gap: 0; }
+  .theme-row { flex-wrap: wrap; gap: 8px; }
+  .theme-section { padding: 10px 12px; }
+
+  .section-header { flex-wrap: wrap; gap: 6px; }
+
+  .epic-row { flex-direction: column; gap: 6px; }
+  .epic-row .epic-field { max-width: 100% !important; }
+  .epic-body { padding: 8px; }
+  .epic-head input { min-width: 0; }
+
+  .preview-bar { padding: 8px 12px; }
 }
 
-.sidebar .nav-items .nav-item {
-  animation: slideIn 0.4s ease both;
-}
-.nav-item:nth-child(1) { animation-delay: 0.05s; }
-.nav-item:nth-child(2) { animation-delay: 0.10s; }
-.nav-item:nth-child(3) { animation-delay: 0.15s; }
-.nav-item:nth-child(4) { animation-delay: 0.20s; }
-.nav-item:nth-child(5) { animation-delay: 0.25s; }
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: translateX(0); }
+@media (max-width: 480px) {
+  header { padding: 8px 12px; }
+  .logo-graffiti { font-size: 18px; }
+  .header-actions .btn svg { display: none; }
+  .header-actions .btn { padding: 6px 10px; font-size: 11px; }
+  .left-panel { padding: 12px; }
+  .drop-zone { padding: 14px; }
+  .drop-icon { font-size: 22px; }
 }
 </style>
 </head>
 <body>
 
-<!-- ══ SIDEBAR ══ -->
-<aside class="sidebar">
-
-  <div class="logo-wrap">
+<header>
+  <div>
     <div class="logo-graffiti">LazyPO <span>✦</span></div>
+    <div class="header-sub">SoW Email Generator</div>
   </div>
-
-  <div class="nav-section-label">Outils</div>
-
-  <nav class="nav-items">
-
-    <a href="lazypo_generator.html" class="nav-item active">
-      <div class="nav-icon">✉️</div>
-      <span class="nav-label">SoW Email</span>
-      <span class="nav-badge badge-live">Live</span>
-    </a>
-
-    <a href="#" class="nav-item" onclick="return false;">
-      <div class="nav-icon">📋</div>
-      <span class="nav-label">Release Notes</span>
-      <span class="nav-badge badge-soon">Bientôt</span>
-    </a>
-
-    <a href="#" class="nav-item" onclick="return false;">
-      <div class="nav-icon">🎫</div>
-      <span class="nav-label">Jira Request</span>
-      <span class="nav-badge badge-wip">En cours</span>
-    </a>
-
-  </nav>
-
-  <div class="nav-divider"></div>
-
-  <div class="nav-section-label">Général</div>
-
-  <nav class="nav-items">
-    <a href="#" class="nav-item" onclick="return false;">
-      <div class="nav-icon">⚙️</div>
-      <span class="nav-label">Paramètres</span>
-    </a>
-  </nav>
-
-  <div class="sidebar-spacer"></div>
-
-  <div class="sidebar-footer">
-    <div class="version-dot"></div>
-    <div class="sidebar-footer-text">v2.0 · <strong>100% local</strong></div>
+  <div class="spacer"></div>
+  <div class="header-actions">
+    <div class="status-pill" id="status-pill">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Email généré !
+    </div>
+    <button class="btn btn-ghost" id="copy-btn" onclick="copyEmailHtml()" disabled>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      Copier HTML
+    </button>
+    <button class="btn btn-success" id="eml-btn" onclick="downloadEml()" disabled>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Télécharger .eml
+    </button>
+    <button class="btn btn-primary" onclick="generate()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Générer
+    </button>
   </div>
+</header>
 
-</aside>
+<div class="mobile-tabs" id="mobile-tabs">
+  <button class="active" onclick="switchTab('form')">✏️ Formulaire</button>
+  <button onclick="switchTab('preview')">👁 Aperçu</button>
+</div>
 
-<!-- ══ MAIN ══ -->
-<main class="main">
-  <div class="main-bg"></div>
-  <div class="main-grid"></div>
+<div class="main">
 
-  <div class="content">
+  <!-- FORM -->
+  <div class="left-panel" id="panel-form">
 
-    <div class="status-pill">
-      <div class="status-dot"></div>
-      Toolkit actif · Aucune donnée envoyée
-    </div>
-
-    <div class="hero-title">Lazy<span>PO</span></div>
-
-    <p class="hero-desc">
-      Be efficient.<br>
-      Be the best <br>
-      Be the Lazy PO <strong>100% offline.</strong>
-    </p>
-
-    <div class="cta-row">
-      <a href="lazypo_generator.html" class="btn btn-primary">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Ouvrir le générateur
-      </a>
-      <a href="#" class="btn btn-ghost" onclick="return false;">
-        En savoir +
-      </a>
-    </div>
-
-    <div class="stats-row">
-      <div class="stat">
-        <span class="stat-val">3</span>
-        <div class="stat-label">Outils</div>
-      </div>
-      <div class="stats-sep"></div>
-      <div class="stat">
-        <span class="stat-val">0</span>
-        <div class="stat-label">API requise</div>
-      </div>
-      <div class="stats-sep"></div>
-      <div class="stat">
-        <span class="stat-val">.eml</span>
-        <div class="stat-label">Prêt Outlook</div>
+    <!-- THEME PICKER -->
+    <div class="theme-section">
+      <div class="theme-row">
+        <span class="theme-label">🎨 Thème</span>
+        <div class="theme-swatches" id="theme-swatches"></div>
+        <div class="theme-sep"></div>
+        <div class="field" style="margin:0;flex:1;min-width:120px;">
+          <input type="text" id="email-title" placeholder="Titre (ex: DPnxt CLM)" value="" style="font-size:12px;padding:5px 9px;" />
+        </div>
+        <div class="field" style="margin:0;flex:1.5;min-width:160px;">
+          <input type="text" id="email-subtitle" placeholder="Sous-titre" value="" style="font-size:12px;padding:5px 9px;" />
+        </div>
       </div>
     </div>
 
-  </div>
-</main>
+    <div class="section">
+      <div class="section-header">
+        Import Excel
+        <span style="font-size:10px;color:var(--text-faint);text-transform:none;letter-spacing:0;">Jira export · Key · Summary · Description · Component/s · Fix Version/s</span>
+      </div>
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" accept=".xlsx,.xls,.csv" id="file-input" />
+        <div class="drop-icon">📊</div>
+        <p><strong>Glisse ton fichier Excel ici</strong> ou clique pour parcourir</p>
+        <p class="drop-hint">.xlsx · .xls · .csv</p>
+        <div class="drop-status" id="drop-status"></div>
+      </div>
+    </div>
 
+    <div class="section">
+      <div class="section-header">Général</div>
+      <div class="row">
+        <div class="field"><label>PI en cours</label><input type="text" id="pi-current" value="" /></div>
+        <div class="field"><label>Prochain PI</label><input type="text" id="pi-next" value="" /></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Deadline prioritisation</label><input type="text" id="deadline" value="" /></div>
+        <div class="field"><label>Sujet email</label><input type="text" id="email-subject" value="" /></div>
+      </div>
+      <div class="field">
+        <label>Texte d'introduction</label>
+        <textarea id="intro-text">We are pleased to inform you the PI Planning for Q2 26' has successfully concluded today. Objectives have been defined based on backlog review sessions and aligned with the overall product strategy &amp; roadmap.</textarea>
+      </div>
+      <div class="field">
+        <label>Message bloc "Next PI" (texte bleu clair)</label>
+        <textarea id="backlog-text">The backlog review sessions to assess all requests priority will start at the end of May.</textarea>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        Signature &amp; Footer
+        <span class="toggle-wrap">
+          <span class="toggle-label">Simon Goffin</span>
+          <label class="toggle"><input type="checkbox" id="toggle-sg" onchange="toggleSimon()" /><span class="toggle-slider"></span></label>
+        </span>
+      </div>
+      <div id="sig-fields">
+        <div class="row">
+          <div class="field"><label>Nom</label><input type="text" id="sig-name" placeholder="ex: Jane Doe" /></div>
+          <div class="field"><label>Titre / Rôle</label><input type="text" id="sig-title" placeholder="ex: Product Owner · Digital" /></div>
+        </div>
+        <div class="field"><label>Téléphone fixe</label><input type="text" id="sig-phone" placeholder="ex: +32 2 000 00 00" /></div>
+        <div class="field"><label>Mobile</label><input type="text" id="sig-mobile" placeholder="ex: +32 479 00 00 00" /></div>
+        <div class="field"><label>Email</label><input type="text" id="sig-email" placeholder="ex: j.doe@company.com" /></div>
+        <div class="field"><label>Ligne footer (banque / adresse)</label><textarea id="footer-text" style="min-height:44px;">Bank | Company Name · Address</textarea></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        Objectifs PI
+        <button class="add-btn small-add-btn" onclick="addObj()">+ Ajouter</button>
+      </div>
+      <div id="objectives-list">
+
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        Epics / Features
+        <span style="display:flex;align-items:center;gap:12px;">
+          <span class="toggle-wrap">
+            <span class="toggle-label">Business Line</span>
+            <label class="toggle"><input type="checkbox" id="toggle-bl" onchange="toggleBusinessLine()" /><span class="toggle-slider"></span></label>
+          </span>
+          <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">↕ glisser pour réordonner</span>
+        </span>
+      </div>
+      <div id="epics-list"></div>
+      <button class="add-btn" onclick="addEpic()">+ Ajouter un epic</button>
+    </div>
+
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="right-panel" id="panel-preview">
+    <div class="preview-bar">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      <span class="preview-bar-label">Aperçu email</span>
+      <div style="flex:1"></div>
+      <button class="btn" style="font-size:11px;padding:5px 12px;background:transparent;color:var(--text-muted);border:1px solid var(--border);" onclick="generate()">↻ Rafraîchir</button>
+    </div>
+    <div class="preview-empty" id="preview-empty">
+      <div class="preview-empty-icon">✉️</div>
+      <p><strong>Clique sur "Générer"</strong> pour voir l'aperçu de l'email<br>et débloquer le téléchargement <code style="background:var(--bg);padding:1px 6px;border-radius:4px;font-size:12px;">.eml</code></p>
+    </div>
+    <iframe id="preview-frame"></iframe>
+  </div>
+
+</div>
+
+<script>
+// ── THEMES ──
+const THEMES = [
+  // Blues foncés
+  { id:'navy',      label:'Navy (défaut)',     header:'#002060', headerMid:'#0a3575', table:'#1e3a6e', pill:'#0a3575', pillBorder:'#1e5799', accent:'#0078d4', objBg:'#f0f6ff', benefitBg:'#e0f2fe', benefitText:'#0369a1' },
+  { id:'royal',     label:'Royal Blue',        header:'#003399', headerMid:'#0d47a1', table:'#1565c0', pill:'#0d47a1', pillBorder:'#1565c0', accent:'#1976d2', objBg:'#e3f2fd', benefitBg:'#bbdefb', benefitText:'#0d47a1' },
+  { id:'steel',     label:'Steel Blue',        header:'#1a3a5c', headerMid:'#1e4976', table:'#235789', pill:'#1e4976', pillBorder:'#235789', accent:'#2196f3', objBg:'#e8f4fd', benefitBg:'#d0eaf9', benefitText:'#1565c0' },
+  // Blues clairs
+  { id:'sky',       label:'Sky Blue',          header:'#0369a1', headerMid:'#0284c7', table:'#0284c7', pill:'#0369a1', pillBorder:'#0284c7', accent:'#38bdf8', objBg:'#f0f9ff', benefitBg:'#bae6fd', benefitText:'#0369a1' },
+  { id:'cerulean',  label:'Cerulean',          header:'#0e7490', headerMid:'#0891b2', table:'#0891b2', pill:'#0e7490', pillBorder:'#0891b2', accent:'#22d3ee', objBg:'#ecfeff', benefitBg:'#a5f3fc', benefitText:'#0e7490' },
+  { id:'slate',     label:'Slate',             header:'#334155', headerMid:'#475569', table:'#475569', pill:'#334155', pillBorder:'#475569', accent:'#64748b', objBg:'#f8fafc', benefitBg:'#e2e8f0', benefitText:'#334155' },
+  // Autres couleurs
+  { id:'emerald',   label:'Emerald',           header:'#065f46', headerMid:'#047857', table:'#059669', pill:'#047857', pillBorder:'#059669', accent:'#10b981', objBg:'#ecfdf5', benefitBg:'#a7f3d0', benefitText:'#065f46' },
+  { id:'violet',    label:'Violet',            header:'#4c1d95', headerMid:'#5b21b6', table:'#6d28d9', pill:'#5b21b6', pillBorder:'#6d28d9', accent:'#7c3aed', objBg:'#f5f3ff', benefitBg:'#ddd6fe', benefitText:'#5b21b6' },
+  { id:'rose',      label:'Rose',              header:'#881337', headerMid:'#9f1239', table:'#be123c', pill:'#9f1239', pillBorder:'#be123c', accent:'#f43f5e', objBg:'#fff1f2', benefitBg:'#fecdd3', benefitText:'#9f1239' },
+];
+
+let currentTheme = THEMES[0];
+
+function renderThemeSwatches() {
+  const container = document.getElementById('theme-swatches');
+  container.innerHTML = '';
+  THEMES.forEach(t => {
+    const sw = document.createElement('div');
+    sw.className = 'theme-swatch' + (t.id === currentTheme.id ? ' active' : '');
+    sw.style.background = t.header;
+    sw.title = t.label;
+    sw.addEventListener('click', () => {
+      currentTheme = t;
+      document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      if (lastEmailHtml) generate();
+    });
+    container.appendChild(sw);
+  });
+}
+
+const RELEASE_OPTIONS = ['1/04/26 (16 Apr)','April (16 Apr)','21/05/26 (21 May)','May (21 May)','June 26','July 26',"Q2 26'","Q3 26'",'TBD'];
+
+const DEFAULT_EPICS = [];
+
+let epics = JSON.parse(JSON.stringify(DEFAULT_EPICS));
+let dragSrc = null;
+let lastEmailHtml = '';
+let blEnabled = false;
+
+function toggleBusinessLine() {
+  blEnabled = document.getElementById('toggle-bl').checked;
+  renderEpics();
+  if (lastEmailHtml) generate();
+}
+
+const SIMON_DATA = {
+  name: 'Simon Goffin',
+  title: 'Product Owner CLM PB & DPnxt Onboarding · PB Digital',
+  phone: '+32 2 662 86 64',
+  mobile: '+32 479 48 76 08',
+  email: 's.goffin@degroofpetercam.com',
+  footer: 'Bank | Banque Degroof Petercam nv | sa\nRue de l\u2019Industrie 44 Nijverheidsstraat | 1040 Brussels\nBTW | TVA BE 0403 212 172  \u00b7  RPR Brussel | RPM Bruxelles \u2013 FSMA 040460 A'
+};
+
+function toggleSimon() {
+  const on = document.getElementById('toggle-sg').checked;
+  const fields = document.getElementById('sig-fields');
+  if (on) {
+    document.getElementById('sig-name').value = SIMON_DATA.name;
+    document.getElementById('sig-title').value = SIMON_DATA.title;
+    document.getElementById('sig-phone').value = SIMON_DATA.phone;
+    document.getElementById('sig-mobile').value = SIMON_DATA.mobile;
+    document.getElementById('sig-email').value = SIMON_DATA.email;
+    document.getElementById('footer-text').value = SIMON_DATA.footer;
+    fields.style.opacity = '0.5';
+    fields.style.pointerEvents = 'none';
+  } else {
+    document.getElementById('sig-name').value = '';
+    document.getElementById('sig-title').value = '';
+    document.getElementById('sig-phone').value = '';
+    document.getElementById('sig-mobile').value = '';
+    document.getElementById('sig-email').value = '';
+    document.getElementById('footer-text').value = '';
+    fields.style.opacity = '1';
+    fields.style.pointerEvents = 'auto';
+  }
+  if (lastEmailHtml) generate();
+}
+
+function relClass(r) {
+  const l = r.toLowerCase();
+  if (l.includes('apr') || l.includes('1/04')) return 'rel-apr';
+  if (l.includes('may') || l.includes('21/05')) return 'rel-may';
+  return 'rel-other';
+}
+function relLabel(r) {
+  const l = r.toLowerCase();
+  if (l.includes('1/04') || l.includes('apr')) return '📅 16 Apr';
+  if (l.includes('21/05') || l.includes('may')) return '📅 21 May';
+  return '📅 ' + r;
+}
+function matchRelease(raw) {
+  if (!raw) return 'TBD';
+  const s = String(raw).toLowerCase().trim();
+  if (s.includes('apr') || s.includes('04/')) return '1/04/26 (16 Apr)';
+  if (s.includes('may') || s.includes('05/')) return 'May (21 May)';
+  if (s.includes('jun')) return 'June 26';
+  if (s.includes('jul')) return 'July 26';
+  if (s.includes('q2')) return "Q2 26'";
+  if (s.includes('q3')) return "Q3 26'";
+  const d = new Date(raw);
+  if (!isNaN(d)) {
+    const m = d.getMonth();
+    if (m === 3) return '1/04/26 (16 Apr)';
+    if (m === 4) return 'May (21 May)';
+    if (m === 5) return 'June 26';
+    if (m === 6) return 'July 26';
+  }
+  return 'TBD';
+}
+
+function parseDescriptionField(raw) {
+  // Parse Jira Description field to extract description and benefits
+  const s = String(raw || '').replace(/\{?\*\}?/g, '').replace(/\+/g, '').replace(/\xa0/g, ' ').trim();
+  if (!s) return { desc: '', benefits: [] };
+
+  // Try to split on Benefits / Business Benefits section
+  const benefitSplit = s.split(/\n\s*(?:benefits?|business\s+benefits?)\s*:?\s*/i);
+  let descPart = benefitSplit[0] || '';
+  let benefitsPart = benefitSplit.slice(1).join('\n') || '';
+
+  // Clean description: remove leading "Description:" / "Request:" label
+  descPart = descPart.replace(/^\s*(?:descriptions?|request)\s*:?\s*/i, '').trim();
+  // Remove markdown bullets and clean up
+  const descLines = descPart.split(/\n/).map(l => l.replace(/^[\s\-\*•·]+/, '').trim()).filter(Boolean);
+  const desc = descLines.join(' ; ');
+
+  // Parse benefits: split by bullets, newlines, numbered items
+  const benefitLines = benefitsPart.split(/\n/).map(l => l.replace(/^[\s\-\*•·]+/, '').trim()).filter(Boolean);
+  // Filter out empty or label-only lines
+  const benefits = benefitLines.filter(b => b.length > 2 && !/^benefits?\s*:?\s*$/i.test(b));
+
+  return { desc, benefits };
+}
+
+function parseExcel(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+    const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+
+    // Get raw data as array-of-arrays to find the real header row
+    const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    let headerIdx = 0;
+    for (let i = 0; i < Math.min(raw.length, 15); i++) {
+      const r = raw[i];
+      if (!r || !r.length) continue;
+      const vals = r.map(v => String(v || '').toLowerCase().trim());
+      if (vals.includes('key') || vals.includes('summary') || vals.includes('issue type')) {
+        headerIdx = i; break;
+      }
+    }
+
+    // Build rows manually: use headerIdx row as keys, subsequent rows as data
+    const headers = raw[headerIdx].map(h => String(h || '').trim());
+    const rows = [];
+    for (let i = headerIdx + 1; i < raw.length; i++) {
+      const r = raw[i];
+      if (!r || !r.length) continue;
+      // Skip fully empty rows
+      if (r.every(v => !v && v !== 0)) continue;
+      const obj = {};
+      headers.forEach((h, ci) => { obj[h] = (r[ci] != null ? r[ci] : ''); });
+      rows.push(obj);
+    }
+    if (!rows.length) return;
+
+    // Build column map from headers (flexible matching)
+    const colMap = {};
+    Object.keys(rows[0]).forEach(k => {
+      const kl = k.toLowerCase().trim();
+      // Jira format — order matters: more specific matches first
+      if (kl === 'key') colMap.ticket = k;
+      else if (kl.includes('jira') || kl.includes('ticket')) colMap.ticket = colMap.ticket || k;
+      if (kl === 'summary') colMap.name = k;
+      else if (kl.includes('epic name') || (kl.includes('name') && !kl.includes('assign') && !kl.includes('epic link'))) colMap.name = colMap.name || k;
+      if (kl === 'description') colMap.desc = k;
+      if (kl.includes('component')) colMap.component = k;
+      if (kl.includes('fix version') || kl === 'release') colMap.release = k;
+      // Legacy format (separate benefits column)
+      if (kl.includes('benefit') && !kl.includes('desc')) colMap.benefits = k;
+      // Legacy business line column
+      if (kl.includes('business') || kl.includes('department') || kl.includes('dept')) colMap.businessLine = k;
+    });
+
+    const imported = rows
+      .filter(r => String(r[colMap.name] || '').trim())
+      .map(r => {
+        // Parse description field for desc + benefits
+        const rawDesc = String(r[colMap.desc] || '');
+        const parsed = parseDescriptionField(rawDesc);
+
+        // If there's a separate benefits column (legacy format), use it instead
+        if (colMap.benefits && String(r[colMap.benefits] || '').trim()) {
+          parsed.benefits = String(r[colMap.benefits]).split(/[,;|]/).map(b => b.trim()).filter(Boolean);
+        }
+
+        // Business lines from Component/s column, filtering out "CLM Platform"
+        let bl = [];
+        if (colMap.component) {
+          bl = String(r[colMap.component] || '').split(/[,;|]/).map(b => b.trim()).filter(b => b && b.toLowerCase() !== 'clm platform');
+        } else if (colMap.businessLine) {
+          bl = String(r[colMap.businessLine] || '').split(/[,;|]/).map(b => b.trim()).filter(Boolean);
+        }
+
+        return {
+          name: String(r[colMap.name] || '').trim(),
+          ticket: String(r[colMap.ticket] || '').trim(),
+          desc: parsed.desc,
+          benefits: parsed.benefits,
+          release: matchRelease(r[colMap.release] || ''),
+          businessLines: bl
+        };
+      });
+
+    if (imported.length) {
+      // Auto-enable business line toggle if any epic has business lines
+      const hasBL = imported.some(ep => ep.businessLines.length > 0);
+      if (hasBL) {
+        const toggle = document.getElementById('toggle-bl');
+        toggle.checked = true;
+        blEnabled = true;
+      }
+      epics = imported; renderEpics();
+      const st = document.getElementById('drop-status');
+      st.style.display = 'block';
+      st.textContent = `✓ ${imported.length} epic${imported.length>1?'s':''} importé${imported.length>1?'s':''}`;
+      // Auto-generate the email preview
+      generate();
+    }
+    } catch(err) { console.error('Excel parse error:', err); alert('Erreur import: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+const dz = document.getElementById('drop-zone');
+const fi = document.getElementById('file-input');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); if (e.dataTransfer.files[0]) parseExcel(e.dataTransfer.files[0]); });
+fi.addEventListener('change', e => { if (e.target.files[0]) parseExcel(e.target.files[0]); });
+
+function renderEpics() {
+  const list = document.getElementById('epics-list');
+  list.innerHTML = '';
+  epics.forEach((ep, i) => {
+    const card = document.createElement('div');
+    card.className = 'epic-card'; card.draggable = true; card.dataset.idx = i;
+    const optsHtml = RELEASE_OPTIONS.map(o => `<option value="${o}"${ep.release===o?' selected':''}>${o}</option>`).join('');
+    card.innerHTML = `
+      <div class="epic-head">
+        <span class="drag-dots">⠿</span>
+        <div class="epic-idx">${i+1}</div>
+        <input type="text" class="epic-name-input" value="${(ep.name||'').replace(/"/g,'&quot;')}" />
+        <button class="del-btn">×</button>
+      </div>
+      <div class="epic-body">
+        <div class="epic-row">
+          <div class="epic-field" style="max-width:110px;"><label>Ticket</label><input type="text" class="epic-ticket" value="${ep.ticket||''}" /></div>
+          <div class="epic-field"><label>Description <span style="font-weight:400;color:var(--text-faint)">(sépare les points par " ; ")</span></label><textarea class="epic-desc">${(ep.desc||'').replace(/</g,'&lt;')}</textarea></div>
+        </div>
+        <div class="epic-row" style="align-items:flex-end;">
+          <div class="epic-field">
+            <label>Bénéfices <span style="font-weight:400;color:var(--text-faint)">(Entrée pour ajouter)</span></label>
+            <div style="display:flex;gap:4px;align-items:stretch;">
+              <div class="tags-wrap" id="tw-${i}" style="flex:1;">
+                ${ep.benefits.map((b,bi)=>`<span class="tag">${b}<span class="tag-x" data-i="${i}" data-bi="${bi}">×</span></span>`).join('')}
+                <input class="tag-input" placeholder="Ajouter..." data-idx="${i}" />
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+                <button class="obj-arrow arrow-insert" data-arrow="↑" data-idx="${i}" title="Insérer ↑" style="flex:1;">↑</button>
+                <button class="obj-arrow arrow-insert" data-arrow="↓" data-idx="${i}" title="Insérer ↓" style="flex:1;">↓</button>
+              </div>
+            </div>
+          </div>
+          <div class="epic-field" style="max-width:155px;">
+            <label>Release</label>
+            <select class="epic-release">${optsHtml}</select>
+            <span class="release-preview ${relClass(ep.release)}">${relLabel(ep.release)}</span>
+          </div>
+        </div>
+        ${blEnabled ? `<div class="epic-row bl-row">
+          <div class="epic-field">
+            <label>Business Line <span style="font-weight:400;color:var(--text-faint)">(Entrée pour ajouter)</span></label>
+            <div class="tags-wrap" id="bl-${i}">
+              ${(ep.businessLines||[]).map((b,bi)=>`<span class="tag" style="background:#fef3c7;color:#92400e;">${b}<span class="tag-x bl-tag-x" data-i="${i}" data-bi="${bi}">×</span></span>`).join('')}
+              <input class="tag-input bl-input" placeholder="Ajouter département..." data-idx="${i}" />
+            </div>
+          </div>
+        </div>` : ''}
+      </div>`;
+
+    card.querySelector('.del-btn').addEventListener('click', () => { epics.splice(i,1); renderEpics(); });
+    card.querySelector('.epic-name-input').addEventListener('input', e => { epics[i].name = e.target.value; });
+    card.querySelector('.epic-ticket').addEventListener('input', e => { epics[i].ticket = e.target.value; });
+    card.querySelector('.epic-desc').addEventListener('input', e => { epics[i].desc = e.target.value; });
+    card.querySelector('.epic-release').addEventListener('change', e => {
+      epics[i].release = e.target.value;
+      const p = card.querySelector('.release-preview');
+      p.className = `release-preview ${relClass(e.target.value)}`;
+      p.textContent = relLabel(e.target.value);
+    });
+    card.querySelector(`#tw-${i} .tag-input`).addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ',') && e.target.value.trim()) {
+        e.preventDefault(); epics[i].benefits.push(e.target.value.trim()); e.target.value = ''; renderEpics();
+        setTimeout(() => document.querySelector(`#tw-${i} .tag-input`)?.focus(), 0);
+      }
+      if (e.key === 'Backspace' && !e.target.value && epics[i].benefits.length) {
+        epics[i].benefits.pop(); renderEpics();
+        setTimeout(() => document.querySelector(`#tw-${i} .tag-input`)?.focus(), 0);
+      }
+    });
+    card.querySelectorAll('.tag-x:not(.bl-tag-x)').forEach(x => x.addEventListener('click', () => { epics[i].benefits.splice(+x.dataset.bi,1); renderEpics(); }));
+    // Arrow insert buttons for benefits
+    card.querySelectorAll('.arrow-insert').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const inp = card.querySelector(`#tw-${i} .tag-input`);
+        const arrow = btn.dataset.arrow;
+        const pos = inp.selectionStart || inp.value.length;
+        inp.value = inp.value.slice(0, pos) + arrow + ' ' + inp.value.slice(pos);
+        inp.focus();
+        inp.selectionStart = inp.selectionEnd = pos + 2;
+      });
+    });
+    // Business Line tag listeners
+    if (blEnabled) {
+      const blInput = card.querySelector('.bl-input');
+      if (blInput) {
+        blInput.addEventListener('keydown', e => {
+          if ((e.key === 'Enter' || e.key === ',') && e.target.value.trim()) {
+            e.preventDefault(); if (!epics[i].businessLines) epics[i].businessLines = []; epics[i].businessLines.push(e.target.value.trim()); e.target.value = ''; renderEpics();
+            setTimeout(() => document.querySelector(`#bl-${i} .bl-input`)?.focus(), 0);
+          }
+          if (e.key === 'Backspace' && !e.target.value && (epics[i].businessLines||[]).length) {
+            epics[i].businessLines.pop(); renderEpics();
+            setTimeout(() => document.querySelector(`#bl-${i} .bl-input`)?.focus(), 0);
+          }
+        });
+      }
+      card.querySelectorAll('.bl-tag-x').forEach(x => x.addEventListener('click', () => { epics[i].businessLines.splice(+x.dataset.bi,1); renderEpics(); }));
+    }
+    card.addEventListener('dragstart', e => { dragSrc = i; card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      e.preventDefault(); card.classList.remove('drag-over');
+      if (dragSrc !== null && dragSrc !== i) { const m = epics.splice(dragSrc,1)[0]; epics.splice(i,0,m); renderEpics(); }
+    });
+    list.appendChild(card);
+  });
+  // Re-attach live listeners whenever epics are re-rendered
+  attachLiveListeners();
+}
+
+function removeObj(btn) { btn.closest('.obj-item').remove(); updateObjNums(); liveRefresh(); }
+function updateObjNums() { document.querySelectorAll('#objectives-list .obj-counter').forEach((el,i) => el.textContent = i+1); }
+function moveObj(btn, dir) {
+  const item = btn.closest('.obj-item');
+  const list = item.parentNode;
+  if (dir === -1 && item.previousElementSibling) {
+    list.insertBefore(item, item.previousElementSibling);
+  } else if (dir === 1 && item.nextElementSibling) {
+    list.insertBefore(item.nextElementSibling, item);
+  }
+  updateObjNums();
+  liveRefresh();
+}
+function addObj() {
+  const list = document.getElementById('objectives-list');
+  const item = document.createElement('div');
+  item.className = 'obj-item';
+  item.innerHTML = `<div class="obj-num obj-counter">${list.children.length+1}</div><div class="obj-arrows"><button class="obj-arrow" onclick="moveObj(this,-1)" title="Monter">↑</button><button class="obj-arrow" onclick="moveObj(this,1)" title="Descendre">↓</button></div><input type="text" placeholder="Nouvel objectif..." /><button class="del-btn" onclick="removeObj(this)">×</button>`;
+  list.appendChild(item);
+  const inp = item.querySelector('input');
+  inp.addEventListener('input', liveRefresh);
+  inp.focus();
+}
+function addEpic() {
+  epics.push({ name:'Nouvel Epic', ticket:'CRM-XXXX', desc:'Description...', benefits:['Bénéfice'], release:'May (21 May)', businessLines:[] });
+  renderEpics();
+  setTimeout(() => { const inputs = document.querySelectorAll('.epic-name-input'); inputs[inputs.length-1]?.focus(); inputs[inputs.length-1]?.select(); }, 50);
+}
+
+function syncEpics() {
+  document.querySelectorAll('.epic-name-input').forEach((el,i) => { if(epics[i]) epics[i].name = el.value; });
+  document.querySelectorAll('.epic-ticket').forEach((el,i) => { if(epics[i]) epics[i].ticket = el.value; });
+  document.querySelectorAll('.epic-desc').forEach((el,i) => { if(epics[i]) epics[i].desc = el.value; });
+  epics.forEach((ep,i) => {
+    const tags = document.querySelectorAll(`#tw-${i} .tag`);
+    if (tags.length) ep.benefits = [...tags].map(t => t.textContent.replace('×','').trim());
+    const blTags = document.querySelectorAll(`#bl-${i} .tag`);
+    if (blTags.length) ep.businessLines = [...blTags].map(t => t.textContent.replace('×','').trim());
+    if (!ep.businessLines) ep.businessLines = [];
+  });
+}
+
+// ── HTML EMAIL BUILDER ──
+function buildEmailHtml() {
+  syncEpics();
+  const piC      = document.getElementById('pi-current').value.trim();
+  const piN      = document.getElementById('pi-next').value.trim();
+  const dl       = document.getElementById('deadline').value.trim();
+  const intro    = document.getElementById('intro-text').value.trim();
+  const backlog  = document.getElementById('backlog-text').value.trim();
+  const titleTxt  = document.getElementById('email-title').value.trim() || 'Scope of Work';
+  const subTxt    = document.getElementById('email-subtitle').value.trim();
+  const sigName   = document.getElementById('sig-name').value.trim() || 'Your Name';
+  const sigTitle  = document.getElementById('sig-title').value.trim() || 'Product Owner';
+  const sigPhone  = document.getElementById('sig-phone').value.trim();
+  const sigMobile = document.getElementById('sig-mobile').value.trim();
+  const sigEmail  = document.getElementById('sig-email').value.trim();
+  const footerTxt = document.getElementById('footer-text').value.trim();
+  const objs = [...document.querySelectorAll('#objectives-list input[type="text"]')].map(el => el.value.trim()).filter(Boolean);
+
+  // Theme shorthand
+  const T = currentTheme;
+
+  // Safe HTML escape (leave existing &amp; etc. intact)
+  const esc = s => String(s).replace(/&(?!(amp|lt|gt|quot|#\d+|#x[\da-f]+);)/gi,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Objectives (table-based circles, Outlook-safe)
+  const objsHtml = objs.map((o, i) => `
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+    <tr>
+      <td width="28" valign="top">
+        <table cellpadding="0" cellspacing="0" border="0"><tr>
+          <td width="24" height="24" bgcolor="${T.header}" align="center" valign="middle"
+              style="background-color:${T.header};border-radius:12px;mso-padding-alt:0;width:24px;height:24px;text-align:center;">
+            <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12px;font-weight:bold;color:#ffffff;line-height:24px;">${i+1}</span>
+          </td>
+        </tr></table>
+      </td>
+      <td style="padding-left:8px;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;color:#1f2937;line-height:1.5;">${esc(o)}</td>
+    </tr>
+  </table>`).join('');
+
+  // Epic rows
+  const epicRows = epics.map((ep, i) => {
+    const bg = i % 2 === 0 ? '#ffffff' : '#f9fafb';
+
+    // Description: split by " ; " into bullet points
+    const parts = ep.desc.split(/\s*;\s*/).map(s => s.trim()).filter(Boolean);
+    const descHtml = parts.map(d =>
+      `<p style="margin:0 0 4px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12px;font-style:italic;color:#4b5563;">&#8226; ${esc(d)}</p>`
+    ).join('');
+
+    // Benefits pills (theme-colored)
+    const benefitsHtml = ep.benefits.map(b => `
+  <table cellpadding="2" cellspacing="0" border="0" style="margin-bottom:4px;">
+    <tr><td bgcolor="${T.benefitBg}" style="background-color:${T.benefitBg};padding:2px 8px;border-radius:8px;">
+      <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;color:${T.benefitText};">${esc(b)}</span>
+    </td></tr>
+  </table>`).join('');
+
+    // Business Line pills
+    const blHtml = (ep.businessLines||[]).map(b => `
+  <table cellpadding="2" cellspacing="0" border="0" style="margin-bottom:4px;">
+    <tr><td bgcolor="#fef3c7" style="background-color:#fef3c7;padding:2px 8px;border-radius:8px;">
+      <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;color:#92400e;">${esc(b)}</span>
+    </td></tr>
+  </table>`).join('');
+
+    // Release badge
+    const rel = ep.release.toLowerCase();
+    let relBg = '#f1f5f9', relColor = '#475569', relText = '&#128197; ' + esc(ep.release);
+    if (rel.includes('apr') || rel.includes('1/04')) { relBg = '#fae8ff'; relColor = '#86198f'; relText = '&#128197; 16 Apr'; }
+    else if (rel.includes('may') || rel.includes('21/05')) { relBg = '#fff7ed'; relColor = '#c2410c'; relText = '&#128197; 21 May'; }
+
+    return `
+  <tr bgcolor="${bg}" style="background-color:${bg};border-bottom:1px solid #f3f4f6;">
+    <td align="center" valign="top" style="padding:10px 8px;border-bottom:1px solid #f3f4f6;">
+      <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:15px;font-weight:bold;color:#1e3a6e;">${i+1}</span>
+    </td>
+    <td valign="top" style="padding:10px;border-bottom:1px solid #f3f4f6;">
+      <p style="margin:0 0 2px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;font-weight:bold;color:#1e3a6e;">${esc(ep.name)}</p>
+      <p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-style:italic;color:#6b7280;">${esc(ep.ticket)}</p>
+    </td>
+    <td valign="top" style="padding:10px;border-bottom:1px solid #f3f4f6;">${descHtml}</td>
+    <td valign="top" style="padding:10px;border-bottom:1px solid #f3f4f6;">${benefitsHtml}</td>
+    ${blEnabled ? `<td valign="top" style="padding:10px;border-bottom:1px solid #f3f4f6;">${blHtml}</td>` : ''}
+    <td valign="top" style="padding:10px;border-bottom:1px solid #f3f4f6;">
+      <table cellpadding="0" cellspacing="0" border="0"><tr>
+        <td bgcolor="${relBg}" style="background-color:${relBg};padding:5px 10px;border-radius:20px;">
+          <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:${relColor};">${relText}</span>
+        </td>
+      </tr></table>
+    </td>
+  </tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+<style>body,table,td{font-family:'Segoe UI',Calibri,Arial,sans-serif;}body{margin:0;padding:0;background-color:#f0f4f8;}img{border:0;outline:none;text-decoration:none;}table{border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;}</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f0f4f8;">
+<!--[if mso]><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f0f4f8"><![endif]-->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0f4f8;">
+<tr><td align="center" style="padding:24px 16px;">
+
+<table width="660" cellpadding="0" cellspacing="0" border="0" style="max-width:660px;background-color:#ffffff;">
+
+
+
+  <!-- ACCENT BAR -->
+  <tr><td height="4" bgcolor="${T.accent}" style="background-color:${T.accent};font-size:0;line-height:0;">&nbsp;</td></tr>
+
+  <!-- HEADER -->
+  <!--[if mso]><tr><td bgcolor="${T.header}"><v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:660px;height:110px;"><v:fill type="solid" color="${T.header}"/><v:textbox inset="30px,28px,30px,28px"><![endif]-->
+  <tr>
+    <td bgcolor="${T.header}" style="background-color:${T.header};padding:28px 32px 24px 32px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td>
+          <table cellpadding="0" cellspacing="0" border="0"><tr>
+            <td bgcolor="${T.pill}" style="background-color:${T.pill};border:1px solid ${T.pillBorder};padding:4px 14px;border-radius:20px;">
+              <span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:10px;font-weight:bold;color:#93c5fd;letter-spacing:1px;text-transform:uppercase;">PI PLANNING &middot; ${esc(piC)}&ndash;${esc(piN)}</span>
+            </td>
+          </tr></table>
+        </td></tr>
+        <tr><td height="12" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td><p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:24px;font-weight:bold;color:#ffffff;line-height:1.2;">${esc(titleTxt)} &mdash; Scope of Work</p></td></tr>
+        <tr><td height="6" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td><p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;color:#93c5fd;">${esc(subTxt)}</p></td></tr>
+      </table>
+    </td>
+  </tr>
+  <!--[if mso]></v:textbox></v:rect></td></tr><![endif]-->
+
+  <!-- BODY -->
+  <tr><td style="padding:32px 32px 0 32px;">
+
+    <p style="margin:0 0 12px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:16px;font-weight:bold;color:${T.header};">Dear Colleagues,</p>
+    <p style="margin:0 0 28px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;color:#374151;line-height:1.6;">${esc(intro)}</p>
+
+    <!-- OBJECTIVES -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+      <tr>
+        <td width="4" bgcolor="${T.header}" style="background-color:${T.header};border-radius:4px 0 0 4px;">&nbsp;</td>
+        <td bgcolor="${T.objBg}" style="background-color:${T.objBg};padding:20px 22px;border-radius:0 8px 8px 0;">
+          <p style="margin:0 0 8px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;font-weight:bold;color:${T.header};">&#127919; PI ${esc(piC)} OBJECTIVES &mdash; ${esc(titleTxt)}</p>
+          <p style="margin:0 0 14px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12px;font-style:italic;color:#4b5563;">Objectives defined from backlog review sessions, aligned with product strategy &amp; roadmap.</p>
+          ${objsHtml}
+        </td>
+      </tr>
+    </table>
+
+    <!-- FEATURES LABEL -->
+    <p style="margin:0 0 14px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#6b7280;">PI ${esc(piN)} &mdash; KEY FEATURES</p>
+
+    <!-- FEATURES TABLE -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;border:1px solid #e5e7eb;">
+      <tr>
+        <td width="36" bgcolor="${T.table}" align="center" style="background-color:${T.table};padding:10px 8px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">#</span></td>
+        <td width="130" bgcolor="${T.table}" style="background-color:${T.table};padding:10px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">EPIC NAME</span></td>
+        <td bgcolor="${T.table}" style="background-color:${T.table};padding:10px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">DESCRIPTION</span></td>
+        <td width="120" bgcolor="${T.table}" style="background-color:${T.table};padding:10px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">BENEFITS</span></td>
+        ${blEnabled ? `<td width="110" bgcolor="${T.table}" style="background-color:${T.table};padding:10px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">BUSINESS LINE</span></td>` : ''}
+        <td width="90" bgcolor="${T.table}" style="background-color:${T.table};padding:10px;"><span style="font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;">RELEASE</span></td>
+      </tr>
+      ${epicRows}
+    </table>
+
+    <!-- NEXT PI -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+      <tr>
+        <td bgcolor="${T.header}" style="background-color:${T.header};padding:20px 24px;border-radius:8px;">
+          <p style="margin:0 0 8px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;font-weight:bold;color:#ffffff;">&#128197; Next PI &mdash; ${esc(piN)}</p>
+          <p style="margin:0 0 6px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;color:#bfdbfe;">${esc(backlog)}</p>
+          <p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;font-weight:bold;color:#fca5a5;">&#9888; Prioritization requests for ${esc(piN)} cannot be accepted after ${esc(dl)}.</p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 16px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;color:#374151;">Best regards,</p>
+
+  </td></tr>
+
+  <!-- DIVIDER -->
+  <tr><td style="padding:0 32px;"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#e5e7eb" style="background-color:#e5e7eb;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
+
+  <!-- SIGNATURE -->
+  <tr><td style="padding:20px 32px 24px 32px;">
+    <p style="margin:0 0 2px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:15px;font-weight:bold;color:${T.table};">${esc(sigName)}</p>
+    <p style="margin:0 0 8px 0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:13px;color:#4b5563;">${esc(sigTitle)}</p>
+    <p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:12px;color:#0369a1;">${[sigPhone ? '&#128222; ' + esc(sigPhone) : '', sigMobile ? '&#128241; ' + esc(sigMobile) : '', sigEmail ? '<a href="mailto:' + esc(sigEmail) + '" style="color:#0369a1;text-decoration:none;">' + esc(sigEmail) + '</a>' : ''].filter(Boolean).join(' &nbsp;&middot;&nbsp; ')}</p>
+  </td></tr>
+
+  <!-- FOOTER -->
+  <tr><td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:16px 32px;border-top:1px solid #e5e7eb;">
+    <p style="margin:0;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:11px;color:#9ca3af;text-align:center;">${esc(footerTxt).replace(/\n/g,'<br>')}</p>
+  </td></tr>
+
+</table>
+
+</td></tr></table>
+<!--[if mso]></td></tr></table><![endif]-->
+</body>
+</html>`;
+}
+
+// ── LIVE PREVIEW ──
+let _liveTimer = null;
+function liveRefresh() {
+  if (!lastEmailHtml) return;
+  clearTimeout(_liveTimer);
+  _liveTimer = setTimeout(() => generate(), 120);
+}
+
+function attachLiveListeners() {
+  // All text inputs, selects, textareas in the left panel
+  document.querySelectorAll('.left-panel input, .left-panel select, .left-panel textarea').forEach(el => {
+    el.addEventListener('input', liveRefresh);
+    el.addEventListener('change', liveRefresh);
+  });
+}
+
+// ── INJECT INTO IFRAME (preserves scroll position) ──
+let _previewReady = false;
+function injectPreview(html) {
+  const frame = document.getElementById('preview-frame');
+  frame.style.display = 'block';
+  document.getElementById('preview-empty').style.display = 'none';
+  if (!_previewReady) {
+    frame.srcdoc = html;
+    frame.addEventListener('load', () => { _previewReady = true; }, { once: true });
+  } else {
+    try {
+      const win = frame.contentWindow;
+      const scrollY = win.scrollY || 0;
+      win.document.open(); win.document.write(html); win.document.close();
+      requestAnimationFrame(() => { try { win.scrollTo(0, scrollY); } catch(e) {} });
+    } catch(e) { frame.srcdoc = html; }
+  }
+}
+
+// ── GENERATE ──
+function generate() {
+  lastEmailHtml = buildEmailHtml();
+  injectPreview(lastEmailHtml);
+
+  // Enable action buttons
+  document.getElementById('copy-btn').disabled = false;
+  document.getElementById('eml-btn').disabled = false;
+
+  // Flash status pill only on manual trigger (not debounced live refresh)
+  if (!_liveTimer) {
+    const pill = document.getElementById('status-pill');
+    pill.classList.add('visible');
+    setTimeout(() => pill.classList.remove('visible'), 2500);
+  }
+}
+
+// ── COPY HTML ──
+function copyEmailHtml() {
+  navigator.clipboard.writeText(lastEmailHtml).then(() => {
+    const btn = document.getElementById('copy-btn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copié !`;
+    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  });
+}
+
+// ── DOWNLOAD .EML ──
+function downloadEml() {
+  if (!lastEmailHtml) return;
+  const subj = document.getElementById('email-subject').value.trim();
+  const piC  = document.getElementById('pi-current').value.trim();
+  const piN  = document.getElementById('pi-next').value.trim();
+  const dl   = document.getElementById('deadline').value.trim();
+  const objs = [...document.querySelectorAll('#objectives-list input[type="text"]')].map(el => el.value.trim()).filter(Boolean);
+
+  // Plain-text fallback
+  const plain = [
+    'Dear Colleagues,', '',
+    document.getElementById('intro-text').value.trim(), '',
+    `PI ${piC} OBJECTIVES - CLM NXT (Onboarding)`,
+    ...objs.map((o,i) => `${i+1}. ${o}`), '',
+    `PI ${piN} — KEY FEATURES`,
+    ...epics.map((ep,i) => `${i+1}. ${ep.name} (${ep.ticket}) - Release: ${ep.release}${blEnabled && (ep.businessLines||[]).length ? ' - Business Line: ' + ep.businessLines.join(', ') : ''}`), '',
+    `NEXT PI (${piN})`,
+    document.getElementById('backlog-text').value.trim(),
+    `Prioritization requests cannot be accepted after ${dl}.`, '',
+    'Best regards,', 'Simon Goffin',
+    'Product Owner CLM PB & DPnxt Onboarding | PB Digital',
+    'T +32 2 662 86 64 | M +32 479 48 76 08', 's.goffin@degroofpetercam.com',
+  ].join('\n');
+
+  const boundary = '----=_AltPart_DPnxt_CLM_' + Date.now();
+  const date = new Date().toUTCString();
+
+  // base64 encode (handles UTF-8)
+  const toB64 = str => btoa(unescape(encodeURIComponent(str)));
+
+  const eml = [
+    'MIME-Version: 1.0',
+    `Date: ${date}`,
+    'From: Simon Goffin <s.goffin@degroofpetercam.com>',
+    'To: Colleagues <colleagues@degroofpetercam.com>',
+    `Subject: ${subj}`,
+    `Content-Type: multipart/alternative;`,
+    `\tboundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="utf-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    toB64(plain),
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset="utf-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    toB64(lastEmailHtml),
+    '',
+    `--${boundary}--`,
+  ].join('\r\n');
+
+  const blob = new Blob([eml], { type: 'message/rfc822' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = subj.replace(/[^a-zA-Z0-9_\-' ]/g,'_').replace(/\s+/g,'_') + '.eml';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// ── MOBILE TABS ──
+function switchTab(tab) {
+  const form = document.getElementById('panel-form');
+  const preview = document.getElementById('panel-preview');
+  const btns = document.querySelectorAll('#mobile-tabs button');
+  if (tab === 'form') {
+    form.classList.remove('hidden');
+    preview.classList.add('hidden');
+    btns[0].classList.add('active');
+    btns[1].classList.remove('active');
+  } else {
+    form.classList.add('hidden');
+    preview.classList.remove('hidden');
+    btns[1].classList.add('active');
+    btns[0].classList.remove('active');
+  }
+}
+
+renderThemeSwatches();
+renderEpics();
+attachLiveListeners();
+</script>
 </body>
 </html>
