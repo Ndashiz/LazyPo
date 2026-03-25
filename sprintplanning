@@ -3,459 +3,1012 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LazyPO — PO Toolkit</title>
-<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>LazyPO ✦ Sprint Planner Slide Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS@3.12.0/dist/pptxgen.bundle.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#002060;--navy-border:#0a3575;--bg:#0f172a;--card:#1e293b;--card-border:#334155;
+  --text:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b;--input-bg:#0f172a;
+  --blue:#3b82f6;--blue-light:#60a5fa;--blue-pale:#93c5fd;
+  --green:#10b981;--green-light:#34d399;--green-pale:#6ee7b7;
+  --amber:#f59e0b;--amber-light:#fbbf24;
+  --red:#ef4444;--red-light:#f87171;
+  --purple:#8b5cf6;--gray:#6b7280;
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-:root {
-  --bg:       #0c0c0c;
-  --sidebar:  #111111;
-  --surface:  #161616;
-  --surface2: #1c1c1c;
-  --border:   #222222;
-  --border2:  #2a2a2a;
-  --accent:   #3b82f6;
-  --accent2:  #60a5fa;
-  --glow:     rgba(59,130,246,0.15);
-  --text:     #f0f0f0;
-  --muted:    #6b6b6b;
-  --faint:    #2e2e2e;
-  --r:        10px;
-}
+/* ═══ HEADER ═══ */
+.header{display:flex;align-items:center;gap:20px;position:sticky;top:0;z-index:100;background:var(--navy);border-bottom:3px solid var(--navy-border);padding:14px 28px}
+.logo-block{display:flex;flex-direction:column;flex-shrink:0}
+.logo{font-family:'Permanent Marker',cursive;font-size:26px;color:#fff;text-shadow:3px 3px 0 rgba(59,130,246,.4),-1px -1px 0 rgba(255,255,255,.1);transform:rotate(-1.5deg);letter-spacing:1px;line-height:1;text-decoration:none;display:inline-block}
+.logo .star{color:var(--blue-light)}
+.subtitle{font-size:12px;color:var(--blue-pale);margin-top:3px;transform:rotate(-1.5deg)}
+.spacer{flex:1}
+.actions{display:flex;gap:8px;align-items:center}
+.status-pill{background:rgba(16,185,129,.15);color:var(--green-pale);font-size:13px;font-weight:500;padding:5px 14px;border-radius:20px;white-space:nowrap;opacity:0;transform:translateY(-4px);transition:opacity .3s,transform .3s;pointer-events:none}
+.status-pill.visible{opacity:1;transform:translateY(0);pointer-events:auto}
 
-html, body { height: 100%; overflow: hidden; }
+/* ═══ BUTTONS ═══ */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;border:none;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s,transform .1s;line-height:1;font-family:inherit}
+.btn:active{transform:scale(.97)}.btn svg{width:13px;height:13px;flex-shrink:0}
+.btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.25)}
+.btn-ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.4)}
+.btn-primary{background:var(--blue);color:#fff;border:1px solid transparent}
+.btn-primary:hover{background:#2563eb}
+.btn-danger{background:transparent;color:var(--red-light);border:1px solid rgba(248,113,113,.3)}
+.btn-danger:hover{background:rgba(248,113,113,.1)}
+.btn-sm{padding:5px 10px;font-size:12px}.btn-sm svg{width:11px;height:11px}
 
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  display: flex;
-}
+/* ═══ TABS ═══ */
+.tabs{display:flex;gap:2px;background:rgba(255,255,255,.05);border-radius:10px;padding:3px;margin-bottom:24px}
+.tab{flex:1;padding:10px 16px;border-radius:8px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-dim);transition:all .2s;border:none;background:transparent;font-family:inherit}
+.tab:hover{color:var(--text-muted)}
+.tab.active{background:var(--card);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.tab-panel{display:none}.tab-panel.active{display:block}
 
-/* ════════════════════════════════
-   SIDEBAR
-════════════════════════════════ */
-.sidebar {
-  width: 260px;
-  min-width: 260px;
-  height: 100vh;
-  background: var(--sidebar);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: 28px 16px 24px;
-  position: relative;
-  z-index: 10;
-}
+/* ═══ LAYOUT ═══ */
+.main{max-width:1400px;margin:0 auto;padding:24px 28px 60px}
+.section{margin-bottom:28px}
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.section-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.section-icon svg{width:18px;height:18px}
+.section-icon.blue{background:rgba(59,130,246,.15);color:var(--blue-light)}
+.section-icon.amber{background:rgba(245,158,11,.15);color:var(--amber-light)}
+.section-icon.green{background:rgba(16,185,129,.15);color:var(--green-light)}
+.section-icon.purple{background:rgba(139,92,246,.15);color:var(--purple)}
+.section-title{font-size:18px;font-weight:700;color:#f1f5f9}
+.section-subtitle{font-size:13px;color:var(--text-dim);margin-top:2px}
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:24px}
 
-/* subtle vertical glow line on right edge */
-.sidebar::after {
-  content: '';
-  position: absolute; top: 15%; right: -1px; bottom: 15%;
-  width: 1px;
-  background: linear-gradient(to bottom, transparent, rgba(59,130,246,0.4), transparent);
-}
+/* ═══ DROP ZONE ═══ */
+.dropzone{border:2px dashed var(--card-border);border-radius:12px;padding:48px 24px;text-align:center;cursor:pointer;transition:all .3s}
+.dropzone:hover,.dropzone.dragover{border-color:var(--blue);background:rgba(59,130,246,.05)}
+.dropzone.loaded{border-color:var(--green);border-style:solid;background:rgba(16,185,129,.05)}
+.dropzone input[type=file]{display:none}
+.loaded-info{display:flex;align-items:center;gap:12px;justify-content:center}
+.loaded-info .count{font-size:28px;font-weight:700;color:var(--green-light)}
 
-.logo-wrap {
-  padding: 0 8px;
-  margin-bottom: 36px;
-}
-.logo-graffiti {
-  font-family: 'Permanent Marker', cursive;
-  font-size: 28px;
-  color: #fff;
-  letter-spacing: 1px;
-  line-height: 1;
-  text-shadow: 2px 2px 0 rgba(59,130,246,0.5), -1px -1px 0 rgba(255,255,255,0.06);
-  transform: rotate(-1.5deg);
-  display: inline-block;
-}
-.logo-graffiti span { color: #60a5fa; }
+/* ═══ PI ROW ═══ */
+.pi-row{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.field input,.field select{background:var(--input-bg);border:1px solid var(--card-border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--blue)}
+.pi-summary{display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;font-size:14px;color:var(--blue-pale);white-space:nowrap}
+.pi-summary strong{color:var(--blue-light);font-size:20px;font-weight:700}
 
-/* nav section label */
-.nav-section-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding: 0 12px;
-  margin-bottom: 8px;
-  margin-top: 4px;
-}
+/* ═══ SPRINT GRID ═══ */
+.sprint-grid{display:grid;gap:10px}
+.sprint-card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px;transition:border-color .2s;animation:slideIn .2s ease}
+.sprint-card:hover{border-color:#475569}
+.sprint-card.has-release{border-color:rgba(16,185,129,.4)}
+.sprint-num{width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.12);color:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
+.sprint-card.has-release .sprint-num{background:rgba(16,185,129,.15);color:var(--green-light)}
+.sprint-info{flex:1;min-width:0}
+.sprint-name{font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:3px}
+.sprint-dates{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sprint-dates input[type=date]{background:var(--input-bg);border:1px solid var(--card-border);border-radius:6px;padding:4px 8px;color:#cbd5e1;font-size:12px;font-family:inherit;outline:none;width:135px}
+.sprint-dates input:focus{border-color:var(--blue)}
+.sprint-dates .sep{color:#475569;font-size:11px}
+.release-row{display:none;align-items:center;gap:6px;margin-top:4px}
+.release-row.vis{display:flex}
+.release-row label{font-size:11px;color:var(--green-light);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.release-row input[type=date]{background:var(--input-bg);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:3px 8px;color:var(--green-light);font-size:12px;font-family:inherit;outline:none;width:135px}
+.sprint-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.chip{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(59,130,246,.12);color:var(--blue-light);border:1px solid rgba(59,130,246,.2)}
+.sprint-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.rel-toggle{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--card-border);background:transparent;color:var(--text-dim);transition:all .2s;font-family:inherit}
+.rel-toggle:hover{border-color:#475569;color:var(--text-muted)}
+.rel-toggle.active{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.4);color:var(--green-light)}
+.rel-toggle svg{width:11px;height:11px}
+.add-row{display:flex;justify-content:center;padding:14px}
 
-.nav-items { display: flex; flex-direction: column; gap: 3px; }
+/* ═══ EPIC TABLE ═══ */
+.epic-table{width:100%;border-collapse:separate;border-spacing:0}
+.epic-table thead th{background:var(--input-bg);color:var(--text-muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;text-align:left;border-bottom:1px solid var(--card-border)}
+.epic-table thead th:first-child{border-radius:8px 0 0 0}
+.epic-table thead th:last-child{border-radius:0 8px 0 0}
+.epic-table tbody tr{transition:background .15s}
+.epic-table tbody tr:hover{background:rgba(59,130,246,.04)}
+.epic-table tbody td{padding:10px 12px;border-bottom:1px solid #1e293b;font-size:13px;color:#cbd5e1;vertical-align:middle}
+.epic-table input,.epic-table select{background:transparent;border:1px solid transparent;border-radius:6px;padding:5px 7px;color:#cbd5e1;font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color .2s,background .2s}
+.epic-table input:hover,.epic-table select:hover{background:var(--input-bg);border-color:var(--card-border)}
+.epic-table input:focus,.epic-table select:focus{background:var(--input-bg);border-color:var(--blue)}
+.epic-table select{cursor:pointer;appearance:none;padding-right:24px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
 
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 10px 12px;
-  border-radius: var(--r);
-  cursor: pointer;
-  text-decoration: none;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.15s ease;
-  position: relative;
-  border: 1px solid transparent;
-}
-.nav-item:hover {
-  color: var(--text);
-  background: var(--surface);
-}
-.nav-item.active {
-  color: var(--text);
-  background: var(--surface2);
-  border-color: var(--border2);
-}
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 20%; bottom: 20%;
-  width: 2px;
-  background: var(--accent2);
-  border-radius: 2px;
-  box-shadow: 0 0 8px var(--accent2);
-}
+/* ═══ PLANNER ═══ */
+.planner-wrap{overflow-x:auto;padding-bottom:8px}
+.planner{display:grid;gap:0;min-width:700px}
+.planner-header{display:contents}
+.planner-header>div{background:var(--navy);color:var(--blue-pale);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:10px 14px;text-align:center;border-right:1px solid var(--navy-border)}
+.planner-header>div:first-child{text-align:left;border-radius:8px 0 0 0}
+.planner-header>div:last-child{border-right:none;border-radius:0 8px 0 0}
+.planner-row{display:contents}
+.planner-row>div{padding:10px 12px;border-bottom:1px solid #1e293b;border-right:1px solid #1e293b;font-size:12px;display:flex;align-items:center;justify-content:center;min-height:48px}
+.planner-row>div:first-child{justify-content:flex-start;font-weight:600;color:#f1f5f9;font-size:12px}
+.planner-row>div:last-child{border-right:none}
+.planner-block{width:100%;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:600;text-align:center;line-height:1.3}
+.pl-todo{background:rgba(107,114,128,.15);color:#9ca3af}
+.pl-ongoing{background:rgba(245,158,11,.15);color:var(--amber-light)}
+.pl-completed{background:rgba(16,185,129,.15);color:var(--green-light)}
+.pl-delayed{background:rgba(239,68,68,.15);color:var(--red-light)}
+.pl-canceled{background:rgba(107,114,128,.1);color:#6b7280;text-decoration:line-through}
 
-.nav-icon {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px;
-  background: var(--faint);
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-.nav-item.active .nav-icon {
-  background: rgba(59,130,246,0.15);
-}
-.nav-item:hover .nav-icon {
-  background: var(--border2);
-}
+/* ═══ SLIDE PREVIEW ═══ */
+.preview-container{background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--card-border)}
+.preview-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--card-border)}
+.preview-nav .nav-label{font-size:13px;color:var(--text-muted);font-weight:500}
+.preview-nav button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;transition:background .2s}
+.preview-nav button:hover{background:rgba(255,255,255,.15)}
+.preview-nav button:disabled{opacity:.3;cursor:default}
+.slide-viewport{position:relative;width:100%;padding-top:56.25%;background:#fff;overflow:hidden}
+.slide-inner{position:absolute;inset:0}
 
-.nav-label { flex: 1; }
+/* === SLIDE CONTENT (white background, PowerPoint style) === */
+.sl-wrap{width:100%;height:100%;display:flex;flex-direction:column;font-family:'DM Sans',Arial,sans-serif}
 
-.nav-badge {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 2px 7px;
-  border-radius: 20px;
-  text-transform: uppercase;
-}
-.badge-live   { background: rgba(59,130,246,0.15); color: var(--accent2); border: 1px solid rgba(96,165,250,0.25); }
-.badge-soon   { background: rgba(80,80,80,0.3);    color: #888;           border: 1px solid #333; }
-.badge-wip    { background: rgba(245,158,11,0.1);  color: #f59e0b;        border: 1px solid rgba(245,158,11,0.2); }
+/* Feature slide */
+.sl-feat-header{background:#fff;padding:20px 36px 10px;display:flex;align-items:center;gap:14px}
+.sl-pct{font-size:32px;color:var(--navy);font-weight:800;line-height:1}
+.sl-feat-title{font-size:22px;font-weight:700;color:var(--navy)}
+.sl-feat-sub{font-size:11px;color:var(--text-dim);padding:0 36px 10px;font-style:italic}
+.sl-feat-body{flex:1;padding:0 36px 20px;overflow:hidden}
+.slt{width:100%;border-collapse:collapse;font-size:10px}
+.slt thead th{background:var(--navy);color:#fff;padding:7px 10px;text-align:left;font-weight:600;font-size:9.5px}
+.slt tbody td{padding:6px 10px;border-bottom:1px solid #e2e8f0;color:#1e293b;vertical-align:top;font-size:9px;line-height:1.4}
+.slt tbody tr:nth-child(even){background:#f8fafc}
+.slt .ep-name{font-weight:700;font-size:10px}
+.slt .ep-key{color:#1a73e8;font-size:8.5px;display:block;font-weight:600;margin-top:1px}
 
-.nav-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 14px 4px;
-}
+/* Roadmap slide - exact PowerPoint replica */
+.sl-road{width:100%;height:100%;display:flex;flex-direction:column;background:#fff;padding:14px 20px 10px;overflow:hidden;position:relative;font-family:Arial,Helvetica,sans-serif}
+.sl-road-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:3px;flex-shrink:0}
+.sl-road-logo{font-size:26px;color:var(--navy);font-weight:800;flex-shrink:0;margin-top:2px}
+.sl-road-titles{flex:1}
+.sl-road-title{font-size:18px;font-weight:700;color:#1e293b}
+.sl-road-sub{font-size:8px;color:#1a73e8;font-style:italic;margin-top:2px;line-height:1.4}
 
-.sidebar-spacer { flex: 1; }
+/* Diagonal ribbon - top right */
+.ud-ribbon{position:absolute;top:16px;right:-34px;background:#4a86c8;color:#fff;font-size:7.5px;font-weight:700;padding:4px 44px;transform:rotate(45deg);z-index:2;letter-spacing:.3px;box-shadow:0 2px 4px rgba(0,0,0,.15)}
 
-/* version pill at bottom */
-.sidebar-footer {
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.version-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent2);
-  box-shadow: 0 0 8px var(--accent2);
-  animation: pulse 2.5s ease infinite;
-  flex-shrink: 0;
-}
-@keyframes pulse {
-  0%,100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.5; transform: scale(0.7); }
-}
-.sidebar-footer-text { font-size: 12px; color: var(--muted); }
-.sidebar-footer-text strong { color: #555; }
+/* PI delivery bars */
+.pi-bars{display:flex;gap:0;margin-bottom:3px;flex-shrink:0}
+.pi-bar{text-align:center;padding:3px 0;font-size:7.5px;font-weight:700;color:#fff}
+.pi-bar.q2{background:#1a73e8;border-radius:2px 0 0 2px}
+.pi-bar.q3{background:#1a73e8;border-radius:0 2px 2px 0;border-left:1px solid rgba(255,255,255,.3)}
 
+/* Sprint columns area — columns + legend side by side */
+.road-cols-area{display:flex;flex:1;overflow:hidden;min-height:0}
+.road-cols{display:flex;gap:2px;flex:1;min-height:0}
+.road-col{flex:1;display:flex;flex-direction:column;min-width:0}
 
-/* ════════════════════════════════
-   MAIN CONTENT
-════════════════════════════════ */
-.main {
-  flex: 1;
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
+/* Sprint headers — navy rounded rectangles, uniform height */
+.road-col-head{background:var(--navy);color:#fff;text-align:center;padding:5px 3px;border-radius:4px;font-size:7.5px;font-weight:600;line-height:1.3;flex-shrink:0;min-height:32px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.road-col-head .sprint-dates{font-size:6.5px;font-weight:400;opacity:.85}
+.road-col-head .release-date{color:#4ade80;font-weight:700;font-size:6.5px;display:block;margin-top:1px}
 
-/* dark radial background + grid */
-.main-bg {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(ellipse 70% 60% at 60% 40%, rgba(20,40,80,0.45) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 40% at 90% 10%, rgba(30,58,110,0.2) 0%, transparent 60%);
-}
-.main-grid {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
-  background-size: 52px 52px;
-  mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black, transparent);
-}
+/* Sprint body — cards stacked top-aligned */
+.road-col-body{flex:1;display:flex;flex-direction:column;gap:0;padding-top:2px;align-items:stretch}
 
-.content {
-  position: relative; z-index: 1;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 48px 64px;
-  max-width: 760px;
-}
+/* Epic cards — rectangular, consistent width, no drop shadow */
+.road-epic{position:relative;margin-top:12px;flex-shrink:0;width:100%}
+.road-epic-box{border-radius:4px;padding:8px 5px 5px;text-align:center;position:relative;min-height:28px;display:flex;flex-direction:column;align-items:center;justify-content:center}
 
-/* status pill */
-.status-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border2);
-  border-radius: 20px;
-  padding: 6px 16px;
-  font-size: 12px; font-weight: 500; color: var(--muted);
-  margin-bottom: 32px;
-  width: fit-content;
-}
-.status-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent2);
-  box-shadow: 0 0 8px var(--accent2);
-  animation: pulse 2.5s ease infinite;
-}
+/* Number circle — centered top, overlapping box */
+.road-epic .epic-num{position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:19px;height:19px;border-radius:50%;background:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:1;border:1px solid #bbb;color:var(--navy)}
 
-/* big title */
-.hero-title {
-  font-family: 'Permanent Marker', cursive;
-  font-size: clamp(64px, 9vw, 104px);
-  line-height: 0.95;
-  color: #ffffff;
-  letter-spacing: 1px;
-  text-shadow: 4px 4px 0 rgba(59,130,246,0.25);
-  transform: rotate(-1deg);
-  display: inline-block;
-  margin-bottom: 28px;
-}
-.hero-title span { color: var(--accent2); }
+/* Title — bold dark navy uppercase */
+.road-epic .epic-label{display:block;font-weight:700;font-size:7.5px;line-height:1.25;text-transform:uppercase;color:var(--navy);margin-top:2px}
+/* Status meta — italic below title */
+.road-epic .epic-meta{display:block;font-size:6.5px;font-weight:400;margin-top:1px;font-style:italic;color:var(--navy)}
+/* Red annotation */
+.road-epic .epic-note{display:block;font-size:6px;font-weight:700;margin-top:1px;color:#dc2626;font-style:italic}
+/* CRM key — centered italic bottom */
+.road-epic .epic-key{display:block;font-size:6.5px;font-style:italic;margin-top:2px;color:var(--navy);opacity:.7}
 
-.hero-desc {
-  font-size: 17px;
-  color: var(--muted);
-  line-height: 1.7;
-  max-width: 460px;
-  margin-bottom: 40px;
-  font-weight: 400;
-}
-.hero-desc strong { color: #a0a0a0; font-weight: 600; }
+/* ═══ STATUS COLORS ═══ */
+.road-epic.st-todo .road-epic-box{background:#ffffff;border:1px solid #c0c0c0}
+.road-epic.st-todo .epic-label,.road-epic.st-todo .epic-key,.road-epic.st-todo .epic-meta{color:var(--navy)}
 
-/* CTA buttons */
-.cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 56px; }
+.road-epic.st-ongoing .road-epic-box{background:#f5a623;border:1px solid #d4900f}
+.road-epic.st-ongoing .epic-label,.road-epic.st-ongoing .epic-key,.road-epic.st-ongoing .epic-meta{color:var(--navy)}
 
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px; font-weight: 700;
-  padding: 13px 28px;
-  border-radius: var(--r);
-  border: none; cursor: pointer;
-  text-decoration: none;
-  transition: all 0.18s;
-  letter-spacing: 0.02em;
-}
-.btn-primary {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 0 24px rgba(59,130,246,0.3);
-}
-.btn-primary:hover {
-  background: #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 32px rgba(59,130,246,0.45);
-}
-.btn-ghost {
-  background: transparent;
-  color: #666;
-  border: 1px solid var(--border2);
-}
-.btn-ghost:hover {
-  color: var(--text);
-  border-color: #444;
-  background: var(--surface);
-}
+.road-epic.st-completed .road-epic-box{background:#34a853;border:1px solid #2d8e47}
+.road-epic.st-completed .epic-label,.road-epic.st-completed .epic-meta{color:#fff}
+.road-epic.st-completed .epic-key{color:#fff;opacity:.85}
+.road-epic.st-completed .epic-num{color:#2d8e47}
 
-/* stats row */
-.stats-row {
-  display: flex;
-  gap: 40px;
-  align-items: center;
-}
-.stat { }
-.stat-val {
-  font-family: 'DM Mono', monospace;
-  font-size: 26px;
-  font-weight: 500;
-  color: var(--accent2);
-  display: block;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-.stat-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.stats-sep {
-  width: 1px; height: 32px;
-  background: var(--border2);
-}
+.road-epic.st-delayed .road-epic-box{background:repeating-linear-gradient(45deg,#ef4444,#ef4444 3px,#ff7b7b 3px,#ff7b7b 6px);border:1px solid #dc2626}
+.road-epic.st-delayed .epic-label,.road-epic.st-delayed .epic-meta{color:#fff}
+.road-epic.st-delayed .epic-key{color:#fff;opacity:.85}
+.road-epic.st-delayed .epic-num{color:#dc2626}
 
-/* ── ANIMATIONS ── */
-.content > * {
-  animation: fadeUp 0.55s ease both;
-}
-.status-pill   { animation-delay: 0.05s; }
-.hero-title    { animation-delay: 0.12s; }
-.hero-desc     { animation-delay: 0.20s; }
-.cta-row       { animation-delay: 0.27s; }
-.stats-row     { animation-delay: 0.34s; }
+.road-epic.st-canceled .road-epic-box{background:repeating-linear-gradient(-45deg,#fecaca,#fecaca 3px,#fca5a5 3px,#fca5a5 6px);border:1px solid #dc2626}
+.road-epic.st-canceled .epic-label{color:#991b1b;text-decoration:line-through}
+.road-epic.st-canceled .epic-key,.road-epic.st-canceled .epic-meta{color:#991b1b;opacity:.7}
+.road-epic.st-canceled .epic-num{color:#991b1b}
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/* Legend — vertical stack, right side of road-cols-area */
+.road-legend-wrap{display:flex;flex-direction:column;justify-content:flex-end;padding:0 0 4px 6px;flex-shrink:0;min-width:72px}
+.road-legend{display:flex;flex-direction:column;gap:3px}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:6.5px;color:#1e293b;white-space:nowrap}
+.leg-dot{width:16px;height:11px;border-radius:2px;border:1px solid rgba(0,0,0,.12);flex-shrink:0}
+.leg-dot.l-todo{background:#fff}
+.leg-dot.l-ongoing{background:#f5a623}
+.leg-dot.l-completed{background:#34a853}
+.leg-dot.l-delayed{background:repeating-linear-gradient(45deg,#ef4444,#ef4444 2px,#ff7b7b 2px,#ff7b7b 4px)}
+.leg-dot.l-canceled{background:repeating-linear-gradient(-45deg,#fecaca,#fecaca 2px,#fca5a5 2px,#fca5a5 4px)}
 
-.sidebar .nav-items .nav-item {
-  animation: slideIn 0.4s ease both;
-}
-.nav-item:nth-child(1) { animation-delay: 0.05s; }
-.nav-item:nth-child(2) { animation-delay: 0.10s; }
-.nav-item:nth-child(3) { animation-delay: 0.15s; }
-.nav-item:nth-child(4) { animation-delay: 0.20s; }
-.nav-item:nth-child(5) { animation-delay: 0.25s; }
+/* ═══ TEMPLATE MODAL ═══ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:32px;max-width:700px;width:90%;max-height:85vh;overflow-y:auto}
+.modal h2{font-size:20px;font-weight:700;margin-bottom:16px;color:#f1f5f9}
+.modal p{font-size:14px;color:var(--text-muted);margin-bottom:12px;line-height:1.6}
+.modal pre{background:var(--input-bg);border:1px solid var(--card-border);border-radius:8px;padding:16px;font-size:11.5px;color:var(--blue-pale);overflow-x:auto;margin:12px 0;white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:auto;line-height:1.5}
+.radio-group{display:flex;flex-direction:column;gap:10px;margin:16px 0}
+.radio-group label{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:var(--text);padding:10px 14px;border-radius:8px;border:1px solid var(--card-border);transition:all .2s}
+.radio-group label:hover{border-color:#475569}
+.radio-group label.selected{border-color:var(--blue);background:rgba(59,130,246,.08)}
+.radio-group input[type=radio]{accent-color:var(--blue);width:16px;height:16px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
 
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:768px){.header{padding:10px 16px;flex-wrap:wrap}.logo{font-size:20px}.btn{padding:6px 12px;font-size:12px}.main{padding:16px 14px 40px}.pi-row{flex-direction:column}.sprint-card{flex-direction:column;align-items:stretch}}
+@media(max-width:480px){.header{padding:8px 12px}.logo{font-size:18px}.btn svg{display:none}}
+@keyframes slideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.empty{text-align:center;padding:40px 24px;color:#475569;font-size:14px}
 </style>
 </head>
 <body>
 
-<!-- ══ SIDEBAR ══ -->
-<aside class="sidebar">
+<header class="header">
+  <div class="logo-block">
+    <a href="https://ndashiz.be/LazyPO" class="logo">LazyPO <span class="star">✦</span></a>
+    <span class="subtitle">Sprint Planner Slide Generator</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="actions">
+    <span class="status-pill" id="statusPill">✓ OK</span>
+    <button class="btn btn-ghost" onclick="openTemplate()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Template
+    </button>
+    <button class="btn btn-primary" onclick="downloadPptx()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Télécharger .pptx
+    </button>
+  </div>
+</header>
 
-  <div class="logo-wrap">
-    <div class="logo-graffiti">LazyPO <span>✦</span></div>
+<div class="main">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('config')">⚙️ Configuration</button>
+    <button class="tab" onclick="switchTab('planner')">🧭 Planner</button>
+    <button class="tab" onclick="switchTab('preview')">👁️ Preview</button>
   </div>
 
-  <div class="nav-section-label">Outils</div>
-
-  <nav class="nav-items">
-
-    <a href="lazypo_generator.html" class="nav-item active">
-      <div class="nav-icon">✉️</div>
-      <span class="nav-label">SoW Email</span>
-      <span class="nav-badge badge-live">Live</span>
-    </a>
-
-    <a href="#" class="nav-item" onclick="return false;">
-      <div class="nav-icon">📋</div>
-      <span class="nav-label">Release Notes</span>
-      <span class="nav-badge badge-soon">Bientôt</span>
-    </a>
-
-    <a href="#" class="nav-item" onclick="return false;">
-      <div class="nav-icon">🎫</div>
-      <span class="nav-label">Jira Request</span>
-      <span class="nav-badge badge-wip">En cours</span>
-    </a>
-
-  </nav>
-
-  <div class="nav-divider"></div>
-
-  <div class="nav-section-label">Général</div>
-
-  <nav class="nav-items">
-    <a href="#" class="nav-item" onclick="return false;">
-      <div class="nav-icon">⚙️</div>
-      <span class="nav-label">Paramètres</span>
-    </a>
-  </nav>
-
-  <div class="sidebar-spacer"></div>
-
-  <div class="sidebar-footer">
-    <div class="version-dot"></div>
-    <div class="sidebar-footer-text">v2.0 · <strong>100% local</strong></div>
-  </div>
-
-</aside>
-
-<!-- ══ MAIN ══ -->
-<main class="main">
-  <div class="main-bg"></div>
-  <div class="main-grid"></div>
-
-  <div class="content">
-
-    <div class="status-pill">
-      <div class="status-dot"></div>
-      Toolkit actif · Aucune donnée envoyée
-    </div>
-
-    <div class="hero-title">Lazy<span>PO</span></div>
-
-    <p class="hero-desc">
-      Le toolkit du PO qui n'a pas de temps à perdre.<br>
-      Génère tes emails, release notes et Jira requests<br>
-      en quelques clics. <strong>100% offline.</strong>
-    </p>
-
-    <div class="cta-row">
-      <a href="lazypo_generator.html" class="btn btn-primary">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Ouvrir le générateur
-      </a>
-      <a href="#" class="btn btn-ghost" onclick="return false;">
-        En savoir +
-      </a>
-    </div>
-
-    <div class="stats-row">
-      <div class="stat">
-        <span class="stat-val">3</span>
-        <div class="stat-label">Outils</div>
+  <!-- ═══ CONFIG ═══ -->
+  <div class="tab-panel active" id="panel-config">
+    <!-- JIRA DROP -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+        <div><div class="section-title">Import Jira</div><div class="section-subtitle">Glissez un export Jira (.xlsx) ou cliquez pour sélectionner</div></div>
       </div>
-      <div class="stats-sep"></div>
-      <div class="stat">
-        <span class="stat-val">0</span>
-        <div class="stat-label">API requise</div>
-      </div>
-      <div class="stats-sep"></div>
-      <div class="stat">
-        <span class="stat-val">.eml</span>
-        <div class="stat-label">Prêt Outlook</div>
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv"/>
+        <div id="dropContent">
+          <div style="font-size:40px;margin-bottom:12px;opacity:.5">📋</div>
+          <div style="font-size:14px;color:var(--text-muted)">Glissez votre export Jira ici</div>
+          <div style="font-size:12px;color:var(--text-dim);margin-top:6px">.xlsx · Colonnes Key, Summary, Description, Fix Version/s, Sprint mappées automatiquement</div>
+        </div>
       </div>
     </div>
 
+    <!-- PI -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <div><div class="section-title">Program Increment</div><div class="section-subtitle">Sprints de 14 jours calculés automatiquement</div></div>
+      </div>
+      <div class="card">
+        <div class="pi-row">
+          <div class="field"><label>Début</label><input type="date" id="piStart"/></div>
+          <div class="field"><label>Fin</label><input type="date" id="piEnd"/></div>
+          <button class="btn btn-primary" onclick="genSprints()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Calculer</button>
+          <div class="pi-summary" id="piSummary" style="display:none"><span id="piDays">0</span> jours → <strong id="piCount">0</strong> sprints</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPRINTS -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div><div class="section-title">Sprints</div><div class="section-subtitle">2 semaines · Flaggez les releases</div></div>
+      </div>
+      <div class="sprint-grid" id="sprintGrid"><div class="empty">Configurez les dates du PI ci-dessus</div></div>
+      <div class="add-row" id="addSprintBar" style="display:none"><button class="btn btn-ghost btn-sm" onclick="addSprint()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Ajouter un sprint</button></div>
+    </div>
+
+    <!-- EPICS -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <div><div class="section-title">Epics</div><div class="section-subtitle">Statut, sprint, sizing — numéro affiché dans le planner et la roadmap</div></div>
+        <div class="spacer"></div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-muted);white-space:nowrap">
+          <input type="checkbox" id="tshirtToggle" checked onchange="showTshirt=this.checked" style="accent-color:var(--blue);width:14px;height:14px"/>
+          T-Shirt dans les slides
+        </label>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table class="epic-table"><thead><tr>
+            <th style="width:55px">#</th><th style="width:80px">Key</th><th style="width:200px">Epic</th><th>Description</th>
+            <th style="width:130px">Sprint</th><th style="width:120px">Statut</th><th style="width:80px">T-Shirt</th><th style="width:40px"></th>
+          </tr></thead><tbody id="epicBody"></tbody></table>
+        </div>
+        <div class="add-row"><button class="btn btn-ghost btn-sm" onclick="addEpic()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Ajouter une epic</button></div>
+      </div>
+    </div>
   </div>
-</main>
+
+  <!-- ═══ PLANNER ═══ -->
+  <div class="tab-panel" id="panel-planner">
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></div>
+        <div><div class="section-title">Vue Planner</div><div class="section-subtitle">Epics par sprint avec statuts</div></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden"><div class="planner-wrap" id="plannerWrap"><div class="empty">Créez des sprints et assignez des epics</div></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ PREVIEW ═══ -->
+  <div class="tab-panel" id="panel-preview">
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <div><div class="section-title">Aperçu des slides</div><div class="section-subtitle">Synchronisé en temps réel avec vos modifications</div></div>
+      </div>
+      <div class="preview-container">
+        <div class="preview-nav">
+          <button onclick="prevSlide()" id="btnPrev">← Précédent</button>
+          <span class="nav-label" id="slideLabel">Slide 1 / 3</span>
+          <button onclick="nextSlide()" id="btnNext">Suivant →</button>
+        </div>
+        <div class="slide-viewport"><div class="slide-inner" id="slideInner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TEMPLATE MODAL ═══ -->
+<div class="modal-overlay" id="templateModal">
+  <div class="modal">
+    <h2>🎨 Template PowerPoint</h2>
+    <p>Le template actuel reproduit la structure de votre fichier : fond blanc, header navy avec logo %, tableaux features avec colonnes navy, et roadmap en colonnes de sprint avec blocs colorés par statut.</p>
+    <div class="radio-group" id="templateRadios">
+      <label class="selected"><input type="radio" name="tpl" value="existing" checked/>Utiliser le template existant</label>
+      <label><input type="radio" name="tpl" value="new"/>Importer un nouveau template</label>
+    </div>
+    <div id="tplPromptArea" style="display:none">
+      <p>Copiez ce prompt dans Claude en joignant votre nouveau fichier .pptx :</p>
+      <pre id="tplPrompt"></pre>
+      <button class="btn btn-ghost btn-sm" onclick="copyPrompt()" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copier</button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeTemplate()">Fermer</button></div>
+  </div>
+</div>
+
+<script>
+let sprints=[],epics=[],nextNum=1,curSlide=0,showTshirt=true;
+const STATUSES=['todo','ongoing','completed','delayed','canceled'];
+const ST_LABELS={todo:'To be started',ongoing:'Ongoing',completed:'Completed',delayed:'Delayed',canceled:'Canceled'};
+
+function pill(t){const p=document.getElementById('statusPill');p.textContent=t;p.classList.add('visible');setTimeout(()=>p.classList.remove('visible'),2500)}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x.toISOString().split('T')[0]}
+function daysBetween(a,b){return Math.round((new Date(b)-new Date(a))/864e5)}
+function uid(){return crypto.randomUUID()}
+function fmtS(d){if(!d)return'';const x=new Date(d);return(x.getDate()+'').padStart(2,'0')+'/'+(x.getMonth()+1+'').padStart(2,'0')}
+
+// ═══ TABS ═══
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['config','planner','preview'][i]===id));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if(id==='planner')renderPlanner();
+  if(id==='preview')renderPreview();
+}
+
+// ═══ DROPZONE ═══
+const dz=document.getElementById('dropzone'),fi=document.getElementById('fileInput');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0])});
+fi.addEventListener('change',e=>{if(e.target.files[0])processFile(e.target.files[0])});
+
+function processFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+    const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    let hIdx=-1;
+    for(let i=0;i<Math.min(raw.length,10);i++){
+      const row=raw[i].map(c=>String(c).trim().toLowerCase());
+      if(row.includes('key')&&row.includes('summary')){hIdx=i;break}
+    }
+    if(hIdx===-1){pill('⚠ Format Jira non reconnu');return}
+    const headers=raw[hIdx].map(c=>String(c).trim());
+    const col=h=>headers.findIndex(x=>x.toLowerCase()===h.toLowerCase());
+    const iKey=col('Key'),iSum=col('Summary'),iDesc=col('Description'),
+          iFix=col('Fix Version/s'),iSpr=col('Sprint'),iComp=col('Component/s');
+    epics=[];nextNum=1;
+    for(let i=hIdx+1;i<raw.length;i++){
+      const r=raw[i];
+      if(!r[iKey]||!String(r[iKey]).trim())continue;
+      const key=String(r[iKey]).trim(),summary=String(r[iSum]||'').trim(),desc=String(r[iDesc]||'').trim();
+      const fix=String(r[iFix]||'').trim(),sprint=iSpr>=0?String(r[iSpr]||'').trim():'';
+      const components=iComp>=0?String(r[iComp]||'').trim():'';
+      let shortDesc='',benefits='';
+      const dm=desc.match(/(?:description[:\s]*\n?)([\s\S]*?)(?:\n\s*(?:benefits?|business benefits?))/i);
+      const bm=desc.match(/(?:benefits?|business benefits?)[:\s]*\n?([\s\S]*)/i);
+      shortDesc=dm?dm[1].replace(/[*\\{}+\[\]]/g,'').replace(/\n+/g,' ').trim():summary;
+      benefits=bm?bm[1].replace(/[*\\{}+\[\]]/g,'').replace(/\n+/g,' ').trim():'';
+      if(shortDesc.length>200)shortDesc=shortDesc.substring(0,200)+'…';
+      if(benefits.length>200)benefits=benefits.substring(0,200)+'…';
+      epics.push({id:uid(),number:nextNum++,key,name:summary,description:shortDesc,benefits,fixVersion:fix,jiraSprint:sprint,components,sprintId:'',status:'todo',tshirt:''});
+    }
+    epics.forEach(ep=>{const l=(ep.description+ep.benefits).length;ep.tshirt=l<80?'S':l<200?'M':'L'});
+    dz.classList.add('loaded');
+    document.getElementById('dropContent').innerHTML=`<div class="loaded-info"><div><div class="count">${epics.length}</div><div style="font-size:12px;color:var(--text-dim)">epics importées depuis Jira</div></div></div>`;
+    autoAssign();
+    renderEpics();renderSprints();pill(`✓ ${epics.length} epics importées`);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ═══ SPRINTS ═══
+function genSprints(){
+  const s=document.getElementById('piStart').value,e=document.getElementById('piEnd').value;
+  if(!s||!e){pill('⚠ Dates requises');return}
+  const total=daysBetween(s,e);if(total<14){pill('⚠ Trop court');return}
+  const cnt=Math.floor(total/14),yr=new Date(s).getFullYear(),q=Math.floor(new Date(s).getMonth()/3)+1;
+  sprints=[];
+  for(let i=0;i<cnt;i++) sprints.push({id:uid(),number:i+1,label:`Sprint ${yr}.${q}.${i+1}`,start:addDays(s,i*14),end:addDays(s,(i+1)*14-1),hasRelease:false,releaseDate:''});
+  document.getElementById('piSummary').style.display='flex';
+  document.getElementById('piDays').textContent=total;
+  document.getElementById('piCount').textContent=cnt;
+  document.getElementById('addSprintBar').style.display='flex';
+  epics.forEach(f=>f.sprintId='');
+  autoAssign();
+  renderSprints();renderEpics();pill(`✓ ${cnt} sprints`);
+}
+function renderSprints(){
+  const g=document.getElementById('sprintGrid');
+  if(!sprints.length){g.innerHTML='<div class="empty">Configurez les dates du PI ci-dessus</div>';return}
+  g.innerHTML=sprints.map((s,i)=>{
+    const chips=epics.filter(f=>f.sprintId===s.id).map(f=>`<span class="chip">#${f.number}</span>`).join('');
+    return `<div class="sprint-card ${s.hasRelease?'has-release':''}" style="animation-delay:${i*30}ms">
+      <div class="sprint-num">${s.number}</div>
+      <div class="sprint-info">
+        <div class="sprint-name">${s.label}</div>
+        <div class="sprint-dates">
+          <input type="date" value="${s.start}" onchange="updS('${s.id}','start',this.value)"/>
+          <span class="sep">→</span>
+          <input type="date" value="${s.end}" onchange="updS('${s.id}','end',this.value)"/>
+        </div>
+        <div class="release-row ${s.hasRelease?'vis':''}">
+          <label>Release</label>
+          <input type="date" value="${s.releaseDate}" onchange="updS('${s.id}','releaseDate',this.value)"/>
+        </div>
+        ${chips?`<div class="sprint-chips">${chips}</div>`:''}
+      </div>
+      <div class="sprint-actions">
+        <button class="rel-toggle ${s.hasRelease?'active':''}" onclick="togRel('${s.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Release
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="delS('${s.id}')" style="padding:4px 8px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div></div>`}).join('');
+}
+function updS(id,k,v){const s=sprints.find(x=>x.id===id);if(s)s[k]=v;if(k==='releaseDate'){autoAssign();renderSprints();renderEpics()}}
+function togRel(id){const s=sprints.find(x=>x.id===id);if(!s)return;s.hasRelease=!s.hasRelease;if(s.hasRelease&&!s.releaseDate)s.releaseDate=s.end;autoAssign();renderSprints();renderEpics()}
+
+// ═══ AUTO-ASSIGN epics to release sprints based on Fix Version ═══
+const MONTHS={january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11,jan:0,feb:1,mar:2,apr:3,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function parseFixMonth(fix){
+  if(!fix)return null;
+  const f=fix.toLowerCase();
+  for(const[name,num] of Object.entries(MONTHS)){
+    if(f.includes(name)){
+      const ym=f.match(/(\d{4})/);
+      return ym?{month:num,year:parseInt(ym[1])}:null;
+    }
+  }
+  return null;
+}
+function autoAssign(){
+  const relSprints=sprints.filter(s=>s.hasRelease&&s.releaseDate);
+  if(!relSprints.length)return;
+  let assigned=0;
+  epics.forEach(ep=>{
+    if(ep.sprintId)return; // already assigned manually
+    const fm=parseFixMonth(ep.fixVersion);
+    if(!fm)return;
+    // Find release sprint matching this month/year
+    const match=relSprints.find(s=>{
+      const rd=new Date(s.releaseDate);
+      return rd.getMonth()===fm.month&&rd.getFullYear()===fm.year;
+    });
+    if(match){ep.sprintId=match.id;assigned++}
+  });
+  if(assigned)pill(`✓ ${assigned} epics auto-assignées`);
+}
+function delS(id){sprints=sprints.filter(x=>x.id!==id);sprints.forEach((s,i)=>s.number=i+1);epics.forEach(f=>{if(f.sprintId===id)f.sprintId=''});renderSprints();renderEpics();pill('✓ Sprint supprimé')}
+function addSprint(){const l=sprints[sprints.length-1];const ns=l?addDays(l.end,1):new Date().toISOString().split('T')[0];const n=sprints.length+1;const yr=new Date(ns).getFullYear(),q=Math.floor(new Date(ns).getMonth()/3)+1;sprints.push({id:uid(),number:n,label:`Sprint ${yr}.${q}.${n}`,start:ns,end:addDays(ns,13),hasRelease:false,releaseDate:''});renderSprints();renderEpics();pill('✓ Sprint ajouté')}
+
+// ═══ EPICS ═══
+function addEpic(){epics.push({id:uid(),number:nextNum++,key:'',name:'',description:'',benefits:'',fixVersion:'',jiraSprint:'',components:'',sprintId:'',status:'todo',tshirt:''});renderEpics()}
+function delEpic(id){epics=epics.filter(f=>f.id!==id);renderEpics();renderSprints();pill('✓ Epic supprimée')}
+function updE(id,k,v){const f=epics.find(x=>x.id===id);if(!f)return;if(k==='number')v=parseInt(v)||0;f[k]=v;if(k==='sprintId')renderSprints()}
+function renderEpics(){
+  document.getElementById('epicBody').innerHTML=epics.map(f=>{
+    const so=sprints.map(s=>`<option value="${s.id}" ${f.sprintId===s.id?'selected':''}>${s.label}</option>`).join('');
+    return `<tr>
+      <td><input style="width:45px;text-align:center;font-weight:700" type="number" value="${f.number}" min="1" onchange="updE('${f.id}','number',this.value)"/></td>
+      <td><input style="width:75px;font-weight:600;color:var(--blue-light)" value="${f.key}" oninput="updE('${f.id}','key',this.value)"/></td>
+      <td><input value="${f.name}" placeholder="Nom…" oninput="updE('${f.id}','name',this.value)"/></td>
+      <td><input value="${f.description}" placeholder="Description…" oninput="updE('${f.id}','description',this.value)"/></td>
+      <td><select onchange="updE('${f.id}','sprintId',this.value)"><option value="">—</option>${so}</select></td>
+      <td><select onchange="updE('${f.id}','status',this.value)">${STATUSES.map(s=>`<option value="${s}" ${f.status===s?'selected':''}>${ST_LABELS[s]}</option>`).join('')}</select></td>
+      <td><select onchange="updE('${f.id}','tshirt',this.value)"><option value="">—</option>${['XS','S','M','L','XL'].map(t=>`<option ${f.tshirt===t?'selected':''}>${t}</option>`).join('')}</select></td>
+      <td><button class="btn btn-danger btn-sm" onclick="delEpic('${f.id}')" style="padding:3px 5px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></td>
+    </tr>`}).join('');
+}
+
+// ═══ PLANNER ═══
+function renderPlanner(){
+  const w=document.getElementById('plannerWrap');
+  if(!sprints.length||!epics.length){w.innerHTML='<div class="empty">Créez des sprints et assignez des epics</div>';return}
+  let h=`<div class="planner" style="grid-template-columns:200px repeat(${sprints.length},1fr)"><div class="planner-header"><div>Epic</div>`;
+  sprints.forEach(s=>{h+=`<div>${s.label}${s.hasRelease?'<br><span style="color:var(--green-light);font-size:10px">🚀 Release</span>':''}</div>`});
+  h+=`</div>`;
+  epics.forEach(ep=>{
+    h+=`<div class="planner-row"><div>#${ep.number} ${(ep.name||ep.key).substring(0,25)}</div>`;
+    sprints.forEach(s=>{h+=ep.sprintId===s.id?`<div><div class="planner-block pl-${ep.status}">#${ep.number} ${ST_LABELS[ep.status]}</div></div>`:'<div></div>'});
+    h+=`</div>`;
+  });
+  w.innerHTML=h+`</div>`;
+}
+
+// ═══ SLIDE PREVIEW ═══
+function getSlides(){
+  const sl=[];
+  const ps=6;
+  for(let i=0;i<epics.length;i+=ps){
+    const batch=epics.slice(i,i+ps);
+    sl.push({type:'features',epics:batch,page:Math.floor(i/ps)+1,total:Math.ceil(epics.length/ps)});
+  }
+  if(sprints.length) sl.push({type:'roadmap'});
+  if(!sl.length) sl.push({type:'empty'});
+  return sl;
+}
+
+function renderPreview(){
+  const slides=getSlides();
+  if(curSlide>=slides.length)curSlide=slides.length-1;
+  if(curSlide<0)curSlide=0;
+  document.getElementById('slideLabel').textContent=`Slide ${curSlide+1} / ${slides.length}`;
+  document.getElementById('btnPrev').disabled=curSlide===0;
+  document.getElementById('btnNext').disabled=curSlide===slides.length-1;
+  const sl=slides[curSlide],inner=document.getElementById('slideInner');
+
+  if(sl.type==='empty'){
+    inner.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:16px;font-family:DM Sans,sans-serif">Ajoutez des epics pour voir l\'aperçu</div>';
+    return;
+  }
+
+  if(sl.type==='features'){
+    const tshirtTh=showTshirt?'<th style="width:50px">TSHIRT SIZING</th>':'';
+    const tshirtTd=ep=>showTshirt?`<td style="text-align:center;font-weight:600;font-style:italic">${ep.tshirt||'?'}</td>`:'';
+    inner.innerHTML=`<div class="sl-wrap" style="background:#fff">
+      <div class="sl-feat-header"><div class="sl-pct">%</div><div class="sl-feat-title">Squad Nxt CLM – Q2 26</div></div>
+      <div class="sl-feat-sub">Ensure Readiness for Soft Launch — Page ${sl.page}/${sl.total}</div>
+      <div class="sl-feat-body"><table class="slt"><thead><tr>
+        <th style="width:28px">#</th><th style="width:120px">EPIC NAME</th><th>DESCRIPTION</th><th>BENEFITS</th><th style="width:80px">BUSINESS LINE</th>${tshirtTh}
+      </tr></thead><tbody>
+      ${sl.epics.map(ep=>`<tr>
+        <td style="font-weight:700">${ep.number}</td>
+        <td><span class="ep-name">${(ep.name||'').toUpperCase().substring(0,40)}</span><span class="ep-key">${ep.key}</span></td>
+        <td>${ep.description||'—'}</td>
+        <td>${ep.benefits||'—'}</td>
+        <td>${ep.components||'—'}</td>
+        ${tshirtTd(ep)}
+      </tr>`).join('')}</tbody></table></div></div>`;
+    return;
+  }
+
+  // ═══ ROADMAP SLIDE — exact PowerPoint replica ═══
+  // Determine PI groupings based on releases
+  let q2Count=0,q3Count=0;
+  let foundLastQ2Release=false;
+  // All sprints before the last release are Q2, rest are Q3
+  const lastRelIdx=sprints.reduce((acc,s,i)=>s.hasRelease?i:acc,-1);
+  q2Count=lastRelIdx>=0?lastRelIdx+1:Math.max(sprints.length-2,1);
+  q3Count=sprints.length-q2Count;
+  if(q3Count<0)q3Count=0;
+  
+  let colsHtml=sprints.map(s=>{
+    const sEpics=epics.filter(f=>f.sprintId===s.id);
+    const epicBlocks=sEpics.map(ep=>{
+      const shortName=(ep.name||ep.key).toUpperCase();
+      const displayName=shortName.length>28?shortName.substring(0,28)+'…':shortName;
+      let meta='';
+      if(ep.status==='ongoing')meta='Development ongoing';
+      if(ep.status==='completed')meta='Completed';
+      if(ep.status==='delayed')meta='Delayed';
+      if(ep.status==='canceled')meta='Canceled';
+      // Check for critical notes in description
+      let note='';
+      const desc=(ep.description||'').toLowerCase();
+      if(desc.includes('critical'))note='Critical release';
+      if(desc.includes('no q1 commitment')||desc.includes('no commitment'))note='No Q1 Commitment';
+      return `<div class="road-epic st-${ep.status}">
+        <div class="epic-num">${ep.number}</div>
+        <div class="road-epic-box">
+          <span class="epic-label">${displayName}</span>
+          ${meta?`<span class="epic-meta">${meta}</span>`:''}
+          ${note?`<span class="epic-note">${note}</span>`:''}
+          <span class="epic-key">${ep.key}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="road-col">
+      <div class="road-col-head">
+        ${s.label}<br><span class="sprint-dates">${fmtS(s.start)} – ${fmtS(s.end)}</span>
+        ${s.hasRelease?`<span class="release-date">Release ${fmtS(s.releaseDate)}</span>`:''}
+      </div>
+      <div class="road-col-body">${epicBlocks}</div>
+    </div>`;
+  }).join('');
+
+  inner.innerHTML=`<div class="sl-road">
+    <div class="ud-ribbon">Under Discussion</div>
+    <div class="sl-road-top">
+      <div class="sl-road-logo">%</div>
+      <div class="sl-road-titles">
+        <div class="sl-road-title">CLM PB – PI Q2 – Planning for Discussion</div>
+        <div class="sl-road-sub">Proposed planning based on priorities captured from business line waiting for squad member validation</div>
+      </div>
+    </div>
+    <div class="pi-bars">
+      ${q2Count>0?`<div class="pi-bar q2" style="flex:${q2Count}">PI Q2 Delivery*</div>`:''}
+      ${q3Count>0?`<div class="pi-bar q3" style="flex:${q3Count}">PI Q3 Delivery</div>`:''}
+    </div>
+    <div class="road-cols-area">
+      <div class="road-cols">${colsHtml}</div>
+      <div class="road-legend-wrap">
+        <div class="road-legend">
+          <div class="leg-item"><div class="leg-dot l-todo"></div>To be started</div>
+          <div class="leg-item"><div class="leg-dot l-completed"></div>Completed</div>
+          <div class="leg-item"><div class="leg-dot l-ongoing"></div>Ongoing</div>
+          <div class="leg-item"><div class="leg-dot l-delayed"></div>Delayed</div>
+          <div class="leg-item"><div class="leg-dot l-canceled"></div>Canceled</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function prevSlide(){curSlide--;renderPreview()}
+function nextSlide(){curSlide++;renderPreview()}
+
+// ═══ TEMPLATE MODAL ═══
+function openTemplate(){document.getElementById('templateModal').classList.add('open');genPromptText()}
+function closeTemplate(){document.getElementById('templateModal').classList.remove('open')}
+document.getElementById('templateModal').addEventListener('click',e=>{if(e.target===document.getElementById('templateModal'))closeTemplate()});
+document.querySelectorAll('#templateRadios input[type=radio]').forEach(r=>{
+  r.addEventListener('change',e=>{
+    document.querySelectorAll('#templateRadios label').forEach(l=>l.classList.remove('selected'));
+    e.target.parentElement.classList.add('selected');
+    document.getElementById('tplPromptArea').style.display=e.target.value==='new'?'block':'none';
+  });
+});
+
+function genPromptText(){
+  document.getElementById('tplPrompt').textContent=`Analyse ce fichier PowerPoint (.pptx) que je joins et fournis-moi une configuration JSON que je pourrai utiliser dans mon Sprint Planner Slide Generator (LazyPO).
+
+Pour CHAQUE slide du fichier, extrais :
+
+1. LAYOUT
+   - Dimensions du slide (largeur × hauteur en pouces)
+   - Disposition : colonnes, grille, zones de contenu
+   - Marges et espacements
+
+2. COULEURS (en HEX)
+   - Background de chaque zone
+   - Couleur des textes (titre, sous-titre, body)
+   - Couleur des headers de tableau / colonnes
+   - Couleurs de statut pour les blocs Epic :
+     → "To be started" : fond + texte
+     → "Ongoing" : fond + texte
+     → "Completed" : fond + texte
+     → "Delayed" : fond + texte + pattern éventuel (rayures…)
+     → "Canceled" : fond + texte + style (barré…)
+   - Couleur des dates de Release
+   - Couleur des bordures
+
+3. TYPOGRAPHIE
+   - Nom de la police pour titres / body / labels
+   - Tailles en pt
+   - Poids (regular, bold, italic)
+
+4. ÉLÉMENTS VISUELS
+   - Logo (forme, couleur, position)
+   - Formes décoratives (badge "Under Discussion", etc.)
+   - Style des numéros d'Epic (cercle blanc avec ombre ?)
+   - Bordures des blocs
+
+5. STRUCTURE DE DONNÉES
+   - SLIDE FEATURES : colonnes du tableau (noms, largeurs relatives)
+   - SLIDE ROADMAP : structure des colonnes de sprint, placement des blocs Epic, légende
+
+Réponds UNIQUEMENT avec un objet JSON structuré comme ceci :
+{
+  "slideWidth": 13.33,
+  "slideHeight": 7.5,
+  "colors": {
+    "navyBg": "#002060",
+    "titleText": "#1e293b",
+    "subtitleText": "#64748b",
+    "tableHeaderBg": "#002060",
+    "tableHeaderText": "#ffffff",
+    "statusTodo": { "bg": "#e5e7eb", "text": "#4b5563" },
+    "statusOngoing": { "bg": "#f5a623", "text": "#1e293b" },
+    "statusCompleted": { "bg": "#4ade80", "text": "#065f46" },
+    "statusDelayed": { "bg": "#ff6b6b", "text": "#ffffff", "pattern": "diagonal-stripes" },
+    "statusCanceled": { "bg": "#d1d5db", "text": "#9ca3af", "strikethrough": true },
+    "releaseDate": "#ff0000",
+    "epicNumberBg": "#ffffff",
+    "epicNumberShadow": "0 1px 3px rgba(0,0,0,0.15)"
+  },
+  "typography": {
+    "titleFont": "...",
+    "titleSize": 24,
+    "bodyFont": "...",
+    "bodySize": 10,
+    "labelFont": "...",
+    "labelSize": 8
+  },
+  "featureSlide": {
+    "columns": ["#", "EPIC NAME", "DESCRIPTION", "BENEFITS", "BUSINESS LINE", "TSHIRT SIZING"],
+    "columnWidths": [5, 15, 30, 30, 12, 8]
+  },
+  "roadmapSlide": {
+    "piDeliveryBars": true,
+    "sprintColumnLayout": "vertical-stack",
+    "epicBlockStyle": "rounded-rect-with-number-circle",
+    "legendPosition": "bottom-right"
+  }
+}`;
+}
+
+function copyPrompt(){navigator.clipboard.writeText(document.getElementById('tplPrompt').textContent);pill('✓ Prompt copié')}
+
+// ═══ DOWNLOAD PPTX ═══
+function downloadPptx(){
+  if(!epics.length){pill('⚠ Aucune epic');return}
+  pill('⏳ Génération du .pptx…');
+
+  const pres=new PptxGenJS();
+  pres.layout='LAYOUT_WIDE'; // 13.33 x 7.5
+  pres.author='LazyPO';
+  pres.title='Sprint Planning';
+
+  const NAVY='002060', WHITE='FFFFFF', GOLD='F5A623', GREEN='34A853', RED='EF4444', GRAY='E5E7EB';
+  const statusColors={todo:{bg:WHITE,text:NAVY,border:'C0C0C0'},ongoing:{bg:GOLD,text:NAVY,border:'D4900F'},completed:{bg:GREEN,text:WHITE,border:'2D8E47'},delayed:{bg:RED,text:WHITE,border:'DC2626'},canceled:{bg:'FECACA',text:'991B1B',border:'DC2626'}};
+
+  // ═══ FEATURE SLIDES (paginated by 6) ═══
+  const ps=6;
+  for(let p=0;p<epics.length;p+=ps){
+    const batch=epics.slice(p,p+ps);
+    const sl=pres.addSlide();
+    sl.background={color:WHITE};
+
+    // Title
+    sl.addText([
+      {text:'%  ',options:{fontSize:28,fontFace:'Arial',color:NAVY,bold:true}},
+      {text:'Squad Nxt CLM – Q2 26',options:{fontSize:22,fontFace:'Arial',color:'1E293B',bold:true}}
+    ],{x:0.5,y:0.3,w:10,h:0.6,margin:0});
+    sl.addText('Ensure Readiness for Soft Launch',{x:0.5,y:0.85,w:10,h:0.3,fontSize:10,fontFace:'Arial',color:'1A73E8',italic:true});
+
+    // Table
+    const hdr=[
+      {text:'#',options:{fill:{color:NAVY},color:WHITE,bold:true,fontSize:9,fontFace:'Arial',align:'center'}},
+      {text:'EPIC NAME',options:{fill:{color:NAVY},color:WHITE,bold:true,fontSize:9,fontFace:'Arial'}},
+      {text:'DESCRIPTION',options:{fill:{color:NAVY},color:WHITE,bold:true,fontSize:9,fontFace:'Arial'}},
+      {text:'BENEFITS',options:{fill:{color:NAVY},color:WHITE,bold:true,fontSize:9,fontFace:'Arial'}},
+      {text:'BUSINESS LINE',options:{fill:{color:NAVY},color:WHITE,bold:true,fontSize:9,fontFace:'Arial'}},
+    ];
+    if(showTshirt)hdr.push({text:'TSHIRT',options:{fill:{color:NAVY},color:WHITE,bold:true,fontSize:9,fontFace:'Arial',align:'center'}});
+
+    const rows=[hdr];
+    batch.forEach((ep,i)=>{
+      const bg=i%2===0?'FFFFFF':'F8FAFC';
+      const row=[
+        {text:String(ep.number),options:{fill:{color:bg},fontSize:9,fontFace:'Arial',bold:true,align:'center',color:'1E293B'}},
+        {text:(ep.name||'').toUpperCase()+'\n'+ep.key,options:{fill:{color:bg},fontSize:8,fontFace:'Arial',bold:true,color:NAVY}},
+        {text:ep.description||'—',options:{fill:{color:bg},fontSize:8,fontFace:'Arial',color:'1E293B'}},
+        {text:ep.benefits||'—',options:{fill:{color:bg},fontSize:8,fontFace:'Arial',color:'1E293B'}},
+        {text:ep.components||'—',options:{fill:{color:bg},fontSize:8,fontFace:'Arial',color:'1E293B'}},
+      ];
+      if(showTshirt)row.push({text:ep.tshirt||'?',options:{fill:{color:bg},fontSize:9,fontFace:'Arial',italic:true,align:'center',color:'1E293B'}});
+      rows.push(row);
+    });
+
+    const colW=showTshirt?[0.5,2.2,3.5,3.5,2,0.8]:[0.5,2.5,4,4,2];
+    sl.addTable(rows,{x:0.4,y:1.3,w:12.5,colW,border:{pt:0.5,color:'E2E8F0'},rowH:0.6,autoPage:false});
+  }
+
+  // ═══ ROADMAP SLIDE ═══
+  if(sprints.length){
+    const sl=pres.addSlide();
+    sl.background={color:WHITE};
+
+    // Title
+    sl.addText([
+      {text:'%  ',options:{fontSize:26,fontFace:'Arial',color:NAVY,bold:true}},
+      {text:'CLM PB – PI Q2 – Planning for Discussion',options:{fontSize:20,fontFace:'Arial',color:'1E293B',bold:true}}
+    ],{x:0.5,y:0.2,w:11,h:0.5,margin:0});
+    sl.addText('Proposed planning based on priorities captured from business line waiting for squad member validation',{x:0.5,y:0.7,w:11,h:0.3,fontSize:9,fontFace:'Arial',color:'1A73E8',italic:true});
+
+    // PI Bars
+    const lastRelIdx=sprints.reduce((a,s,i)=>s.hasRelease?i:a,-1);
+    const q2c=lastRelIdx>=0?lastRelIdx+1:Math.max(sprints.length-2,1);
+    const q3c=sprints.length-q2c;
+    const barY=1.05,barH=0.22,totalW=11.5,barX=0.4;
+    if(q2c>0){
+      const w2=totalW*(q2c/sprints.length);
+      sl.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:barX,y:barY,w:w2,h:barH,fill:{color:'1A73E8'},rectRadius:0.02});
+      sl.addText('PI Q2 Delivery*',{x:barX,y:barY,w:w2,h:barH,fontSize:7,fontFace:'Arial',color:WHITE,bold:true,align:'center',valign:'middle'});
+    }
+    if(q3c>0){
+      const x3=barX+totalW*(q2c/sprints.length);
+      const w3=totalW*(q3c/sprints.length);
+      sl.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:x3,y:barY,w:w3,h:barH,fill:{color:'1A73E8'},rectRadius:0.02});
+      sl.addText('PI Q3 Delivery',{x:x3,y:barY,w:w3,h:barH,fontSize:7,fontFace:'Arial',color:WHITE,bold:true,align:'center',valign:'middle'});
+    }
+
+    // Sprint columns
+    const colW=totalW/sprints.length;
+    const colTop=1.35,headH=0.45;
+
+    sprints.forEach((sp,ci)=>{
+      const cx=barX+ci*colW;
+
+      // Header
+      sl.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:cx+0.02,y:colTop,w:colW-0.04,h:headH,fill:{color:NAVY},rectRadius:0.04});
+      let headTxt=[{text:sp.label,options:{fontSize:7,fontFace:'Arial',color:WHITE,bold:true,breakLine:true}},
+        {text:fmtS(sp.start)+' – '+fmtS(sp.end),options:{fontSize:6,fontFace:'Arial',color:'CADCFC'}}];
+      if(sp.hasRelease)headTxt.push({text:'\nRelease '+fmtS(sp.releaseDate),options:{fontSize:6,fontFace:'Arial',color:'4ADE80',bold:true}});
+      sl.addText(headTxt,{x:cx+0.02,y:colTop,w:colW-0.04,h:headH,align:'center',valign:'middle',margin:0});
+
+      // Epic cards
+      const sEpics=epics.filter(f=>f.sprintId===sp.id);
+      sEpics.forEach((ep,ei)=>{
+        const cardY=colTop+headH+0.15+ei*0.85;
+        const cardH=0.7;
+        const sc=statusColors[ep.status]||statusColors.todo;
+
+        // Card rect
+        sl.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:cx+0.04,y:cardY,w:colW-0.08,h:cardH,fill:{color:sc.bg},line:{color:sc.border,width:1},rectRadius:0.04});
+
+        // Number circle
+        const circR=0.15;
+        sl.addShape(pres.shapes.OVAL,{x:cx+colW/2-circR,y:cardY-circR+0.02,w:circR*2,h:circR*2,fill:{color:WHITE},line:{color:'BBBBBB',width:0.5}});
+        sl.addText(String(ep.number),{x:cx+colW/2-circR,y:cardY-circR+0.02,w:circR*2,h:circR*2,fontSize:7,fontFace:'Arial',bold:true,color:NAVY,align:'center',valign:'middle',margin:0});
+
+        // Title
+        const shortName=(ep.name||ep.key).toUpperCase();
+        const displayName=shortName.length>35?shortName.substring(0,35)+'…':shortName;
+        sl.addText(displayName,{x:cx+0.08,y:cardY+0.12,w:colW-0.16,h:0.35,fontSize:7,fontFace:'Arial',bold:true,color:sc.text,align:'center',valign:'top',margin:0,wrap:true});
+
+        // CRM Key
+        sl.addText(ep.key,{x:cx+0.08,y:cardY+cardH-0.2,w:colW-0.16,h:0.18,fontSize:6,fontFace:'Arial',italic:true,color:sc.text,align:'center',valign:'bottom',margin:0});
+      });
+    });
+
+    // Legend
+    const legX=11.8,legY=5.8,legItems=[
+      {label:'To be started',color:WHITE,border:'C0C0C0'},
+      {label:'Completed',color:GREEN,border:'2D8E47'},
+      {label:'Ongoing',color:GOLD,border:'D4900F'},
+      {label:'Delayed',color:RED,border:'DC2626'},
+      {label:'Canceled',color:'FECACA',border:'DC2626'}
+    ];
+    legItems.forEach((li,i)=>{
+      const ly=legY+i*0.28;
+      sl.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:legX,y:ly,w:0.22,h:0.16,fill:{color:li.color},line:{color:li.border,width:0.5},rectRadius:0.02});
+      sl.addText(li.label,{x:legX+0.28,y:ly,w:1.2,h:0.16,fontSize:6,fontFace:'Arial',color:'1E293B',valign:'middle',margin:0});
+    });
+
+    // Under Discussion ribbon (diagonal text)
+    sl.addText('Under Discussion',{x:11.2,y:0.1,w:2,h:0.3,fontSize:8,fontFace:'Arial',color:WHITE,bold:true,fill:{color:'4A86C8'},align:'center',valign:'middle',rotate:45});
+  }
+
+  pres.writeFile({fileName:'Sprint_Planning.pptx'}).then(()=>pill('✓ .pptx téléchargé'));
+}
+
+// ═══ TEST MODE ═══
+function loadTestData(){
+  const piStart='2026-03-30';
+  sprints=[
+    {id:'s1',number:1,label:'Sprint 2026.2.1',start:'2026-03-30',end:'2026-04-10',hasRelease:false,releaseDate:''},
+    {id:'s2',number:2,label:'Sprint 2026.2.2',start:'2026-04-13',end:'2026-04-24',hasRelease:true,releaseDate:'2026-04-16'},
+    {id:'s3',number:3,label:'Sprint 2026.2.3',start:'2026-04-27',end:'2026-05-08',hasRelease:false,releaseDate:''},
+    {id:'s4',number:4,label:'Sprint 2026.2.4',start:'2026-05-11',end:'2026-05-22',hasRelease:true,releaseDate:'2026-05-21'},
+    {id:'s5',number:5,label:'Sprint 2026.2.5',start:'2026-05-25',end:'2026-06-05',hasRelease:false,releaseDate:''},
+    {id:'s6',number:6,label:'Sprint 2026.3.1',start:'2026-06-08',end:'2026-06-19',hasRelease:true,releaseDate:'2026-06-18'},
+    {id:'s7',number:7,label:'Sprint 2026.3.2',start:'2026-06-22',end:'2026-07-03',hasRelease:false,releaseDate:''}
+  ];
+
+  nextNum=1;
+  epics=[
+    {id:uid(),number:1,key:'CAR-101',name:'Chassis & Frame Design',description:'Design and validate the monocoque chassis structure with crash simulation',benefits:'Safety certification, weight optimization under 1400kg',fixVersion:'Monthly Release June 2026',jiraSprint:'',components:'Engineering, Structure',sprintId:'s6',status:'todo',tshirt:'L'},
+    {id:uid(),number:2,key:'CAR-102',name:'Electric Powertrain Integration',description:'Integrate dual-motor electric drivetrain with battery management system',benefits:'450km range, 0-100km/h in 4.2s, regenerative braking',fixVersion:'Monthly Release May 2026',jiraSprint:'',components:'Powertrain, Electronics',sprintId:'s4',status:'ongoing',tshirt:'XL'},
+    {id:uid(),number:3,key:'CAR-103',name:'Autonomous Driving Module L3',description:'Implement Level 3 autonomous driving with LiDAR, cameras and sensor fusion',benefits:'Highway autopilot, traffic jam assist, enhanced safety',fixVersion:'Monthly Release April 2026',jiraSprint:'',components:'ADAS, Software',sprintId:'s2',status:'ongoing',tshirt:'XL'},
+    {id:uid(),number:4,key:'CAR-104',name:'Interior UX & Dashboard',description:'Design digital cockpit with dual 15" screens and HUD projection',benefits:'Intuitive driver experience, OTA-updatable interface',fixVersion:'Monthly Release April 2026',jiraSprint:'',components:'Interior, UX Design',sprintId:'s2',status:'todo',tshirt:'L'},
+    {id:uid(),number:5,key:'CAR-105',name:'Aerodynamics Package V3',description:'Wind tunnel optimization with active rear spoiler and underbody diffuser',benefits:'Cd 0.23 target, 12% range improvement at highway speed',fixVersion:'Monthly Release May 2026',jiraSprint:'',components:'Aero, Engineering',sprintId:'s4',status:'completed',tshirt:'M'},
+    {id:uid(),number:6,key:'CAR-106',name:'Thermal Management System',description:'Unified thermal circuit for battery, cabin and powertrain cooling/heating',benefits:'Optimal battery temp in all conditions, heat pump efficiency',fixVersion:'Monthly Release April 2026',jiraSprint:'',components:'Thermal, Powertrain',sprintId:'s2',status:'todo',tshirt:'L'},
+    {id:uid(),number:7,key:'CAR-107',name:'Suspension & Ride Tuning',description:'Adaptive air suspension with predictive road scanning and sport/comfort modes',benefits:'Superior ride comfort, active body control, 15mm ground clearance adj.',fixVersion:'Monthly Release April 2026',jiraSprint:'',components:'Chassis, Dynamics',sprintId:'s1',status:'ongoing',tshirt:'M'},
+    {id:uid(),number:8,key:'CAR-108',name:'Battery Pack Assembly Line',description:'Setup high-voltage battery pack assembly with automated cell stacking',benefits:'Production capacity 200 units/day, cell-to-pack technology',fixVersion:'Monthly Release May 2026',jiraSprint:'',components:'Manufacturing, Battery',sprintId:'s3',status:'ongoing',tshirt:'XL'},
+    {id:uid(),number:9,key:'CAR-109',name:'Infotainment & Connectivity',description:'5G connected infotainment with app store, voice assistant and phone mirroring',benefits:'Seamless smartphone integration, OTA updates, real-time navigation',fixVersion:'Monthly Release April 2026',jiraSprint:'',components:'Software, UX',sprintId:'s3',status:'todo',tshirt:'M'},
+    {id:uid(),number:10,key:'CAR-110',name:'Paint Shop & Color Options',description:'Robotic paint line with 12 standard colors and custom-mix capability',benefits:'Premium finish quality, 3-layer ceramic coating option',fixVersion:'Monthly Release June 2026',jiraSprint:'',components:'Manufacturing, Design',sprintId:'s5',status:'todo',tshirt:'S'},
+    {id:uid(),number:11,key:'CAR-111',name:'Crash Test Certification',description:'Full NCAP crash test program — frontal, side, pole and pedestrian',benefits:'Target 5-star Euro NCAP rating, market authorization',fixVersion:'Monthly Release May 2026',jiraSprint:'',components:'Safety, Compliance',sprintId:'s4',status:'delayed',tshirt:'L'},
+    {id:uid(),number:12,key:'CAR-112',name:'Charging Infrastructure',description:'Develop proprietary fast-charging network compatibility and home charger',benefits:'250kW DC fast charge, 10-80% in 18 minutes',fixVersion:'',jiraSprint:'',components:'Infrastructure, Electronics',sprintId:'s5',status:'todo',tshirt:'M'},
+    {id:uid(),number:13,key:'CAR-113',name:'Quality Assurance Protocol',description:'End-of-line quality gates with automated visual inspection and water test',benefits:'<0.5% defect rate target, customer satisfaction',fixVersion:'Monthly Release June 2026',jiraSprint:'',components:'Quality, Manufacturing',sprintId:'s6',status:'todo',tshirt:'L'},
+    {id:uid(),number:14,key:'CAR-114',name:'Supplier Chain Optimization',description:'Dual-source critical components and implement just-in-sequence delivery',benefits:'Supply resilience, 15% cost reduction on key parts',fixVersion:'Monthly Release June 2026',jiraSprint:'',components:'Procurement, Logistics',sprintId:'s4',status:'ongoing',tshirt:'M'},
+    {id:uid(),number:15,key:'CAR-115',name:'Braking System Validation',description:'Validate brake-by-wire with mechanical fallback and ABS/ESP integration',benefits:'Shorter stopping distances, seamless regen-to-friction blend',fixVersion:'Monthly Release April 2026',jiraSprint:'',components:'Chassis, Safety',sprintId:'s1',status:'completed',tshirt:'S'},
+    {id:uid(),number:16,key:'CAR-116',name:'Homologation Dossier',description:'Prepare regulatory homologation for EU, UK and US markets',benefits:'Multi-market launch readiness, type approval',fixVersion:'Monthly Release June 2026',jiraSprint:'',components:'Compliance, Legal',sprintId:'s7',status:'todo',tshirt:'M'},
+    {id:uid(),number:17,key:'CAR-117',name:'Legacy Platform Decommission',description:'Sunset the previous generation platform tooling and documentation',benefits:'Factory floor space recovery, tooling cost savings',fixVersion:'Monthly Release June 2026',jiraSprint:'',components:'Manufacturing',sprintId:'s7',status:'canceled',tshirt:'S'}
+  ];
+
+  document.getElementById('piStart').value='2026-03-30';
+  document.getElementById('piEnd').value='2026-07-03';
+  document.getElementById('piSummary').style.display='flex';
+  document.getElementById('piDays').textContent='95';
+  document.getElementById('piCount').textContent='7';
+  document.getElementById('addSprintBar').style.display='flex';
+
+  const dz=document.getElementById('dropzone');
+  dz.classList.add('loaded');
+  document.getElementById('dropContent').innerHTML=`<div class="loaded-info"><div><div class="count">${epics.length}</div><div style="font-size:12px;color:var(--text-dim)">epics chargées (mode test 🚗)</div></div></div>`;
+
+  renderSprints();renderEpics();
+  pill('🧪 Test mode — projet voiture chargé');
+}
+
+// ═══ INIT ═══
+renderEpics();
+</script>
+
+<!-- TEST MODE FAB -->
+<button onclick="loadTestData()" title="Charger les données de test" style="
+  position:fixed;bottom:24px;right:24px;z-index:200;
+  width:48px;height:48px;border-radius:50%;border:2px solid rgba(245,158,11,.4);
+  background:rgba(30,41,59,.95);color:#fbbf24;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,.4);
+  transition:all .2s;backdrop-filter:blur(8px);
+" onmouseover="this.style.transform='scale(1.1)';this.style.borderColor='#fbbf24'" onmouseout="this.style.transform='scale(1)';this.style.borderColor='rgba(245,158,11,.4)'">🧪</button>
 
 </body>
 </html>
