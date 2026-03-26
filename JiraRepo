@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Jira Query Saver</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    input, textarea, select {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    input { flex: 1; }
+    textarea { flex: 2; resize: vertical; min-height: 60px; }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover { background: #5a67d8; }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 8px;
+      color: white;
+    }
+
+    .DPnxt { background: #3182ce; }
+    .CLM { background: #38a169; }
+    .PB { background: #e53e3e; }
+
+    .group {
+      margin-bottom: 25px;
+    }
+
+    .group h2 {
+      margin-bottom: 10px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 5px;
+    }
+
+    .query-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      background: #f7f9fc;
+      padding: 15px;
+      border-radius: 12px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .card h3 { margin: 0 0 10px; font-size: 16px; }
+
+    .card p {
+      font-size: 13px;
+      white-space: pre-wrap;
+      color: #555;
+    }
+
+    .actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .small-btn {
+      font-size: 12px;
+      padding: 6px 10px;
+    }
+
+    .delete { background: #e53e3e; }
+    .delete:hover { background: #c53030; }
+
+    .copy { background: #38a169; }
+    .copy:hover { background: #2f855a; }
+  
+
+    /* HEADER */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #002060;
+      border-bottom: 3px solid #0a3575;
+      padding: 14px 28px;
+      color: white;
+    }
+
+    .logo-wrap { display: flex; flex-direction: column; }
+
+    .logo {
+      font-family: 'Permanent Marker', cursive;
+      font-size: 26px;
+      color: #fff;
+      transform: rotate(-1.5deg);
+      letter-spacing: 1px;
+      line-height: 1;
+      text-shadow: 3px 3px 0 rgba(59,130,246,.4), -1px -1px 0 rgba(255,255,255,.1);
+    }
+
+    .logo span { color: #60a5fa; }
+
+    .subtitle {
+      font-size: 12px;
+      color: #93c5fd;
+    }
+
+    .spacer { flex: 1; }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .header-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #1e3a8a;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .header-btn svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    .status {
+      background: rgba(16,185,129,0.2);
+      color: #6ee7b7;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      display: none;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .header { padding: 10px 16px; flex-wrap: wrap; }
+      .logo { font-size: 20px; }
+      .header-btn { font-size: 12px; padding: 6px 10px; }
+    }
+
+    @media (max-width: 480px) {
+      .header { padding: 8px 12px; }
+      .logo { font-size: 18px; }
+      .header-btn svg { display: none; }
+    }
+
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo-wrap">
+    <div class="logo">LazyPO <span>✦</span></div>
+    <div class="subtitle">Jira Query Manager</div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="actions">
+    <div id="status" class="status">Sauvegardé</div>
+    <button class="header-btn" onclick="focusForm()">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      Ajouter
+    </button>
+  </div>
+</header>
+
+<div class="container">
+  <h1>💾 Jira Query Saver</h1>
+
+  <div class="form">
+    <input type="text" id="name" placeholder="Nom de la query" />
+    <textarea id="query" placeholder="Ta JQL ici..."></textarea>
+
+    <select id="tag">
+      <option value="DPnxt">DPnxt</option>
+      <option value="CLM">CLM</option>
+      <option value="PB">PB</option>
+    </select>
+
+    <button onclick="addQuery()">Ajouter</button>
+  </div>
+
+  <div id="groups"></div>
+</div>
+
+<script>
+  const groupsEl = document.getElementById('groups');
+
+  const TAG_ORDER = ['DPnxt', 'CLM', 'PB'];
+
+  function loadQueries() {
+    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
+
+    groupsEl.innerHTML = '';
+
+    TAG_ORDER.forEach(tag => {
+      const groupQueries = queries.filter(q => q.tag === tag);
+      if (groupQueries.length === 0) return;
+
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'group';
+
+      groupDiv.innerHTML = `<h2>${tag}</h2>`;
+
+      const list = document.createElement('div');
+      list.className = 'query-list';
+
+      groupQueries.forEach((q, index) => {
+        const realIndex = queries.indexOf(q);
+
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        card.innerHTML = `
+          <span class="tag ${q.tag}">${q.tag}</span>
+          <h3>${q.name}</h3>
+          <p>${q.query}</p>
+          <div class="actions">
+            <button class="small-btn copy" onclick="copyQuery(${realIndex})">Copier</button>
+            <button class="small-btn delete" onclick="deleteQuery(${realIndex})">Supprimer</button>
+          </div>
+        `;
+
+        list.appendChild(card);
+      });
+
+      groupDiv.appendChild(list);
+      groupsEl.appendChild(groupDiv);
+    });
+  }
+
+  function showStatus() {
+    const s = document.getElementById('status');
+    s.style.display = 'inline-block';
+    setTimeout(() => s.style.display = 'none', 1500);
+  }
+
+  function focusForm() {
+    document.getElementById('name').focus();
+  }
+
+  function addQuery() {
+    const name = document.getElementById('name').value.trim();
+    const query = document.getElementById('query').value.trim();
+    const tag = document.getElementById('tag').value;
+
+    if (!name || !query) {
+      alert('Remplis les champs !');
+      return;
+    }
+
+    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
+    queries.push({ name, query, tag });
+    localStorage.setItem('jiraQueries', JSON.stringify(queries));
+    showStatus();
+
+    document.getElementById('name').value = '';
+    document.getElementById('query').value = '';
+
+    loadQueries();
+  }
+
+  function deleteQuery(index) {
+    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
+    queries.splice(index, 1);
+    localStorage.setItem('jiraQueries', JSON.stringify(queries));
+    showStatus();
+    loadQueries();
+  }
+
+  function copyQuery(index) {
+    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
+    navigator.clipboard.writeText(queries[index].query);
+    alert('Query copiée !');
+  }
+
+  loadQueries();
+</script>
+
+</body>
+</html>
