@@ -255,6 +255,11 @@
       color: #666; font-size: 14px;
     }
 
+    /* ── Body offset (desktop) — donne de la place à la sidebar fixe ── */
+    @media (min-width: 769px) {
+      body { padding-left: 64px !important; }
+    }
+
     /* ── Responsive ── */
     @media (max-width: 768px) {
       .sb {
