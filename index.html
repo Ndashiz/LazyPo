@@ -269,8 +269,8 @@ body {
   50%     { opacity: 0.5; transform: scale(0.7); }
 }
 
-.project-preview  { animation: fadeUp 0.5s ease 0.05s both; }
-.content          { animation: fadeUp 0.5s ease 0.18s both; }
+.content          { animation: fadeUp 0.5s ease 0.05s both; }
+.project-preview  { animation: fadeUp 0.5s ease 0.18s both; }
 .products-section { animation: fadeUp 0.5s ease 0.30s both; }
 
 /* ════════════════════════════════
@@ -307,13 +307,7 @@ body {
 
 <main class="main">
 
-  <!-- ══ 1. PROGRESS BARS (en premier, centrées) ══ -->
-  <section class="project-preview">
-    <div class="section-label">Project preview</div>
-    <div class="countdown-grid" id="countdownGrid"></div>
-  </section>
-
-  <!-- ══ 2. HERO TEXT (centré) ══ -->
+  <!-- ══ 1. HERO TEXT (centré) ══ -->
   <div class="content">
     <div class="hero-title">Lazy<span>PO</span></div>
     <p class="hero-desc">
@@ -338,6 +332,12 @@ body {
       </div>
     </div>
   </div>
+
+  <!-- ══ 2. PROGRESS BARS (sous le hero) ══ -->
+  <section class="project-preview">
+    <div class="section-label">Project preview</div>
+    <div class="countdown-grid" id="countdownGrid"></div>
+  </section>
 
   <!-- ══ 3. PRODUITS (rappel) ══ -->
   <section class="products-section">
