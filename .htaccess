@@ -1,0 +1,83 @@
+# ═══════════════════════════════════════════════
+#  LazyPO — .htaccess Security Configuration
+# ═══════════════════════════════════════════════
+
+# ── Force HTTPS ──────────────────────────────
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ── Disable directory listing ─────────────────
+Options -Indexes
+
+# ── Block access to sensitive files ──────────
+<FilesMatch "(^\.htaccess|^\.env|^\.git|projet\.json|package\.json|package-lock\.json|README\.md)">
+  Require all denied
+</FilesMatch>
+
+# ── Block access to hidden files/dirs ─────────
+RedirectMatch 404 /\..*
+
+# ── Security Headers ──────────────────────────
+<IfModule mod_headers.c>
+
+  # Prevent clickjacking
+  Header always set X-Frame-Options "SAMEORIGIN"
+
+  # Prevent MIME type sniffing
+  Header always set X-Content-Type-Options "nosniff"
+
+  # XSS Protection (legacy browsers)
+  Header always set X-XSS-Protection "1; mode=block"
+
+  # Referrer policy
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Permissions policy — disable unused browser features
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+
+  # Content Security Policy
+  # Allows: self, Google Fonts, inline styles/scripts (needed for static app)
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self';"
+
+  # Remove server signature
+  Header always unset X-Powered-By
+  Header always unset Server
+
+</IfModule>
+
+# ── Cache static assets ───────────────────────
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # HTML — no cache (always fresh)
+  ExpiresByType text/html                 "access plus 0 seconds"
+
+  # CSS & JS — 1 week
+  ExpiresByType text/css                  "access plus 1 week"
+  ExpiresByType application/javascript    "access plus 1 week"
+  ExpiresByType text/javascript           "access plus 1 week"
+
+  # Fonts — 1 month
+  ExpiresByType font/woff2                "access plus 1 month"
+  ExpiresByType font/woff                 "access plus 1 month"
+
+  # Images — 1 month
+  ExpiresByType image/png                 "access plus 1 month"
+  ExpiresByType image/jpeg                "access plus 1 month"
+  ExpiresByType image/svg+xml             "access plus 1 month"
+  ExpiresByType image/x-icon              "access plus 1 month"
+</IfModule>
+
+# ── Gzip compression ──────────────────────────
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html
+  AddOutputFilterByType DEFLATE text/css
+  AddOutputFilterByType DEFLATE application/javascript
+  AddOutputFilterByType DEFLATE text/javascript
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# ── Custom error pages ────────────────────────
+ErrorDocument 403 /index.html
+ErrorDocument 404 /index.html
