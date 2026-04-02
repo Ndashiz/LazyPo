@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  const path = window.location.pathname;
+  const lower = path.toLowerCase();
+  if (path !== lower) window.location.replace(lower);
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LazyPO — My Account</title>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0c0c0c;
+  --sidebar:  #111111;
+  --surface:  #161616;
+  --surface2: #1c1c1c;
+  --border:   #222222;
+  --border2:  #2a2a2a;
+  --accent:   #3b82f6;
+  --accent2:  #60a5fa;
+  --glow:     rgba(59,130,246,0.15);
+  --text:     #f0f0f0;
+  --muted:    #6b6b6b;
+  --faint:    #2e2e2e;
+  --danger:   #ef4444;
+  --success:  #22c55e;
+  --r:        10px;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex; overflow: hidden;
+}
+
+/* ══════════════════════════════
+   SIDEBAR (same as index.html)
+══════════════════════════════ */
+.sidebar {
+  width: 260px; min-width: 260px; height: 100vh;
+  background: var(--sidebar); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 28px 16px 24px;
+  position: relative; z-index: 100;
+  transition: transform 0.3s ease;
+}
+.sidebar::after {
+  content: ''; position: absolute; top: 15%; right: -1px; bottom: 15%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(59,130,246,0.4), transparent);
+}
+
+.logo-wrap { padding: 0 8px; margin-bottom: 36px; display: flex; align-items: center; }
+.logo-graffiti {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 28px; color: #fff; letter-spacing: 1px; line-height: 1;
+  text-shadow: 2px 2px 0 rgba(59,130,246,0.5), -1px -1px 0 rgba(255,255,255,0.06);
+  transform: rotate(-1.5deg); display: inline-block; text-decoration: none;
+}
+.logo-graffiti span { color: #60a5fa; }
+
+.nav-section-label {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted);
+  padding: 0 12px; margin-bottom: 8px; margin-top: 4px;
+}
+.nav-items { display: flex; flex-direction: column; gap: 3px; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+  border-radius: var(--r); cursor: pointer; text-decoration: none;
+  color: var(--muted); font-size: 14px; font-weight: 500;
+  transition: all 0.15s; position: relative; border: 1px solid transparent;
+}
+.nav-item:hover { color: var(--text); background: var(--surface); }
+.nav-item.active { color: var(--text); background: var(--surface2); border-color: var(--border2); }
+.nav-item.active::before {
+  content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
+  width: 2px; background: var(--accent2); border-radius: 2px;
+  box-shadow: 0 0 8px var(--accent2);
+}
+.nav-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; background: var(--faint); flex-shrink: 0;
+  transition: background 0.15s;
+}
+.nav-item.active .nav-icon { background: rgba(59,130,246,0.15); }
+.nav-item:hover .nav-icon  { background: var(--border2); }
+.nav-label { flex: 1; }
+
+.nav-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
+  padding: 2px 7px; border-radius: 20px; text-transform: uppercase;
+}
+.badge-live { background: rgba(59,130,246,0.15); color: var(--accent2); border: 1px solid rgba(96,165,250,0.25); }
+.badge-soon { background: rgba(80,80,80,0.3); color: #888; border: 1px solid #333; }
+.badge-wip  { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
+.nav-divider { height: 1px; background: var(--border); margin: 14px 4px; }
+.sidebar-spacer { flex: 1; }
+.sidebar-footer { padding: 0 4px; }
+
+/* Mobile */
+.burger {
+  display: none; position: fixed; top: 18px; left: 16px; z-index: 200;
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  cursor: pointer; align-items: center; justify-content: center;
+  flex-direction: column; gap: 5px;
+}
+.burger span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; transition: all 0.25s; }
+.burger.open span:nth-child(1) { transform: rotate(45deg) translate(2.5px,2.5px); }
+.burger.open span:nth-child(2) { opacity: 0; }
+.burger.open span:nth-child(3) { transform: rotate(-45deg) translate(2.5px,-2.5px); }
+.sidebar-overlay { display: none; position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+.sidebar-close {
+  display: none; position: absolute; top: 16px; right: 16px;
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  cursor: pointer; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 18px;
+}
+
+/* ══════════════════════════════
+   MAIN
+══════════════════════════════ */
+.main { flex: 1; height: 100vh; overflow-y: auto; overflow-x: hidden; }
+
+.page-header {
+  padding: 40px 48px 0;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px; margin-bottom: 40px;
+}
+.page-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted);
+  margin-bottom: 6px;
+}
+.page-heading {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px; font-weight: 700; color: var(--text);
+}
+
+.page-body { padding: 0 48px 64px; max-width: 720px; }
+
+/* ── sections ── */
+.acc-section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px; margin-bottom: 20px;
+}
+.acc-section-title {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  margin-bottom: 20px; padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── avatar zone ── */
+.avatar-zone {
+  display: flex; align-items: center; gap: 24px;
+  margin-bottom: 0;
+}
+.avatar-preview {
+  width: 80px; height: 80px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; position: relative;
+  box-shadow: 0 0 0 3px rgba(96,165,250,0.2);
+  transition: box-shadow 0.2s;
+}
+.avatar-preview img {
+  width: 100%; height: 100%; object-fit: cover;
+  position: absolute; inset: 0;
+}
+.avatar-initial {
+  font-size: 28px; font-weight: 700; color: #fff;
+  font-family: 'DM Sans', sans-serif; position: relative; z-index: 1;
+}
+
+.avatar-actions { display: flex; flex-direction: column; gap: 10px; }
+.avatar-drop-area {
+  border: 2px dashed var(--border2); border-radius: 10px;
+  padding: 14px 20px; text-align: center; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  font-size: 13px; color: var(--muted);
+}
+.avatar-drop-area:hover,
+.avatar-drop-area.drag-over {
+  border-color: var(--accent); background: var(--glow); color: var(--accent2);
+}
+.avatar-drop-area input { display: none; }
+.avatar-hint { font-size: 11px; color: var(--muted); }
+
+/* ── form fields ── */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+}
+.field input {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 10px 14px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+.field input:disabled { opacity: 0.5; cursor: not-allowed; }
+.field input::placeholder { color: var(--muted); }
+
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ── badge row ── */
+.badge-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.badge-pill {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 4px 12px; border-radius: 20px; text-transform: uppercase;
+}
+.badge-pill.admin  { background: rgba(139,92,246,0.15); color: #c084fc; border: 1px solid rgba(192,132,252,0.25); }
+.badge-pill.member { background: rgba(80,80,80,0.2); color: #888; border: 1px solid #333; }
+.badge-desc { font-size: 12px; color: var(--muted); }
+
+/* ── buttons ── */
+.btn-row { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+.btn-save {
+  padding: 10px 24px; background: var(--accent); color: #fff; border: none;
+  border-radius: var(--r); font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-save:hover { background: #2563eb; }
+.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-cancel {
+  padding: 10px 20px; background: transparent; color: var(--muted);
+  border: 1px solid var(--border2); border-radius: var(--r);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.btn-cancel:hover { color: var(--text); border-color: #555; }
+
+/* ── inline feedback ── */
+.inline-msg {
+  font-size: 12px; padding: 8px 12px; border-radius: 8px;
+  display: none; margin-top: 12px;
+}
+.inline-msg.error   { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; display: block; }
+.inline-msg.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: #86efac; display: block; }
+
+/* ── spinner ── */
+.spin { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── loading skeleton ── */
+.skeleton { background: var(--surface2); border-radius: 6px; animation: shimmer 1.4s ease infinite; }
+@keyframes shimmer { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+/* ══════════════════════════════
+   RESPONSIVE
+══════════════════════════════ */
+@media (max-width: 768px) {
+  body { flex-direction: column; overflow: auto; }
+  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .sidebar-close { display: flex; }
+  .burger { display: flex; }
+  .main { height: auto; min-height: 100vh; }
+  .page-header { padding: 72px 24px 20px; margin-bottom: 28px; }
+  .page-body { padding: 0 24px 48px; }
+  .field-row { grid-template-columns: 1fr; }
+  .avatar-zone { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 480px) {
+  .page-header { padding: 72px 16px 20px; }
+  .page-body { padding: 0 16px 40px; }
+  .acc-section { padding: 20px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Mobile burger -->
+<button class="burger" id="burger" aria-label="Menu">
+  <span></span><span></span><span></span>
+</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="logo-wrap">
+    <a href="index.html" class="logo-graffiti">LazyPO <span>✦</span></a>
+  </div>
+  <button class="sidebar-close" id="sidebarClose" aria-label="Close">✕</button>
+
+  <div class="nav-section-label">Outils</div>
+  <nav class="nav-items">
+    <a href="lazypo_generator.html" class="nav-item">
+      <div class="nav-icon">✉️</div>
+      <span class="nav-label">SoW Email</span>
+      <span class="nav-badge badge-live">Live</span>
+    </a>
+    <a href="sprintplanner.html" class="nav-item">
+      <div class="nav-icon">📋</div>
+      <span class="nav-label">Sprint Planning</span>
+      <span class="nav-badge badge-soon">En cours</span>
+    </a>
+    <a href="jirarepo.html" class="nav-item">
+      <div class="nav-icon">🎫</div>
+      <span class="nav-label">Jira Request</span>
+      <span class="nav-badge badge-wip">En cours</span>
+    </a>
+  </nav>
+
+  <div class="nav-divider"></div>
+  <div class="nav-section-label">Général</div>
+  <nav class="nav-items">
+    <a href="account.html" class="nav-item active">
+      <div class="nav-icon">👤</div>
+      <span class="nav-label">My Account</span>
+    </a>
+    <a href="#" class="nav-item" onclick="return false;">
+      <div class="nav-icon">⚙️</div>
+      <span class="nav-label">Paramètres</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-spacer"></div>
+  <div class="sidebar-footer" id="authFooter"></div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Account</div>
+      <div class="page-heading">My Account</div>
+    </div>
+    <div id="accountBadge"></div>
+  </div>
+
+  <div class="page-body">
+
+    <!-- ── Profile picture ── -->
+    <div class="acc-section">
+      <div class="acc-section-title">Profile picture</div>
+      <div class="avatar-zone">
+        <div class="avatar-preview" id="avatarPreview">
+          <div class="avatar-initial" id="avatarInitial">?</div>
+        </div>
+        <div class="avatar-actions">
+          <div class="avatar-drop-area" id="dropArea" onclick="document.getElementById('avatarInput').click()">
+            <input type="file" id="avatarInput" accept="image/*">
+            <div>Drop image here or <strong>browse</strong></div>
+          </div>
+          <div class="avatar-hint">JPG, PNG or GIF · Max 2 MB</div>
+          <div class="inline-msg" id="avatarMsg"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Profile info ── -->
+    <div class="acc-section">
+      <div class="acc-section-title">Profile information</div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="field-row">
+          <div class="field">
+            <label for="inputUsername">Username</label>
+            <input id="inputUsername" type="text" placeholder="Your username">
+          </div>
+          <div class="field">
+            <label for="inputEmail">Email</label>
+            <input id="inputEmail" type="email" disabled>
+          </div>
+        </div>
+        <div class="field">
+          <label>Role</label>
+          <div class="badge-row" id="roleRow">
+            <span class="badge-pill member skeleton" style="width:60px;height:22px;">&nbsp;</span>
+          </div>
+        </div>
+      </div>
+      <div class="inline-msg" id="profileMsg"></div>
+      <div class="btn-row">
+        <button class="btn-save" id="btnSaveProfile" onclick="saveProfile()">Save changes</button>
+      </div>
+    </div>
+
+    <!-- ── Change password ── -->
+    <div class="acc-section">
+      <div class="acc-section-title">Change password</div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="field">
+          <label for="inputNewPwd">New password</label>
+          <input id="inputNewPwd" type="password" placeholder="At least 6 characters" minlength="6">
+        </div>
+        <div class="field">
+          <label for="inputConfirmPwd">Confirm new password</label>
+          <input id="inputConfirmPwd" type="password" placeholder="Repeat password">
+        </div>
+      </div>
+      <div class="inline-msg" id="pwdMsg"></div>
+      <div class="btn-row">
+        <button class="btn-save" id="btnSavePwd" onclick="savePassword()">Update password</button>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script>
+/* ── Mobile sidebar ── */
+const burger  = document.getElementById('burger');
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('sidebarOverlay');
+const closeBtn = document.getElementById('sidebarClose');
+function openSidebar()  { sidebar.classList.add('open'); overlay.classList.add('open'); burger.classList.add('open'); }
+function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); burger.classList.remove('open'); }
+burger.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
+overlay.addEventListener('click', closeSidebar);
+closeBtn.addEventListener('click', closeSidebar);
+
+/* ── Page init ── */
+let currentSession  = null;
+let currentProfile  = null;
+let pendingAvatarFile = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  currentSession = await LazyAuth.requireAuth();
+  if (!currentSession) return;
+
+  // Prefill email
+  document.getElementById('inputEmail').value = currentSession.user.email || '';
+
+  // Load profile
+  try {
+    currentProfile = await LazyAuth.getProfile(currentSession.user.id);
+  } catch (_) {}
+
+  renderProfile();
+});
+
+function renderProfile() {
+  const user    = currentSession.user;
+  const profile = currentProfile;
+
+  const username = profile?.username || user.email?.split('@')[0] || '';
+  const avatar   = profile?.avatar_url || null;
+  const isAdmin  = profile?.is_admin || false;
+  const initial  = (username || user.email || 'U')[0].toUpperCase();
+
+  // Username field
+  document.getElementById('inputUsername').value = username;
+
+  // Avatar
+  const preview = document.getElementById('avatarPreview');
+  document.getElementById('avatarInitial').textContent = initial;
+  if (avatar) {
+    const img = new Image();
+    img.src = avatar;
+    img.onload = () => { preview.querySelector('img')?.remove(); preview.appendChild(img); };
+    img.onerror = () => {};
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;';
+  }
+
+  // Role badge
+  const roleRow = document.getElementById('roleRow');
+  roleRow.innerHTML = isAdmin
+    ? `<span class="badge-pill admin">Admin</span><span class="badge-desc">Full access to all features</span>`
+    : `<span class="badge-pill member">Member</span><span class="badge-desc">Standard access</span>`;
+
+  // Header badge
+  if (isAdmin) {
+    document.getElementById('accountBadge').innerHTML =
+      `<span class="badge-pill admin" style="font-size:10px;">Admin</span>`;
+  }
+}
+
+/* ── Avatar drag & drop ── */
+const dropArea   = document.getElementById('dropArea');
+const avatarInput = document.getElementById('avatarInput');
+
+avatarInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) previewAvatar(e.target.files[0]);
+});
+
+dropArea.addEventListener('dragover',  (e) => { e.preventDefault(); dropArea.classList.add('drag-over'); });
+dropArea.addEventListener('dragleave', ()  => dropArea.classList.remove('drag-over'));
+dropArea.addEventListener('drop',      (e) => {
+  e.preventDefault(); dropArea.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) previewAvatar(file);
+  else showMsg('avatarMsg', 'Please drop an image file.', 'error');
+});
+
+function previewAvatar(file) {
+  if (file.size > 2 * 1024 * 1024) { showMsg('avatarMsg', 'File is too large (max 2 MB).', 'error'); return; }
+  pendingAvatarFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('avatarPreview');
+    let img = preview.querySelector('img');
+    if (!img) { img = document.createElement('img'); img.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;'; preview.appendChild(img); }
+    img.src = e.target.result;
+    showMsg('avatarMsg', 'Preview ready — save profile to upload.', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ── Save profile ── */
+async function saveProfile() {
+  const btn      = document.getElementById('btnSaveProfile');
+  const username = document.getElementById('inputUsername').value.trim();
+  if (!username) { showMsg('profileMsg', 'Username cannot be empty.', 'error'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Saving…';
+  clearMsg('profileMsg');
+
+  try {
+    let avatarUrl = currentProfile?.avatar_url || null;
+
+    // Upload avatar if pending
+    if (pendingAvatarFile) {
+      avatarUrl = await LazyAuth.uploadAvatar(currentSession.user.id, pendingAvatarFile);
+      pendingAvatarFile = null;
+      clearMsg('avatarMsg');
+    }
+
+    const { error } = await LazyAuth.saveProfile(currentSession.user.id, { username, avatar_url: avatarUrl });
+    if (error) throw error;
+
+    currentProfile = { ...currentProfile, username, avatar_url: avatarUrl };
+    renderProfile();
+    showMsg('profileMsg', 'Profile saved!', 'success');
+  } catch (err) {
+    showMsg('profileMsg', err.message || 'Could not save profile.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Save changes';
+  }
+}
+
+/* ── Change password ── */
+async function savePassword() {
+  const btn     = document.getElementById('btnSavePwd');
+  const newPwd  = document.getElementById('inputNewPwd').value;
+  const confirm = document.getElementById('inputConfirmPwd').value;
+
+  if (!newPwd) { showMsg('pwdMsg', 'Enter a new password.', 'error'); return; }
+  if (newPwd.length < 6) { showMsg('pwdMsg', 'Password must be at least 6 characters.', 'error'); return; }
+  if (newPwd !== confirm) { showMsg('pwdMsg', 'Passwords do not match.', 'error'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Updating…';
+  clearMsg('pwdMsg');
+
+  const { error } = await window.sb.auth.updateUser({ password: newPwd });
+
+  if (error) {
+    showMsg('pwdMsg', error.message, 'error');
+  } else {
+    document.getElementById('inputNewPwd').value    = '';
+    document.getElementById('inputConfirmPwd').value = '';
+    showMsg('pwdMsg', 'Password updated successfully!', 'success');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Update password';
+}
+
+/* ── Helpers ── */
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = `inline-msg ${type}`;
+}
+function clearMsg(id) {
+  const el = document.getElementById(id);
+  el.className = 'inline-msg';
+  el.textContent = '';
+}
+</script>
+</body>
+</html>

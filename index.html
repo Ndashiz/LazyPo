@@ -10,6 +10,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LazyPO — Do less, Deliver More</title>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -456,6 +458,10 @@ body {
   <div class="nav-divider"></div>
   <div class="nav-section-label">Général</div>
   <nav class="nav-items">
+    <a href="account.html" class="nav-item">
+      <div class="nav-icon">👤</div>
+      <span class="nav-label">My Account</span>
+    </a>
     <a href="#" class="nav-item" onclick="return false;">
       <div class="nav-icon">⚙️</div>
       <span class="nav-label">Paramètres</span>
@@ -463,10 +469,7 @@ body {
   </nav>
 
   <div class="sidebar-spacer"></div>
-  <div class="sidebar-footer">
-    <div class="version-dot"></div>
-    <div class="sidebar-footer-text">v2.0 · <strong>100% local</strong></div>
-  </div>
+  <div class="sidebar-footer" id="authFooter"></div>
 </aside>
 
 <!-- ══ MAIN ══ -->
