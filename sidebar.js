@@ -55,6 +55,14 @@
       label: 'Focus FM',
       url: null,
       desc: 'Garde le focus sur tes priorités et booste ta productivité.'
+    },
+    { divider: true },
+    {
+      id: 'account',
+      icon: '👤',
+      label: 'My Account',
+      url: 'account.html',
+      desc: 'Gérer ton profil, avatar et mot de passe.'
     }
   ];
 
