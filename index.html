@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <script>
   const path = window.location.pathname;
@@ -11,160 +11,34 @@
 <title>LazyPO — Do less, Deliver More</title>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="auth.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
   --bg:       #0c0c0c;
-  --sidebar:  #111111;
   --surface:  #161616;
   --surface2: #1c1c1c;
   --border:   #222222;
   --border2:  #2a2a2a;
   --accent:   #3b82f6;
   --accent2:  #60a5fa;
-  --glow:     rgba(59,130,246,0.15);
   --text:     #f0f0f0;
   --muted:    #6b6b6b;
   --faint:    #2e2e2e;
   --r:        10px;
 }
 
-html, body { height: 100%; overflow: hidden; }
+html, body { min-height: 100%; }
 
 body {
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   color: var(--text);
-  display: flex;
 }
 
 /* ════════════════════════════════
-   SIDEBAR
+   FIXED BACKGROUND EFFECTS
 ════════════════════════════════ */
-.sidebar {
-  width: 260px;
-  min-width: 260px;
-  height: 100vh;
-  background: var(--sidebar);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: 28px 16px 24px;
-  position: relative;
-  z-index: 100;
-  transition: transform 0.3s ease;
-}
-.sidebar::after {
-  content: '';
-  position: absolute; top: 15%; right: -1px; bottom: 15%;
-  width: 1px;
-  background: linear-gradient(to bottom, transparent, rgba(59,130,246,0.4), transparent);
-}
-
-.logo-wrap { padding: 0 8px; margin-bottom: 36px; display: flex; align-items: center; justify-content: space-between; }
-.logo-graffiti {
-  font-family: 'Permanent Marker', cursive;
-  font-size: 28px; color: #fff; letter-spacing: 1px; line-height: 1;
-  text-shadow: 2px 2px 0 rgba(59,130,246,0.5), -1px -1px 0 rgba(255,255,255,0.06);
-  transform: rotate(-1.5deg); display: inline-block;
-}
-.logo-graffiti span { color: #60a5fa; }
-
-.nav-section-label {
-  font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--muted); padding: 0 12px;
-  margin-bottom: 8px; margin-top: 4px;
-}
-.nav-items { display: flex; flex-direction: column; gap: 3px; }
-
-.nav-item {
-  display: flex; align-items: center; gap: 11px; padding: 10px 12px;
-  border-radius: var(--r); cursor: pointer; text-decoration: none;
-  color: var(--muted); font-size: 14px; font-weight: 500;
-  transition: all 0.15s ease; position: relative; border: 1px solid transparent;
-}
-.nav-item:hover { color: var(--text); background: var(--surface); }
-.nav-item.active { color: var(--text); background: var(--surface2); border-color: var(--border2); }
-.nav-item.active::before {
-  content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
-  width: 2px; background: var(--accent2); border-radius: 2px;
-  box-shadow: 0 0 8px var(--accent2);
-}
-
-.nav-icon {
-  width: 32px; height: 32px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px; background: var(--faint); flex-shrink: 0;
-  transition: background 0.15s;
-}
-.nav-item.active .nav-icon { background: rgba(59,130,246,0.15); }
-.nav-item:hover .nav-icon  { background: var(--border2); }
-.nav-label { flex: 1; }
-
-.nav-badge {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
-  padding: 2px 7px; border-radius: 20px; text-transform: uppercase;
-}
-.badge-live { background: rgba(59,130,246,0.15); color: var(--accent2); border: 1px solid rgba(96,165,250,0.25); }
-.badge-soon { background: rgba(80,80,80,0.3); color: #888; border: 1px solid #333; }
-.badge-wip  { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
-
-.nav-divider { height: 1px; background: var(--border); margin: 14px 4px; }
-.sidebar-spacer { flex: 1; }
-
-.sidebar-footer { padding: 0 8px; display: flex; align-items: center; gap: 10px; }
-.version-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent2); box-shadow: 0 0 8px var(--accent2);
-  animation: pulse 2.5s ease infinite; flex-shrink: 0;
-}
-@keyframes pulse {
-  0%,100% { opacity: 1; transform: scale(1); }
-  50%     { opacity: 0.5; transform: scale(0.7); }
-}
-.sidebar-footer-text { font-size: 12px; color: var(--muted); }
-.sidebar-footer-text strong { color: #555; }
-
-/* ── Mobile burger ── */
-.burger {
-  display: none;
-  position: fixed; top: 18px; left: 16px; z-index: 200;
-  width: 40px; height: 40px; border-radius: 10px;
-  background: var(--surface2); border: 1px solid var(--border2);
-  cursor: pointer; align-items: center; justify-content: center;
-  flex-direction: column; gap: 5px;
-}
-.burger span {
-  display: block; width: 18px; height: 2px; background: var(--text);
-  border-radius: 2px; transition: all 0.25s ease;
-}
-.burger.open span:nth-child(1) { transform: rotate(45deg) translate(2.5px, 2.5px); }
-.burger.open span:nth-child(2) { opacity: 0; }
-.burger.open span:nth-child(3) { transform: rotate(-45deg) translate(2.5px, -2.5px); }
-
-.sidebar-overlay {
-  display: none; position: fixed; inset: 0; z-index: 90;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-}
-.sidebar-close {
-  display: none;
-  position: absolute; top: 16px; right: 16px;
-  width: 32px; height: 32px; border-radius: 8px;
-  background: var(--surface2); border: 1px solid var(--border2);
-  cursor: pointer; align-items: center; justify-content: center;
-  color: var(--muted); font-size: 18px;
-}
-
-/* ════════════════════════════════
-   MAIN CONTENT
-════════════════════════════════ */
-.main {
-  flex: 1; height: 100vh; overflow-y: auto; overflow-x: hidden;
-  position: relative; display: flex; flex-direction: column;
-}
-
 .main-bg {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
@@ -180,82 +54,26 @@ body {
   mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black, transparent);
 }
 
-.content {
-  position: relative; z-index: 1; flex: 1;
-  display: flex; flex-direction: column; justify-content: center;
-  padding: 48px 64px; max-width: 760px;
+/* ════════════════════════════════
+   MAIN LAYOUT
+   sidebar.js injecte une sidebar fixed de 64px
+════════════════════════════════ */
+.main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
 }
-
-.status-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.04); border: 1px solid var(--border2);
-  border-radius: 20px; padding: 6px 16px;
-  font-size: 12px; font-weight: 500; color: var(--muted);
-  margin-bottom: 32px; width: fit-content;
-}
-.status-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent2); box-shadow: 0 0 8px var(--accent2);
-  animation: pulse 2.5s ease infinite;
-}
-
-.hero-title {
-  font-family: 'Permanent Marker', cursive;
-  font-size: clamp(48px, 9vw, 104px);
-  line-height: 0.95; color: #ffffff; letter-spacing: 1px;
-  text-shadow: 4px 4px 0 rgba(59,130,246,0.25);
-  transform: rotate(-1deg); display: inline-block; margin-bottom: 28px;
-}
-.hero-title span { color: var(--accent2); }
-
-.hero-desc {
-  font-size: 17px; color: var(--muted); line-height: 1.7;
-  max-width: 460px; margin-bottom: 40px; font-weight: 400;
-}
-.hero-desc strong { color: #a0a0a0; font-weight: 600; }
-
-.cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 56px; }
-
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px; font-weight: 700; padding: 13px 28px;
-  border-radius: var(--r); border: none; cursor: pointer;
-  text-decoration: none; transition: all 0.18s; letter-spacing: 0.02em;
-}
-.btn-primary {
-  background: var(--accent); color: #fff;
-  box-shadow: 0 0 24px rgba(59,130,246,0.3);
-}
-.btn-primary:hover {
-  background: #2563eb; transform: translateY(-2px);
-  box-shadow: 0 4px 32px rgba(59,130,246,0.45);
-}
-.btn-ghost {
-  background: transparent; color: #666; border: 1px solid var(--border2);
-}
-.btn-ghost:hover {
-  color: var(--text); border-color: #444; background: var(--surface);
-}
-
-.stats-row { display: flex; gap: 40px; align-items: center; flex-wrap: wrap; }
-.stat-val {
-  font-family: 'DM Mono', monospace;
-  font-size: 26px; font-weight: 500; color: var(--accent2);
-  display: block; line-height: 1; margin-bottom: 4px;
-}
-.stat-label {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--muted);
-}
-.stats-sep { width: 1px; height: 32px; background: var(--border2); }
 
 /* ════════════════════════════════
-   PROJECT PREVIEW (Countdown)
+   1. PROJECT PREVIEW — en premier, centré
 ════════════════════════════════ */
 .project-preview {
   position: relative; z-index: 1;
-  padding: 0 64px 64px;
+  width: 100%;
+  padding: 64px 48px 48px;
+  display: flex; flex-direction: column; align-items: center;
 }
 
 .section-label {
@@ -264,34 +82,29 @@ body {
   text-transform: uppercase; color: var(--muted);
   background: var(--surface2); border: 1px solid var(--border2);
   border-radius: 6px; padding: 6px 14px;
-  display: inline-block; margin-bottom: 32px;
+  display: inline-block; margin-bottom: 40px;
 }
 
 .countdown-grid {
-  display: flex; gap: 40px; flex-wrap: wrap;
+  display: flex; gap: 48px; flex-wrap: wrap;
+  justify-content: center; align-items: center;
 }
 
 .countdown-card {
   display: flex; flex-direction: column; align-items: center; gap: 18px;
   animation: fadeUp 0.55s ease both;
 }
-.countdown-card:nth-child(1) { animation-delay: 0.40s; }
-.countdown-card:nth-child(2) { animation-delay: 0.50s; }
-.countdown-card:nth-child(3) { animation-delay: 0.60s; }
-.countdown-card:nth-child(4) { animation-delay: 0.70s; }
+.countdown-card:nth-child(1) { animation-delay: 0.10s; }
+.countdown-card:nth-child(2) { animation-delay: 0.20s; }
+.countdown-card:nth-child(3) { animation-delay: 0.30s; }
+.countdown-card:nth-child(4) { animation-delay: 0.40s; }
 
-.ring-wrap {
-  position: relative; width: 180px; height: 180px;
-}
-.ring-svg {
-  width: 100%; height: 100%; transform: rotate(-90deg);
-}
-.ring-bg {
-  fill: none; stroke: var(--border); stroke-width: 3;
-}
+.ring-wrap  { position: relative; width: 180px; height: 180px; }
+.ring-svg   { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-bg    { fill: none; stroke: var(--border); stroke-width: 3; }
 .ring-progress {
   fill: none; stroke-width: 3.5; stroke-linecap: round;
-  transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease;
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
   filter: drop-shadow(0 0 6px var(--ring-color, #f59e0b));
 }
 .ring-center {
@@ -320,291 +133,265 @@ body {
 }
 
 /* Ring colors */
-.ring-amber .ring-progress  { stroke: #f59e0b; --ring-color: #f59e0b; }
-.ring-white .ring-progress  { stroke: #e0e0e0; --ring-color: rgba(255,255,255,0.4); }
-.ring-blue  .ring-progress  { stroke: #60a5fa; --ring-color: #60a5fa; }
-.ring-green .ring-progress  { stroke: #34d399; --ring-color: #34d399; }
+.ring-amber .ring-progress { stroke: #f59e0b; --ring-color: #f59e0b; }
+.ring-white .ring-progress { stroke: #e0e0e0; --ring-color: rgba(255,255,255,0.4); }
+.ring-blue  .ring-progress { stroke: #60a5fa; --ring-color: #60a5fa; }
+.ring-green .ring-progress { stroke: #34d399; --ring-color: #34d399; }
 
-/* Overdue */
-.countdown-card.overdue .ring-days { color: #ef4444; }
+.countdown-card.overdue .ring-days     { color: #ef4444; }
 .countdown-card.overdue .ring-progress { stroke: #ef4444 !important; filter: drop-shadow(0 0 8px rgba(239,68,68,0.5)); }
-.countdown-card.overdue .countdown-name { color: #ef4444; border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.08); }
-
-/* Imminent < 7 days */
+.countdown-card.overdue .countdown-name{ color: #ef4444; border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.08); }
 .countdown-card.imminent .ring-progress { animation: urgentPulse 2s ease infinite; }
 @keyframes urgentPulse {
   0%,100% { filter: drop-shadow(0 0 6px var(--ring-color)); }
   50%     { filter: drop-shadow(0 0 16px var(--ring-color)); }
 }
 
-/* ── ANIMATIONS ── */
-.content > * { animation: fadeUp 0.55s ease both; }
-.status-pill { animation-delay: 0.05s; }
-.hero-title  { animation-delay: 0.12s; }
-.hero-desc   { animation-delay: 0.20s; }
-.cta-row     { animation-delay: 0.27s; }
-.stats-row   { animation-delay: 0.34s; }
+/* ════════════════════════════════
+   2. HERO TEXT — centré
+════════════════════════════════ */
+.content {
+  position: relative; z-index: 1;
+  width: 100%; padding: 0 48px 56px;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+}
 
+.hero-title {
+  font-family: 'Permanent Marker', cursive;
+  font-size: clamp(48px, 8vw, 96px);
+  line-height: 0.95; color: #ffffff; letter-spacing: 1px;
+  text-shadow: 4px 4px 0 rgba(59,130,246,0.25);
+  transform: rotate(-1deg); display: inline-block; margin-bottom: 24px;
+}
+.hero-title span { color: var(--accent2); }
+
+.hero-desc {
+  font-size: 17px; color: var(--muted); line-height: 1.75;
+  max-width: 500px; margin-bottom: 36px; font-weight: 400;
+}
+.hero-desc strong { color: #a0a0a0; font-weight: 600; }
+
+.stats-row {
+  display: flex; gap: 40px; align-items: center;
+  flex-wrap: wrap; justify-content: center;
+}
+.stat-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 26px; font-weight: 500; color: var(--accent2);
+  display: block; line-height: 1; margin-bottom: 4px;
+}
+.stat-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+}
+.stats-sep { width: 1px; height: 32px; background: var(--border2); }
+
+/* ════════════════════════════════
+   3. PRODUCTS — rappel des outils
+════════════════════════════════ */
+.products-section {
+  position: relative; z-index: 1;
+  width: 100%; padding: 0 48px 56px;
+  display: flex; flex-direction: column; align-items: center;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  width: 100%; max-width: 860px;
+}
+
+.product-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  text-decoration: none; color: inherit; cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  animation: fadeUp 0.55s ease both;
+}
+.product-card:hover {
+  border-color: var(--border2); transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.product-card.unavail { cursor: default; }
+.product-card.unavail:hover { transform: none; box-shadow: none; }
+
+.product-card:nth-child(1) { animation-delay: 0.08s; }
+.product-card:nth-child(2) { animation-delay: 0.14s; }
+.product-card:nth-child(3) { animation-delay: 0.20s; }
+.product-card:nth-child(4) { animation-delay: 0.26s; }
+.product-card:nth-child(5) { animation-delay: 0.32s; }
+
+.product-icon {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--faint);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+}
+.product-name  { font-size: 13px; font-weight: 600; color: var(--text); }
+.product-desc  { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+
+/* ════════════════════════════════
+   4. FOOTER — status pill en bas
+════════════════════════════════ */
+.page-footer {
+  position: relative; z-index: 1;
+  width: 100%; margin-top: auto;
+  padding: 24px 48px 32px;
+  display: flex; justify-content: center;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.status-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 6px 16px;
+  font-size: 12px; font-weight: 500; color: var(--muted);
+}
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent2); box-shadow: 0 0 8px var(--accent2);
+  animation: pulse 2.5s ease infinite;
+}
+
+/* ════════════════════════════════
+   ANIMATIONS
+════════════════════════════════ */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
-.sidebar .nav-items .nav-item { animation: slideIn 0.4s ease both; }
-.nav-item:nth-child(1) { animation-delay: 0.05s; }
-.nav-item:nth-child(2) { animation-delay: 0.10s; }
-.nav-item:nth-child(3) { animation-delay: 0.15s; }
-.nav-item:nth-child(4) { animation-delay: 0.20s; }
-.nav-item:nth-child(5) { animation-delay: 0.25s; }
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: translateX(0); }
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%     { opacity: 0.5; transform: scale(0.7); }
 }
+
+.content          { animation: fadeUp 0.5s ease 0.05s both; }
+.project-preview  { animation: fadeUp 0.5s ease 0.18s both; }
+.products-section { animation: fadeUp 0.5s ease 0.30s both; }
 
 /* ════════════════════════════════
    RESPONSIVE
 ════════════════════════════════ */
-@media (max-width: 1024px) {
-  .content { padding: 40px 40px; }
-  .project-preview { padding: 0 40px 40px; }
-  .stats-row { gap: 24px; }
-}
-
 @media (max-width: 768px) {
-  html, body { overflow: auto; }
-  body { flex-direction: column; }
-
-  .sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0;
-    transform: translateX(-100%);
-    z-index: 100;
-    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
-  }
-  .sidebar.open { transform: translateX(0); }
-  .sidebar-overlay.open { display: block; }
-  .sidebar-close { display: flex; }
-  .burger { display: flex; }
-
-  .main { height: auto; min-height: 100vh; }
-  .content {
-    padding: 72px 24px 32px;
-    justify-content: flex-start; min-height: auto;
-  }
-  .project-preview { padding: 0 24px 40px; }
-
-  .hero-title { transform: rotate(0deg); }
-  .hero-desc { font-size: 15px; }
-  .hero-desc br { display: none; }
-  .cta-row { margin-bottom: 40px; }
-  .btn { padding: 12px 22px; font-size: 13px; }
-  .stats-row { gap: 20px; }
-  .stat-val { font-size: 22px; }
-  .stats-sep { height: 24px; }
-
-  .countdown-grid { gap: 28px; justify-content: center; }
-  .ring-wrap { width: 150px; height: 150px; }
-  .ring-days { font-size: 34px; }
+  .main { margin-left: 0; padding-top: 64px; }
+  .project-preview  { padding: 32px 24px 36px; }
+  .content          { padding: 0 24px 40px; }
+  .products-section { padding: 0 24px 40px; }
+  .page-footer      { padding: 20px 24px 28px; }
+  .countdown-grid   { gap: 32px; }
+  .ring-wrap        { width: 150px; height: 150px; }
+  .ring-days        { font-size: 34px; }
+  .hero-title       { transform: rotate(0deg); }
+  .hero-desc        { font-size: 15px; }
+  .stats-row        { gap: 24px; }
+  .stat-val         { font-size: 22px; }
+  .products-grid    { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 }
 
 @media (max-width: 420px) {
-  .content { padding: 68px 16px 24px; }
-  .project-preview { padding: 0 16px 32px; }
-  .stats-row { gap: 16px; }
-  .stat-val { font-size: 20px; }
-  .stat-label { font-size: 9px; }
-  .cta-row { flex-direction: column; }
-  .btn { width: 100%; justify-content: center; }
-  .ring-wrap { width: 130px; height: 130px; }
-  .ring-days { font-size: 28px; }
-  .countdown-grid { gap: 24px; }
+  .products-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ring-wrap     { width: 130px; height: 130px; }
+  .ring-days     { font-size: 28px; }
+  .stats-row     { gap: 16px; }
 }
 </style>
 </head>
 <body>
 
-<!-- ══ MOBILE BURGER ══ -->
-<button class="burger" id="burger" aria-label="Menu">
-  <span></span><span></span><span></span>
-</button>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="main-bg"></div>
+<div class="main-grid"></div>
 
-<!-- ══ SIDEBAR ══ -->
-<aside class="sidebar" id="sidebar">
-  <div class="logo-wrap">
-    <div class="logo-graffiti">LazyPO <span>✦</span></div>
-  </div>
-  <button class="sidebar-close" id="sidebarClose" aria-label="Fermer">✕</button>
-
-  <div class="nav-section-label">Outils</div>
-  <nav class="nav-items">
-    <a href="lazypo_generator.html" class="nav-item active">
-      <div class="nav-icon">✉️</div>
-      <span class="nav-label">SoW Email</span>
-      <span class="nav-badge badge-live">Live</span>
-    </a>
-    <a href="sprintplanner.html" class="nav-item">
-      <div class="nav-icon">📋</div>
-      <span class="nav-label">Sprint Planning</span>
-      <span class="nav-badge badge-soon">En cours</span>
-    </a>
-    <a href="jirarepo.html" class="nav-item">
-      <div class="nav-icon">🎫</div>
-      <span class="nav-label">Jira Request</span>
-      <span class="nav-badge badge-wip">En cours</span>
-    </a>
-  </nav>
-
-  <div class="nav-divider"></div>
-  <div class="nav-section-label">Général</div>
-  <nav class="nav-items">
-    <a href="account.html" class="nav-item">
-      <div class="nav-icon">👤</div>
-      <span class="nav-label">My Account</span>
-    </a>
-    <a href="#" class="nav-item" onclick="return false;">
-      <div class="nav-icon">⚙️</div>
-      <span class="nav-label">Paramètres</span>
-    </a>
-  </nav>
-
-  <div class="sidebar-spacer"></div>
-  <div class="sidebar-footer" id="authFooter"></div>
-</aside>
-
-<!-- ══ MAIN ══ -->
 <main class="main">
-  <div class="main-bg"></div>
-  <div class="main-grid"></div>
 
+  <!-- ══ 1. HERO TEXT (centred) ══ -->
   <div class="content">
-    <div class="status-pill">
-      <div class="status-dot"></div>
-      Toolkit actif · Aucune donnée envoyée
-    </div>
-
     <div class="hero-title">Lazy<span>PO</span></div>
-
     <p class="hero-desc">
-      Le toolkit du PO qui n'a pas de temps à perdre.<br>
-      Génère tes emails, ta release note et Jira requests<br>
-      en quelques clics. <strong>100% offline.</strong>
+      "Automate the boring. Dominate the brilliant."<br>
+      Your ultimate toolkit for moving fast and thinking bigger.
     </p>
-
-    <div class="cta-row">
-      <a href="lazypo_generator.html" class="btn btn-primary">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Ouvrir le générateur
-      </a>
-      <a href="#" class="btn btn-ghost" onclick="return false;">
-        En savoir +
-      </a>
-    </div>
-
     <div class="stats-row">
       <div class="stat">
-        <span class="stat-val">3</span>
-        <div class="stat-label">Outils</div>
+        <span class="stat-val">5</span>
+        <div class="stat-label">Tools</div>
       </div>
       <div class="stats-sep"></div>
       <div class="stat">
         <span class="stat-val">0</span>
-        <div class="stat-label">API requise</div>
+        <div class="stat-label">API required</div>
       </div>
       <div class="stats-sep"></div>
       <div class="stat">
         <span class="stat-val">.eml</span>
-        <div class="stat-label">Prêt Outlook</div>
+        <div class="stat-label">Outlook ready</div>
       </div>
     </div>
   </div>
 
-  <!-- ══ PROJECT PREVIEW (Countdown) ══ -->
+  <!-- ══ 2. PROJECT PREVIEW (below hero) ══ -->
   <section class="project-preview">
     <div class="section-label">Project preview</div>
     <div class="countdown-grid" id="countdownGrid"></div>
   </section>
 
+  <!-- ══ 3. TOOLS ══ -->
+  <section class="products-section">
+    <div class="section-label">Your tools</div>
+    <div class="products-grid">
+
+      <a href="lazypo_generator.html" class="product-card">
+        <div class="product-icon">✉️</div>
+        <div class="product-name">Scope of Work</div>
+        <div class="product-desc">Generate SoW emails. Export as .eml for Outlook.</div>
+      </a>
+
+      <a href="sprintplanner.html" class="product-card">
+        <div class="product-icon">📋</div>
+        <div class="product-name">Sprint Planning</div>
+        <div class="product-desc">Auto-generate your sprint slides in PowerPoint.</div>
+      </a>
+
+      <a href="jirarepo.html" class="product-card">
+        <div class="product-icon">🎫</div>
+        <div class="product-name">Jira</div>
+        <div class="product-desc">Save and manage your Jira queries in one place.</div>
+      </a>
+
+      <div class="product-card unavail"
+           onclick="window.showUnavailablePopup && window.showUnavailablePopup('Minute Hub')">
+        <div class="product-icon">📝</div>
+        <div class="product-name">Minute Hub</div>
+        <div class="product-desc">Centralise all your meeting notes in one click.</div>
+      </div>
+
+      <div class="product-card unavail"
+           onclick="window.showUnavailablePopup && window.showUnavailablePopup('Focus FM')">
+        <div class="product-icon">🎯</div>
+        <div class="product-name">Focus FM</div>
+        <div class="product-desc">Stay locked on your priorities and ship faster.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ 4. FOOTER ══ -->
+  <footer class="page-footer">
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      Toolkit active · No data sent
+    </div>
+  </footer>
+
 </main>
 
-<script>
-  /* ── Sidebar mobile toggle ── */
-  const burger = document.getElementById('burger');
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  const closeBtn = document.getElementById('sidebarClose');
-
-  function openSidebar()  { sidebar.classList.add('open'); overlay.classList.add('open'); burger.classList.add('open'); }
-  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); burger.classList.remove('open'); }
-
-  burger.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
-  overlay.addEventListener('click', closeSidebar);
-  closeBtn.addEventListener('click', closeSidebar);
-
-  /* ══════════════════════════════════════════════════════════
-     COUNTDOWN — Fetches config from projet.json
-     ──────────────────────────────────────────────────────────
-     Le fichier projet.json contient la liste des projets.
-     Fallback : si le fetch échoue, on utilise FALLBACK_PROJECTS.
-  ══════════════════════════════════════════════════════════ */
-
-  const FALLBACK_PROJECTS = [
-    { name: "REACH",       date: "2025-09-30", color: "ring-amber", totalDays: 180 },
-    { name: "PI PLANNING", date: "2025-06-15", color: "ring-white", totalDays: 90  },
-  ];
-
-  const CIRCUMFERENCE = 2 * Math.PI * 44;
-
-  function getDaysLeft(targetDate) {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const target = new Date(targetDate + "T00:00:00");
-    return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-  }
-
-  function formatDate(dateStr) {
-    const d = new Date(dateStr + "T00:00:00");
-    const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${m[d.getMonth()]} ${String(d.getDate()).padStart(2,'0')}, ${d.getFullYear()}`;
-  }
-
-  function buildCard(p) {
-    const days = getDaysLeft(p.date);
-    const total = p.totalDays || 90;
-    const progress = Math.max(0, Math.min(1, days / total));
-    const offset = CIRCUMFERENCE * (1 - progress);
-    const overdue = days < 0;
-    const imminent = days >= 0 && days <= 7;
-
-    return `
-      <div class="countdown-card ${overdue ? 'overdue' : imminent ? 'imminent' : ''}">
-        <div class="ring-wrap ${p.color}">
-          <svg class="ring-svg" viewBox="0 0 100 100">
-            <circle class="ring-bg" cx="50" cy="50" r="44"/>
-            <circle class="ring-progress" cx="50" cy="50" r="44"
-              stroke-dasharray="${CIRCUMFERENCE}"
-              stroke-dashoffset="${offset}"/>
-          </svg>
-          <div class="ring-center">
-            <div class="ring-days">${overdue ? Math.abs(days) : days}</div>
-            <div class="ring-sub">${overdue ? 'DAYS OVER' : 'DAYS LEFT'}</div>
-          </div>
-        </div>
-        <div class="countdown-name">${p.name}</div>
-        <div class="countdown-date">${formatDate(p.date)}</div>
-      </div>`;
-  }
-
-  function renderCountdown(projects) {
-    document.getElementById('countdownGrid').innerHTML = projects.map(buildCard).join('');
-  }
-
-  // Try loading from projet.json, fallback to hardcoded
-  fetch('projet.json')
-    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(data => renderCountdown(data))
-    .catch(() => renderCountdown(FALLBACK_PROJECTS));
-</script>
+<script src="popup.js"></script>
+<script src="sidebar.js"></script>
+<script src="auth.js"></script>
+<script src="countdown.js"></script>
 
 </body>
 </html>

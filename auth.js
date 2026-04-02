@@ -160,7 +160,7 @@
 
   /* ── Render sidebar footer ───────────────────────────────────── */
   async function renderNavUser() {
-    const footer = document.querySelector('.sidebar-footer');
+    const footer = document.querySelector('.sb-footer');
     if (!footer) return;
 
     const { data: { session } } = await window.sb.auth.getSession();
