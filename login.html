@@ -325,7 +325,7 @@ const SUPABASE_URL  = 'https://hrvxhnmtvzvrsmmmmtsv.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_Mj-FuPZcN_oTeLQ0ME84yQ_uulPdJ4c';
 
 // After successful login, redirect here
-const REDIRECT_AFTER_LOGIN = '/index.html';
+const REDIRECT_AFTER_LOGIN = 'index.html';
 
 // ─────────────────────────────────────────────────────────
 const { createClient } = supabase;
@@ -408,7 +408,7 @@ async function handleForgotPassword() {
   if (!email) { showMsg('Enter your email first, then click Forgot password.'); return; }
 
   const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/login.html',
+    redirectTo: window.location.href.replace(/[^/]*$/, 'login.html'),
   });
   if (error) {
     showMsg(error.message);
@@ -422,7 +422,7 @@ async function handleOAuth(provider) {
   clearMsg();
   const { error } = await sb.auth.signInWithOAuth({
     provider,
-    options: { redirectTo: window.location.origin + REDIRECT_AFTER_LOGIN },
+    options: { redirectTo: window.location.href.replace(/[^/]*$/, REDIRECT_AFTER_LOGIN) },
   });
   if (error) showMsg(error.message);
 }

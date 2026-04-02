@@ -42,8 +42,8 @@
   /* ── Config ──────────────────────────────────────────────────── */
   const SUPABASE_URL  = 'https://hrvxhnmtvzvrsmmmmtsv.supabase.co';
   const SUPABASE_ANON = 'sb_publishable_Mj-FuPZcN_oTeLQ0ME84yQ_uulPdJ4c';
-  const LOGIN_PAGE    = '/login.html';
-  const ACCOUNT_PAGE  = '/account.html';
+  const LOGIN_PAGE    = 'login.html';
+  const ACCOUNT_PAGE  = 'account.html';
 
   const { createClient } = supabase;
   window.sb = createClient(SUPABASE_URL, SUPABASE_ANON);
