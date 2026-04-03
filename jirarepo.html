@@ -244,11 +244,31 @@
 
 <script>
   const groupsEl = document.getElementById('groups');
-
   const TAG_ORDER = ['DPnxt', 'CLM', 'PB'];
 
-  function loadQueries() {
-    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
+  // Wait for auth.js to expose window.sb
+  let currentUserId = null;
+
+  async function init() {
+    const session = await LazyAuth.requireAuthOrPopup();
+    if (!session) return;
+    currentUserId = session.user.id;
+    await loadQueries();
+  }
+
+  async function loadQueries() {
+    groupsEl.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">Loading…</p>';
+
+    const { data: queries, error } = await window.sb
+      .from('jira_queries')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      groupsEl.innerHTML = `<p style="color:#e53e3e;text-align:center;padding:24px;">Error loading queries: ${error.message}</p>`;
+      return;
+    }
 
     groupsEl.innerHTML = '';
 
@@ -258,34 +278,33 @@
 
       const groupDiv = document.createElement('div');
       groupDiv.className = 'group';
-
       groupDiv.innerHTML = `<h2>${tag}</h2>`;
 
       const list = document.createElement('div');
       list.className = 'query-list';
 
-      groupQueries.forEach((q, index) => {
-        const realIndex = queries.indexOf(q);
-
+      groupQueries.forEach(q => {
         const card = document.createElement('div');
         card.className = 'card';
-
         card.innerHTML = `
           <span class="tag ${q.tag}">${q.tag}</span>
-          <h3>${q.name}</h3>
-          <p>${q.query}</p>
+          <h3>${esc(q.name)}</h3>
+          <p>${esc(q.query)}</p>
           <div class="actions">
-            <button class="small-btn copy" onclick="copyQuery(${realIndex})">Copy</button>
-            <button class="small-btn delete" onclick="deleteQuery(${realIndex})">Delete</button>
+            <button class="small-btn copy" onclick="copyQuery('${q.id}', this)">Copy</button>
+            <button class="small-btn delete" onclick="deleteQuery('${q.id}', this)">Delete</button>
           </div>
         `;
-
         list.appendChild(card);
       });
 
       groupDiv.appendChild(list);
       groupsEl.appendChild(groupDiv);
     });
+
+    if (queries.length === 0) {
+      groupsEl.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">No queries yet. Add your first one above!</p>';
+    }
   }
 
   function showStatus() {
@@ -298,42 +317,59 @@
     document.getElementById('name').focus();
   }
 
-  function addQuery() {
-    const name = document.getElementById('name').value.trim();
+  async function addQuery() {
+    const name  = document.getElementById('name').value.trim();
     const query = document.getElementById('query').value.trim();
-    const tag = document.getElementById('tag').value;
+    const tag   = document.getElementById('tag').value;
 
-    if (!name || !query) {
-      alert('Please fill in all fields!');
-      return;
-    }
+    if (!name || !query) { alert('Please fill in all fields!'); return; }
 
-    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
-    queries.push({ name, query, tag });
-    localStorage.setItem('jiraQueries', JSON.stringify(queries));
-    showStatus();
+    const { error } = await window.sb
+      .from('jira_queries')
+      .insert({ user_id: currentUserId, name, query, tag });
 
-    document.getElementById('name').value = '';
+    if (error) { alert('Error saving query: ' + error.message); return; }
+
+    document.getElementById('name').value  = '';
     document.getElementById('query').value = '';
-
-    loadQueries();
-  }
-
-  function deleteQuery(index) {
-    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
-    queries.splice(index, 1);
-    localStorage.setItem('jiraQueries', JSON.stringify(queries));
     showStatus();
-    loadQueries();
+    await loadQueries();
   }
 
-  function copyQuery(index) {
-    const queries = JSON.parse(localStorage.getItem('jiraQueries') || '[]');
-    navigator.clipboard.writeText(queries[index].query);
-    alert('Query copied!');
+  async function deleteQuery(id, btn) {
+    btn.disabled = true;
+    const { error } = await window.sb
+      .from('jira_queries')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', currentUserId);
+
+    if (error) { alert('Error deleting query: ' + error.message); btn.disabled = false; return; }
+    showStatus();
+    await loadQueries();
   }
 
-  loadQueries();
+  async function copyQuery(id, btn) {
+    const { data, error } = await window.sb
+      .from('jira_queries')
+      .select('query')
+      .eq('id', id)
+      .single();
+
+    if (error || !data) { alert('Could not copy query.'); return; }
+    await navigator.clipboard.writeText(data.query);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Init after auth.js is ready
+  window.addEventListener('load', init);
 </script>
 
 <script src="popup.js"></script>
