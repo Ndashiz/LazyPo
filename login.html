@@ -356,6 +356,11 @@ function clearMsg() {
   el.className = 'msg';
 }
 
+// ── show pending message if redirected from auth.js ────
+if (new URLSearchParams(window.location.search).get('pending') === '1') {
+  showMsg('Ton compte est en attente de validation. Tu recevras un accès dès qu\'il sera approuvé.', 'success');
+}
+
 // ── set button loading state ───────────────────────────
 function setLoading(btnId, loading, label) {
   const btn = document.getElementById(btnId);
@@ -379,8 +384,15 @@ async function handleLogin(e) {
   if (error) {
     showMsg(error.message);
   } else {
-    showMsg('Signed in! Redirecting…', 'success');
-    setTimeout(() => window.location.href = REDIRECT_AFTER_LOGIN, 800);
+    // check approval before redirecting
+    const { data: profileData } = await sb.from('profiles').select('is_approved').eq('id', (await sb.auth.getUser()).data.user.id).single();
+    if (profileData && profileData.is_approved === false) {
+      await sb.auth.signOut();
+      showMsg('Ton compte est en attente de validation. Tu recevras un accès dès qu\'il sera approuvé.', 'success');
+    } else {
+      showMsg('Signed in! Redirecting…', 'success');
+      setTimeout(() => window.location.href = REDIRECT_AFTER_LOGIN, 800);
+    }
   }
 }
 

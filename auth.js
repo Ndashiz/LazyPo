@@ -185,6 +185,13 @@
       profile = data;
     } catch (_) {}
 
+    /* ── approval check ── */
+    if (profile && profile.is_approved === false) {
+      await window.sb.auth.signOut();
+      window.location.href = LOGIN_PAGE + '?pending=1';
+      return;
+    }
+
     const email    = session.user.email || '';
     const username = profile?.username || email.split('@')[0] || 'User';
     const avatar   = profile?.avatar_url || null;
