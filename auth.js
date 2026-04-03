@@ -288,6 +288,91 @@
     },
   };
 
+  /* ── Auth guard popup ───────────────────────────────────────── */
+  function _injectPopupStyles() {
+    if (document.getElementById('__authPopupStyles')) return;
+    const s = document.createElement('style');
+    s.id = '__authPopupStyles';
+    s.textContent = `
+    #authGuardOverlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+      animation: __fadeIn 0.2s ease;
+    }
+    @keyframes __fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    #authGuardCard {
+      background: #161616; border: 1px solid #2a2a2a;
+      border-radius: 18px; padding: 36px 32px;
+      max-width: 400px; width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+      animation: __slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes __slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+
+    #authGuardCard .ag-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: rgba(59,130,246,0.12); border: 1px solid rgba(96,165,250,0.2);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px; font-size: 22px;
+    }
+    #authGuardCard h2 {
+      font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 700;
+      color: #f0f0f0; margin-bottom: 10px;
+    }
+    #authGuardCard p {
+      font-family: 'DM Sans', sans-serif; font-size: 14px; color: #6b6b6b;
+      line-height: 1.6; margin-bottom: 28px;
+    }
+    #authGuardCard .ag-btn-login {
+      display: block; width: 100%; padding: 12px;
+      background: #3b82f6; color: #fff; border: none;
+      border-radius: 10px; font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 600; cursor: pointer; text-decoration: none;
+      transition: background 0.15s;
+    }
+    #authGuardCard .ag-btn-login:hover { background: #2563eb; }
+    #authGuardCard .ag-btn-back {
+      display: block; margin-top: 12px;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; color: #6b6b6b;
+      background: none; border: none; cursor: pointer; text-decoration: none;
+      transition: color 0.15s;
+    }
+    #authGuardCard .ag-btn-back:hover { color: #f0f0f0; }
+    `;
+    document.head.appendChild(s);
+  }
+
+  function _showAuthPopup() {
+    _injectPopupStyles();
+    if (document.getElementById('authGuardOverlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'authGuardOverlay';
+    overlay.innerHTML = `
+      <div id="authGuardCard">
+        <div class="ag-icon">🔒</div>
+        <h2>Connexion requise</h2>
+        <p>Il faut se connecter à son compte pour accéder aux options du site.</p>
+        <a href="login.html" class="ag-btn-login">Se connecter</a>
+        <a href="index.html" class="ag-btn-back">← Retour à l'accueil</a>
+      </div>`;
+    document.body.appendChild(overlay);
+    // block scroll
+    document.body.style.overflow = 'hidden';
+  }
+
+  window.LazyAuth.requireAuthOrPopup = async () => {
+    const { data: { session } } = await window.sb.auth.getSession();
+    if (!session) {
+      _showAuthPopup();
+      return null;
+    }
+    return session;
+  };
+
   /* ── Util ────────────────────────────────────────────────────── */
   function esc(s) {
     return String(s)
