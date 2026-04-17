@@ -289,6 +289,18 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .exp-lnk{display:inline-block;margin-top:16px;color:var(--accent2);font-size:13px;text-decoration:none}
 .exp-lnk:hover{text-decoration:underline}
 
+/* ── Deletion dissolve animation ── */
+@keyframes dissolve-out {
+  0%   { opacity:1; filter:blur(0px) brightness(1); }
+  30%  { opacity:0.6; filter:blur(2px) brightness(1.4); }
+  60%  { opacity:0.1; filter:blur(8px) brightness(0.5); }
+  100% { opacity:1; filter:blur(0px) brightness(1); }
+}
+.editor-wrap.dissolving {
+  animation: dissolve-out 0.75s cubic-bezier(0.4,0,0.2,1) forwards;
+  pointer-events: none;
+}
+
 @media(max-width:768px){
   .btn-share span{display:none}
   #plainEditor{padding:16px}
@@ -622,11 +634,16 @@ async function fireAutoDelete() {
   clearInterval(adInterval);
   document.getElementById('adToggle').checked = false;
   document.getElementById('adCd').textContent = '00:00';
+  // Dissolve animation
+  const wrap = document.querySelector('.editor-wrap');
+  wrap.classList.add('dissolving');
+  await new Promise(r => setTimeout(r, 400)); // let animation peak before clearing
   // Clear editor
   isApplyingRemote = true;
   if (currentMode === 'plaintext') { document.getElementById('plainEditor').value = ''; updateLines(); }
   else if (cmEditor) { cmEditor.setValue(''); }
   isApplyingRemote = false;
+  setTimeout(() => wrap.classList.remove('dissolving'), 400);
   updateCount(); scheduleSave();
   // Broadcast to all peers
   channel?.send({ type: 'broadcast', event: 'ad-fired', payload: {} });
@@ -941,9 +958,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  /* New user joined → show security alert only */
-  channel.on('presence', { event: 'join' }, () => {
-    showSecAlert();
+  /* New user joined → alert only if it's a DIFFERENT user (not same user on another device) */
+  channel.on('presence', { event: 'join' }, ({ newPresences }) => {
+    const hasNewUser = newPresences.some(p => p.uid !== myUserId);
+    if (hasNewUser) showSecAlert();
+  });
+
+  /* User left → clear content if they were the last other user */
+  channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
+    // If a different user (not me) disconnected, wipe their contributions
+    // In a shared plain-text doc we clear all since we can't attribute lines
+    const differentUserLeft = leftPresences.some(p => p.uid !== myUserId);
+    if (!differentUserLeft) return;
+    const remaining = Object.values(channel.presenceState()).flat();
+    const otherUsers = remaining.filter(p => p.uid !== myUserId);
+    // Only auto-clear if no other users remain (last peer disconnected)
+    if (otherUsers.length === 0) {
+      fireAutoDelete();
+      toast('A user disconnected — content cleared');
+    }
   });
 
   /* Subscribe & track */
@@ -1081,6 +1114,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* Keyboard shortcuts */
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveNow(); toast('Saved'); }
+    // Ctrl+Shift+X / Cmd+Shift+X — clear all content
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'X') {
+      e.preventDefault();
+      fireAutoDelete();
+    }
   });
 
   /* Save on leave */
