@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <script>
   const p = window.location.pathname, l = p.toLowerCase();
@@ -160,29 +160,29 @@ html,body{min-height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);
       <div class="page-icon">📝</div>
       <div>
         <div class="page-title">LiveNote</div>
-        <div class="page-subtitle">Éditeur collaboratif en temps réel</div>
+        <div class="page-subtitle">Real-time collaborative editor</div>
       </div>
     </div>
     <button class="btn-new" id="btnNew">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Nouveau document
+      New document
     </button>
   </div>
 
   <!-- Notice -->
   <div class="notice">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    Les liens LiveNote expirent après <strong>&nbsp;24 heures&nbsp;</strong>. Tout contenu est supprimé automatiquement.
+    LiveNote links expire after <strong>&nbsp;24 hours&nbsp;</strong>. All content is automatically deleted.
   </div>
 
   <!-- Join by link or code -->
   <div class="join-bar">
-    <input type="text" class="join-input" id="joinInput" placeholder="Colle un lien ou un code (ex: K7M3XNQAB)…">
-    <button class="btn-join" id="btnJoin">Rejoindre →</button>
+    <input type="text" class="join-input" id="joinInput" placeholder="Paste a link or code (e.g. K7M3XNQAB)…">
+    <button class="btn-join" id="btnJoin">Join →</button>
   </div>
 
   <!-- Docs list -->
-  <div class="section-label">Mes documents</div>
+  <div class="section-label">My documents</div>
   <div class="doc-grid" id="docGrid">
     <div class="skeleton"></div>
     <div class="skeleton"></div>
@@ -218,10 +218,10 @@ function fmtExpiry(isoStr) {
 function relTime(isoStr) {
   const diff = Date.now() - new Date(isoStr).getTime();
   const mins = Math.floor(diff / 60000), h = Math.floor(diff / 3600000), d = Math.floor(diff / 86400000);
-  if (mins < 1) return 'à l\'instant';
-  if (mins < 60) return `${mins} min`;
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m`;
   if (h < 24) return `${h}h`;
-  return `${d}j`;
+  return `${d}d`;
 }
 
 function genShortId() {
@@ -234,7 +234,7 @@ function genShortId() {
 function renderGrid(docs) {
   const grid = document.getElementById('docGrid');
   if (!docs.length) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📝</div><p>Aucun document pour l'instant.<br>Crée ton premier document collaboratif.</p></div>`;
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📝</div><p>No documents yet.<br>Create your first collaborative document.</p></div>`;
     return;
   }
   grid.innerHTML = docs.map((doc, i) => {
@@ -247,22 +247,22 @@ function renderGrid(docs) {
       <a class="doc-card${expired ? ' expired' : ''}" href="livenote_editor.html?id=${esc(doc.short_id || doc.id)}">
         <div class="dc-top">
           <div class="dc-emoji">${emoji}</div>
-          <div class="dc-title">${esc(doc.title || 'Sans titre')}</div>
+          <div class="dc-title">${esc(doc.title || 'Untitled')}</div>
         </div>
         <div class="dc-meta">
           <div class="dc-badges">
             <span class="badge badge-mode">${mode}</span>
             ${expired
-              ? `<span class="badge badge-expired">Expiré</span>`
+              ? `<span class="badge badge-expired">Expired</span>`
               : `<span class="badge badge-expiry">⏳ ${expiry}</span>`}
             ${conns > 0 ? `<span class="badge badge-conn">👥 ${conns}</span>` : ''}
           </div>
-          <span>il y a ${relTime(doc.updated_at)}</span>
+          <span>${relTime(doc.updated_at)} ago</span>
         </div>
         <div class="dc-meta">
           <span class="dc-shortid">${esc(doc.short_id || '').toUpperCase()}</span>
         </div>
-        <button class="doc-card-del" title="Supprimer" onclick="delDoc(event,'${esc(doc.short_id || doc.id)}')">
+        <button class="doc-card-del" title="Delete" onclick="delDoc(event,'${esc(doc.short_id || doc.id)}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
         </button>
       </a>`;
@@ -277,7 +277,7 @@ async function loadDocs(userId) {
     .order('updated_at', { ascending: false })
     .limit(50);
   if (error) {
-    document.getElementById('docGrid').innerHTML = `<div class="empty-state"><p style="color:#f87171">Erreur: ${esc(error.message)}</p></div>`;
+    document.getElementById('docGrid').innerHTML = `<div class="empty-state"><p style="color:#f87171">Error: ${esc(error.message)}</p></div>`;
     return;
   }
   renderGrid(data || []);
@@ -285,20 +285,20 @@ async function loadDocs(userId) {
 
 async function createDoc(userId) {
   const btn = document.getElementById('btnNew');
-  btn.disabled = true; btn.textContent = 'Création…';
+  btn.disabled = true; btn.textContent = 'Creating…';
   const shortId = genShortId();
   const { data, error } = await sb.from('livenote_docs').insert({
     short_id:   shortId,
-    title:      'Sans titre',
+    title:      'Untitled',
     created_by: userId,
     mode:       'plaintext',
     content:    '',
     expires_at: new Date(Date.now() + 86400000).toISOString()
   }).select().single();
   if (error) {
-    toast('Erreur : ' + error.message);
+    toast('Error: ' + error.message);
     btn.disabled = false;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nouveau document`;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New document`;
     return;
   }
   window.location.href = `livenote_editor.html?id=${data.short_id}`;
@@ -306,10 +306,10 @@ async function createDoc(userId) {
 
 window.delDoc = async function(e, shortId) {
   e.preventDefault(); e.stopPropagation();
-  if (!confirm('Supprimer ce document définitivement ?')) return;
+  if (!confirm('Permanently delete this document?')) return;
   const { error } = await sb.from('livenote_docs').delete().eq('short_id', shortId);
-  if (error) { toast('Erreur : ' + error.message); return; }
-  toast('Document supprimé');
+  if (error) { toast('Error: ' + error.message); return; }
+  toast('Document deleted');
   e.target.closest('.doc-card')?.remove();
   if (!document.querySelectorAll('.doc-card').length) renderGrid([]);
 };
@@ -325,7 +325,7 @@ function joinDoc() {
   if (id) {
     window.location.href = `livenote_editor.html?id=${id}`;
   } else {
-    toast('Code invalide — 9 caractères attendus (ex: K7M3XNQAB)');
+    toast('Invalid code — 9 characters expected (e.g. K7M3XNQAB)');
   }
 }
 

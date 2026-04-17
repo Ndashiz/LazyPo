@@ -1,41 +1,6 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
-<!--
-  ═══════════════════════════════════════════════════════════════
-  LiveNote Editor v2 — SUPABASE MIGRATION SQL
-  Run this in Supabase SQL Editor:
-  ───────────────────────────────────────────────────────────────
-
-  alter table public.livenote_docs
-    add column if not exists short_id          text unique,
-    add column if not exists mode              text default 'plaintext',
-    add column if not exists expires_at        timestamptz default (now() + interval '24 hours'),
-    add column if not exists total_connections integer default 0,
-    add column if not exists max_concurrent    integer default 0,
-    add column if not exists auto_delete_at    timestamptz;
-
-  update public.livenote_docs
-    set short_id = upper(substr(replace(gen_random_uuid()::text,'-',''), 1, 9))
-    where short_id is null;
-
-  drop policy if exists "livenote_delete" on public.livenote_docs;
-  create policy "livenote_delete" on public.livenote_docs
-    for delete using (auth.uid() = created_by or expires_at < now());
-
-  create or replace function livenote_track_connection(p_short_id text, p_concurrent int)
-  returns void language plpgsql security definer as $$
-  begin
-    update public.livenote_docs
-    set total_connections = total_connections + 1,
-        max_concurrent    = greatest(max_concurrent, p_concurrent)
-    where short_id = p_short_id;
-  end;
-  $$;
-
-  alter publication supabase_realtime add table public.livenote_docs;
-  ═══════════════════════════════════════════════════════════════
--->
 <script>
   const p = window.location.pathname, l = p.toLowerCase();
   if (p !== l) window.location.replace(l + window.location.search);
@@ -44,16 +9,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LiveNote — LazyPO</title>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<!-- CodeMirror (HTML syntax highlighting) -->
+<link  href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0c0c0c;--surface:#161616;--surface2:#1c1c1c;
   --border:#222;--border2:#2a2a2a;
   --accent:#3b82f6;--accent2:#60a5fa;
-  --text:#f0f0f0;--muted:#6b6b6b;--danger:#ef4444;
+  --text:#f0f0f0;--muted:#6b6b6b;
 }
 html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
 
@@ -62,10 +30,9 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 
 /* ── Topbar ── */
 .topbar{
-  display:flex;align-items:center;gap:8px;
-  padding:0 14px;height:50px;flex-shrink:0;
-  background:var(--surface);border-bottom:1px solid var(--border);
-  position:relative;z-index:50;
+  display:flex;align-items:center;gap:8px;padding:0 14px;
+  height:50px;flex-shrink:0;
+  background:var(--surface);border-bottom:1px solid var(--border);z-index:50;
 }
 .btn-back{
   display:flex;align-items:center;gap:5px;padding:5px 9px;border-radius:7px;
@@ -84,10 +51,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .title-input::placeholder{color:var(--muted)}
 
 /* ── Mode toggle ── */
-.mode-toggle{
-  display:flex;background:var(--bg);border:1px solid var(--border2);
-  border-radius:7px;padding:2px;gap:2px;flex-shrink:0;
-}
+.mode-toggle{display:flex;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:2px;gap:2px;flex-shrink:0}
 .mode-btn{
   padding:4px 11px;border-radius:5px;border:none;background:transparent;
   color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;font-weight:500;
@@ -101,8 +65,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
   width:27px;height:27px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
   font-size:11px;font-weight:700;color:#fff;
-  border:2px solid var(--surface);position:relative;cursor:default;
-  transition:transform .2s;
+  border:2px solid var(--surface);position:relative;cursor:default;transition:transform .2s;
 }
 .p-pill:not(:first-child){margin-left:-7px}
 .p-pill:hover{transform:scale(1.2);z-index:1}
@@ -117,13 +80,13 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .p-pill:hover::after{opacity:1}
 .p-count{font-size:11.5px;color:var(--muted);margin-left:6px;flex-shrink:0;white-space:nowrap}
 
-/* ── Icon buttons ── */
+/* ── Buttons ── */
 .btn-icon{
   width:32px;height:32px;border-radius:7px;
   background:transparent;border:1px solid var(--border2);
   color:var(--muted);font-size:14px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  transition:background .15s,color .15s;flex-shrink:0;
+  transition:background .15s,color .15s,border-color .15s;flex-shrink:0;
 }
 .btn-icon:hover{background:var(--surface2);color:var(--text)}
 .btn-icon.armed{border-color:rgba(239,68,68,.4);color:#f87171;background:rgba(239,68,68,.08)}
@@ -135,36 +98,16 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 }
 .btn-share:hover{background:rgba(59,130,246,.2)}
 
-/* ── Quill toolbar ── */
-#toolbar{
-  background:var(--surface)!important;border:none!important;
-  border-bottom:1px solid var(--border)!important;
-  padding:5px 14px!important;flex-shrink:0;
-}
-.ql-toolbar.ql-snow .ql-stroke{stroke:var(--muted)!important}
-.ql-toolbar.ql-snow .ql-fill{fill:var(--muted)!important}
-.ql-toolbar.ql-snow button:hover .ql-stroke,
-.ql-toolbar.ql-snow button.ql-active .ql-stroke{stroke:var(--text)!important}
-.ql-toolbar.ql-snow button:hover .ql-fill,
-.ql-toolbar.ql-snow button.ql-active .ql-fill{fill:var(--text)!important}
-.ql-toolbar.ql-snow .ql-picker-label{color:var(--muted)!important}
-.ql-toolbar.ql-snow .ql-picker-options{
-  background:var(--surface2)!important;border:1px solid var(--border2)!important;
-  border-radius:8px!important;
-}
-.ql-toolbar.ql-snow .ql-picker-item{color:var(--text)!important}
-
 /* ── Editor area ── */
-.editor-wrap{flex:1;overflow:hidden;display:flex;position:relative}
+.editor-wrap{flex:1;overflow:hidden;display:flex;min-height:0}
 
 /* ── Plain text mode ── */
 .plain-wrap{display:flex;width:100%;height:100%;overflow:hidden}
 .line-gutter{
-  width:52px;flex-shrink:0;
-  background:#0f0f0f;border-right:1px solid var(--border);
+  width:52px;flex-shrink:0;background:#0f0f0f;border-right:1px solid var(--border);
   padding:20px 10px 20px 0;text-align:right;
   font-family:'DM Mono',monospace;font-size:13.5px;line-height:1.65;
-  color:#383838;user-select:none;overflow:hidden;
+  color:#383838;user-select:none;overflow:hidden;white-space:pre;
 }
 #plainEditor{
   flex:1;resize:none;border:none;outline:none;
@@ -176,158 +119,147 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 #plainEditor::-webkit-scrollbar{width:5px}
 #plainEditor::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
-/* ── HTML mode (Quill) ── */
-#htmlMode{display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden}
-.ql-container.ql-snow{flex:1;border:none!important;overflow-y:auto;background:var(--bg)!important}
-.ql-editor{
-  max-width:780px;margin:0 auto;
-  padding:40px 32px 100px!important;
-  color:var(--text)!important;
-  font-family:'DM Sans',sans-serif!important;font-size:16px!important;line-height:1.75!important;
-}
-.ql-editor.ql-blank::before{color:var(--muted)!important;font-style:normal!important;left:32px!important}
-.ql-editor h1{font-size:2em;font-weight:700;margin-bottom:.3em}
-.ql-editor h2{font-size:1.5em;font-weight:600;margin-bottom:.3em}
-.ql-editor h3{font-size:1.2em;font-weight:600;color:#c0c0c0;margin-bottom:.3em}
-.ql-editor a{color:var(--accent2)}
-.ql-editor code,.ql-editor pre{background:var(--surface2)!important;border:1px solid var(--border)!important;border-radius:5px!important;color:#93c5fd!important;font-family:'DM Mono',monospace!important}
-.ql-editor blockquote{border-left:3px solid var(--accent)!important;color:var(--muted)!important;margin-left:0!important;padding-left:16px!important}
-.ql-editor ul>li::before,.ql-editor ol>li::before{color:var(--accent2)!important}
-.ql-container::-webkit-scrollbar{width:5px}
-.ql-container::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+/* ── HTML / CodeMirror mode ── */
+#htmlMode{width:100%;height:100%;overflow:hidden;display:none}
+#cmWrap{width:100%;height:100%}
 
-/* ── Statusbar ── */
+/* CodeMirror base override */
+.CodeMirror{
+  height:100%!important;
+  font-family:'DM Mono',monospace!important;
+  font-size:13.5px!important;
+  line-height:1.65!important;
+}
+/* Custom lazynote theme */
+.cm-s-lazynote.CodeMirror{background:var(--bg);color:#e2e8f0}
+.cm-s-lazynote .CodeMirror-gutters{background:#0f0f0f;border-right:1px solid var(--border)}
+.cm-s-lazynote .CodeMirror-linenumber{color:#383838;padding:0 10px 0 5px}
+.cm-s-lazynote .CodeMirror-cursor{border-left:2px solid var(--accent2)}
+.cm-s-lazynote .CodeMirror-selected{background:rgba(59,130,246,.18)}
+.cm-s-lazynote .CodeMirror-activeline-background{background:rgba(255,255,255,.02)}
+.cm-s-lazynote .CodeMirror-scroll{padding:20px 0}
+/* Syntax colors */
+.cm-s-lazynote .cm-tag{color:#60a5fa}          /* tag names — blue */
+.cm-s-lazynote .cm-attribute{color:#34d399}    /* attributes — green */
+.cm-s-lazynote .cm-string{color:#fbbf24}       /* attribute values — yellow */
+.cm-s-lazynote .cm-comment{color:#555;font-style:italic}
+.cm-s-lazynote .cm-bracket{color:#94a3b8}
+.cm-s-lazynote .cm-keyword{color:#c084fc}
+.cm-s-lazynote .cm-number{color:#f97316}
+.cm-s-lazynote .cm-atom{color:#a78bfa}
+.cm-s-lazynote .cm-meta{color:var(--muted)}
+/* Scrollbar */
+.CodeMirror-scroll::-webkit-scrollbar{width:5px}
+.CodeMirror-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── Status bar ── */
 .statusbar{
-  display:flex;align-items:center;gap:12px;padding:0 16px;height:30px;flex-shrink:0;
+  display:flex;align-items:center;gap:12px;padding:0 16px;
+  height:30px;flex-shrink:0;
   background:var(--surface);border-top:1px solid var(--border);
   font-family:'DM Mono',monospace;font-size:11.5px;color:var(--muted);
 }
-.status-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s}
-.status-dot.on{background:#34d399;box-shadow:0 0 5px rgba(52,211,153,.5)}
-.status-dot.sync{background:var(--accent2);animation:blink .7s ease infinite}
-.status-dot.err{background:#f87171}
+.s-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s}
+.s-dot.on{background:#34d399;box-shadow:0 0 5px rgba(52,211,153,.5)}
+.s-dot.sync{background:var(--accent2);animation:blink .7s ease infinite}
+.s-dot.err{background:#f87171}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 .sb-sep{width:1px;height:12px;background:var(--border);flex-shrink:0}
-.stat-clickable{cursor:pointer;transition:color .15s}
-.stat-clickable:hover{color:var(--text)}
+.s-click{cursor:pointer;transition:color .15s}
+.s-click:hover{color:var(--text)}
 
 /* ── Auto-delete panel ── */
 #adPanel{
-  position:fixed;top:58px;right:14px;z-index:400;
-  width:260px;background:var(--surface);border:1px solid var(--border2);
-  border-radius:13px;box-shadow:0 12px 40px rgba(0,0,0,.6);
-  animation:slideDown .2s ease;overflow:hidden;
+  position:fixed;top:58px;right:14px;z-index:400;width:264px;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:13px;box-shadow:0 12px 40px rgba(0,0,0,.65);
+  animation:sld .2s ease;overflow:hidden;
 }
-@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-.ad-header{
+@keyframes sld{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.ad-head{
   display:flex;align-items:center;justify-content:space-between;
   padding:12px 14px;border-bottom:1px solid var(--border);
   font-size:13px;font-weight:600;
 }
-.ad-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0 2px}
-.ad-close:hover{color:var(--text)}
+.ad-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0 2px}
+.ad-x:hover{color:var(--text)}
 .ad-body{padding:14px}
-.ad-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.ad-label{font-size:13px;color:var(--text)}
-.ad-sublabel{font-size:12px;color:var(--muted);margin-bottom:10px}
+.ad-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ad-lbl{font-size:13px;color:var(--text)}
+.ad-sub{font-size:12px;color:var(--muted);margin-bottom:10px}
 
-/* toggle switch */
-.t-switch{position:relative;display:inline-block;width:38px;height:22px}
-.t-switch input{opacity:0;width:0;height:0}
-.t-track{
-  position:absolute;inset:0;border-radius:11px;background:#333;
-  cursor:pointer;transition:background .2s;
-}
-.t-track::before{
-  content:'';position:absolute;width:16px;height:16px;border-radius:50%;
-  left:3px;top:3px;background:#fff;transition:transform .2s;
-}
-.t-switch input:checked+.t-track{background:var(--accent)}
-.t-switch input:checked+.t-track::before{transform:translateX(16px)}
+/* toggle */
+.t-sw{position:relative;display:inline-block;width:38px;height:22px}
+.t-sw input{opacity:0;width:0;height:0}
+.t-tr{position:absolute;inset:0;border-radius:11px;background:#333;cursor:pointer;transition:background .2s}
+.t-tr::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;left:3px;top:3px;background:#fff;transition:transform .2s}
+.t-sw input:checked+.t-tr{background:var(--accent)}
+.t-sw input:checked+.t-tr::before{transform:translateX(16px)}
 
-/* range slider */
-.ad-slider{width:100%;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--border2);outline:none;margin:6px 0}
-.ad-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer}
-.ad-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
-.ad-countdown{
-  font-family:'DM Mono',monospace;font-size:22px;font-weight:700;
-  color:var(--accent2);text-align:center;margin:8px 0 14px;
-}
-.ad-countdown.urgent{color:#f87171;animation:pulse .6s ease infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.btn-danger-confirm{
+/* slider */
+.ad-rng{width:100%;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--border2);outline:none;margin:6px 0}
+.ad-rng::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer}
+.ad-rng::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
+
+/* countdown */
+.ad-cd{font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:var(--accent2);text-align:center;margin:8px 0 12px}
+.ad-cd.hot{color:#f87171;animation:pulse .6s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.btn-del{
   display:flex;align-items:center;justify-content:center;gap:7px;
   width:100%;padding:9px;border-radius:8px;
-  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);
   color:#f87171;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
-  cursor:pointer;transition:background .15s;
+  cursor:pointer;transition:background .15s;margin-top:4px;
 }
-.btn-danger-confirm:hover{background:rgba(239,68,68,.2)}
-.btn-danger-confirm.confirming{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5)}
-.btn-delete-now{
-  display:flex;align-items:center;justify-content:center;gap:7px;
-  width:100%;padding:9px;border-radius:8px;
-  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);
-  color:#f87171;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
-  cursor:pointer;transition:background .15s;margin-top:10px;
-}
-.btn-delete-now:hover{background:rgba(239,68,68,.2)}
+.btn-del:hover{background:rgba(239,68,68,.2)}
+.btn-del.conf{background:rgba(239,68,68,.22);border-color:rgba(239,68,68,.45)}
 
 /* ── Security alert ── */
 #secAlert{
-  position:fixed;top:62px;right:14px;z-index:500;
-  width:300px;background:var(--surface);border:1px solid rgba(251,191,36,.3);
+  position:fixed;top:62px;right:14px;z-index:500;width:300px;
+  background:var(--surface);border:1px solid rgba(251,191,36,.28);
   border-radius:13px;box-shadow:0 12px 40px rgba(0,0,0,.7);
-  padding:18px;animation:slideDown .3s ease;
+  padding:18px;animation:sld .3s ease;
 }
-.sec-icon{font-size:24px;margin-bottom:8px}
-.sec-title{font-size:14px;font-weight:700;color:#fbbf24;margin-bottom:4px}
-.sec-body{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}
-.sec-actions{display:flex;gap:8px;margin-bottom:12px}
-.btn-sec-yes{
-  flex:1;padding:8px;border-radius:7px;border:1px solid var(--border2);
-  background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;
-  font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;
-}
-.btn-sec-yes:hover{background:#2a2a2a}
-.btn-sec-no{
-  flex:1;padding:8px;border-radius:7px;border:1px solid rgba(239,68,68,.3);
-  background:rgba(239,68,68,.1);color:#f87171;font-family:'DM Sans',sans-serif;
-  font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;
-}
-.btn-sec-no:hover{background:rgba(239,68,68,.2)}
-.sec-progress-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
-.sec-progress-bar{height:100%;background:#fbbf24;border-radius:2px;width:100%;transition:width 1s linear}
-.sec-timer{font-size:11px;color:var(--muted);margin-top:5px;text-align:right;font-family:'DM Mono',monospace}
+.sec-ico{font-size:22px;margin-bottom:6px}
+.sec-ttl{font-size:14px;font-weight:700;color:#fbbf24;margin-bottom:4px}
+.sec-msg{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}
+.sec-acts{display:flex;gap:8px;margin-bottom:10px}
+.btn-sy{flex:1;padding:8px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-sy:hover{background:#2a2a2a}
+.btn-sn{flex:1;padding:8px;border-radius:7px;border:1px solid rgba(239,68,68,.28);background:rgba(239,68,68,.1);color:#f87171;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-sn:hover{background:rgba(239,68,68,.2)}
+.sec-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.sec-bar{height:100%;background:#fbbf24;border-radius:2px;width:100%;transition:width 1s linear}
+.sec-t{font-size:11px;color:var(--muted);margin-top:5px;text-align:right;font-family:'DM Mono',monospace}
 
 /* ── Offline banner ── */
 #offlineBanner{
   position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:600;
   background:#7f1d1d;border:1px solid #991b1b;border-top:none;
   color:#fca5a5;font-size:13px;font-weight:500;
-  padding:8px 20px;border-radius:0 0 10px 10px;
+  padding:7px 20px;border-radius:0 0 10px 10px;
   box-shadow:0 4px 20px rgba(0,0,0,.5);
-  animation:slideDown .3s ease;
 }
 
-/* ── Conn stats popup ── */
+/* ── Connection stats popup ── */
 #connPopup{
-  position:fixed;bottom:42px;right:14px;z-index:400;
+  position:fixed;bottom:40px;right:14px;z-index:400;
   background:var(--surface);border:1px solid var(--border2);
   border-radius:10px;padding:14px 16px;font-size:12px;
-  box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:180px;
-  animation:slideDown .2s ease;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:190px;animation:sld .2s ease;
 }
-.conn-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:6px}
-.conn-row:last-child{margin-bottom:0}
-.conn-val{font-family:'DM Mono',monospace;color:var(--accent2);font-weight:600}
+.cp-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:6px}
+.cp-row:last-child{margin-bottom:0}
+.cp-val{font-family:'DM Mono',monospace;color:var(--accent2);font-weight:600}
 
 /* ── Toast ── */
 #toast{
   position:fixed;bottom:44px;left:50%;transform:translateX(-50%) translateY(70px);
-  background:var(--surface2);border:1px solid var(--border2);
-  color:var(--text);font-size:13px;font-weight:500;
-  padding:9px 18px;border-radius:100px;
+  background:var(--surface2);border:1px solid var(--border2);color:var(--text);
+  font-size:13px;font-weight:500;padding:9px 18px;border-radius:100px;
   box-shadow:0 8px 32px rgba(0,0,0,.5);
   transition:transform .3s cubic-bezier(.34,1.56,.64,1);
   z-index:700;white-space:nowrap;pointer-events:none;
@@ -335,31 +267,30 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 #toast.show{transform:translateX(-50%) translateY(0)}
 
 /* ── Loading overlay ── */
-#loadOverlay{
+#loadOv{
   position:fixed;inset:0;z-index:800;background:var(--bg);
   display:flex;align-items:center;justify-content:center;
   flex-direction:column;gap:12px;transition:opacity .4s;
 }
-#loadOverlay.out{opacity:0;pointer-events:none}
-.spin{width:30px;height:30px;border-radius:50%;border:2px solid var(--border2);border-top-color:var(--accent);animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+#loadOv.out{opacity:0;pointer-events:none}
+.spin{width:30px;height:30px;border-radius:50%;border:2px solid var(--border2);border-top-color:var(--accent);animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
 .load-lbl{font-size:13px;color:var(--muted)}
 
-/* ── Expired screen (replaces editor) ── */
-#expiredScreen{
+/* ── Expired screen ── */
+#expScreen{
   position:fixed;inset:0;z-index:700;background:var(--bg);
-  display:flex;align-items:center;justify-content:center;
+  display:none;align-items:center;justify-content:center;
   flex-direction:column;gap:12px;text-align:center;padding:32px;
 }
-.exp-icon{font-size:40px;opacity:.5;margin-bottom:4px}
-.exp-title{font-size:18px;font-weight:700}
-.exp-body{font-size:14px;color:var(--muted);line-height:1.6}
-.exp-link{display:inline-block;margin-top:16px;color:var(--accent2);font-size:13px;text-decoration:none}
-.exp-link:hover{text-decoration:underline}
+.exp-ico{font-size:40px;opacity:.5;margin-bottom:4px}
+.exp-ttl{font-size:18px;font-weight:700}
+.exp-msg{font-size:14px;color:var(--muted);line-height:1.6}
+.exp-lnk{display:inline-block;margin-top:16px;color:var(--accent2);font-size:13px;text-decoration:none}
+.exp-lnk:hover{text-decoration:underline}
 
 @media(max-width:768px){
   .btn-share span{display:none}
-  .ql-editor{padding:24px 16px 80px!important}
   #plainEditor{padding:16px}
 }
 </style>
@@ -369,12 +300,20 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 <script src="auth.js"></script>
 
 <!-- Loading -->
-<div id="loadOverlay">
+<div id="loadOv">
   <div class="spin"></div>
-  <div class="load-lbl" id="loadLbl">Chargement du document…</div>
+  <div class="load-lbl" id="loadLbl">Loading document…</div>
 </div>
 
-<!-- Editor shell -->
+<!-- Expired screen -->
+<div id="expScreen">
+  <div class="exp-ico">⏰</div>
+  <div class="exp-ttl">Document expired</div>
+  <div class="exp-msg">This document has expired and its content has been deleted.<br>LiveNote links are valid for 24 hours.</div>
+  <a href="livenote.html" class="exp-lnk">← Create a new document</a>
+</div>
+
+<!-- Shell -->
 <div class="editor-shell">
 
   <!-- Topbar -->
@@ -383,42 +322,21 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       Docs
     </a>
-    <input id="titleInput" class="title-input" type="text" placeholder="Sans titre…" maxlength="120">
+    <input id="titleInput" class="title-input" type="text" placeholder="Untitled…" maxlength="120">
     <div class="mode-toggle">
       <button class="mode-btn active" data-mode="plaintext">TXT</button>
       <button class="mode-btn" data-mode="html">HTML</button>
     </div>
-    <div class="presence-bar" id="presenceBar"></div>
-    <span class="p-count" id="presenceCount"></span>
+    <div class="presence-bar" id="presBar"></div>
+    <span class="p-count" id="presCount"></span>
     <button class="btn-icon" id="btnAD" title="Auto-Delete">⏱</button>
     <button class="btn-share" id="btnShare">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-      <span>Partager</span>
+      <span>Share</span>
     </button>
-    <button class="btn-icon" id="btnCopy" title="Copier le texte">
+    <button class="btn-icon" id="btnCopy" title="Copy text">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
     </button>
-  </div>
-
-  <!-- Quill toolbar -->
-  <div id="toolbar">
-    <span class="ql-formats">
-      <select class="ql-header"><option value="1">H1</option><option value="2">H2</option><option value="3">H3</option><option selected>Normal</option></select>
-    </span>
-    <span class="ql-formats">
-      <button class="ql-bold"></button><button class="ql-italic"></button>
-      <button class="ql-underline"></button><button class="ql-strike"></button>
-    </span>
-    <span class="ql-formats">
-      <button class="ql-list" value="ordered"></button>
-      <button class="ql-list" value="bullet"></button>
-    </span>
-    <span class="ql-formats">
-      <button class="ql-blockquote"></button><button class="ql-code-block"></button>
-    </span>
-    <span class="ql-formats">
-      <button class="ql-link"></button><button class="ql-clean"></button>
-    </span>
   </div>
 
   <!-- Editor area -->
@@ -426,168 +344,149 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <!-- Plain text -->
     <div class="plain-wrap" id="plainMode">
       <div class="line-gutter" id="lineGutter">1</div>
-      <textarea id="plainEditor" placeholder="Commence à écrire…" spellcheck="false" autocomplete="off" autocorrect="off"></textarea>
+      <textarea id="plainEditor" placeholder="Start writing…" spellcheck="false" autocomplete="off" autocorrect="off"></textarea>
     </div>
-    <!-- HTML / Quill -->
-    <div id="htmlMode" style="display:none;width:100%;height:100%;overflow:hidden;display:none;flex-direction:column">
-      <div id="quillEditor"></div>
-    </div>
+    <!-- HTML / CodeMirror -->
+    <div id="htmlMode"><div id="cmWrap"></div></div>
   </div>
 
   <!-- Status bar -->
   <div class="statusbar">
-    <div class="status-dot" id="sDot"></div>
-    <span id="sTxt">Connexion…</span>
+    <div class="s-dot" id="sDot"></div>
+    <span id="sTxt">Connecting…</span>
     <div class="sb-sep"></div>
     <span id="sExpiry">⏳ --</span>
     <div class="sb-sep"></div>
-    <span id="sCount">0 lignes</span>
+    <span id="sCount">0 lines</span>
     <div class="sb-sep"></div>
     <span id="sSave">--</span>
     <div class="sb-sep"></div>
-    <span id="sConn" class="stat-clickable" title="Historique des connexions">👥 --</span>
+    <span id="sConn" class="s-click" title="Connection history">👥 --</span>
   </div>
 </div>
 
 <!-- Auto-delete panel -->
 <div id="adPanel" style="display:none">
-  <div class="ad-header">
+  <div class="ad-head">
     <span>⏱ Auto-Delete</span>
-    <button class="ad-close" id="adClose">✕</button>
+    <button class="ad-x" id="adClose">✕</button>
   </div>
   <div class="ad-body">
     <div class="ad-row">
-      <span class="ad-label">Activer</span>
-      <label class="t-switch"><input type="checkbox" id="adToggle"><span class="t-track"></span></label>
+      <span class="ad-lbl">Enable</span>
+      <label class="t-sw"><input type="checkbox" id="adToggle" checked><span class="t-tr"></span></label>
     </div>
-    <div id="adSettings">
-      <div class="ad-sublabel" id="adDurationLabel">Durée : 5 min</div>
-      <input type="range" class="ad-slider" id="adSlider" min="1" max="60" value="5">
-      <div id="adCountdownWrap" style="display:none">
-        <div class="ad-countdown" id="adCountdown">05:00</div>
-      </div>
-    </div>
-    <button class="btn-delete-now" id="btnDeleteNow">🗑 Supprimer maintenant</button>
+    <div class="ad-sub" id="adSubLbl">Inactivity timeout: 5 min</div>
+    <input type="range" class="ad-rng" id="adSlider" min="1" max="60" value="5">
+    <div class="ad-cd" id="adCd">05:00</div>
+    <button class="btn-del" id="btnDelNow">🗑 Delete now</button>
   </div>
 </div>
 
 <!-- Security alert -->
 <div id="secAlert" style="display:none">
-  <div class="sec-icon">🔔</div>
-  <div class="sec-title">Nouvelle connexion détectée</div>
-  <div class="sec-body">Un nouvel utilisateur a rejoint ce document. Le reconnaissez-vous ?</div>
-  <div class="sec-actions">
-    <button class="btn-sec-yes" id="secYes">✓ Oui</button>
-    <button class="btn-sec-no" id="secNo">✗ Non — Effacer</button>
+  <div class="sec-ico">🔔</div>
+  <div class="sec-ttl">New connection detected</div>
+  <div class="sec-msg">A new user has joined this document.<br>Do you recognize this person?</div>
+  <div class="sec-acts">
+    <button class="btn-sy" id="secYes">✓ Yes</button>
+    <button class="btn-sn" id="secNo">✗ No — Clear</button>
   </div>
-  <div class="sec-progress-track"><div class="sec-progress-bar" id="secBar"></div></div>
-  <div class="sec-timer" id="secTimer">20s</div>
+  <div class="sec-track"><div class="sec-bar" id="secBar"></div></div>
+  <div class="sec-t" id="secT">20s</div>
 </div>
 
 <!-- Offline banner -->
 <div id="offlineBanner" style="display:none">
-  ⚡ Pas de connexion internet — les modifications peuvent ne pas être sauvegardées
+  ⚡ No internet connection — changes may not be saved
 </div>
 
 <!-- Connection stats popup -->
 <div id="connPopup" style="display:none">
-  <div class="conn-row"><span>Connexions totales</span><span class="conn-val" id="cpTotal">--</span></div>
-  <div class="conn-row"><span>Pic simultané</span><span class="conn-val" id="cpPeak">--</span></div>
-  <div class="conn-row"><span>En ligne maintenant</span><span class="conn-val" id="cpNow">--</span></div>
+  <div class="cp-row"><span>Total connections</span><span class="cp-val" id="cpTotal">--</span></div>
+  <div class="cp-row"><span>Peak concurrent</span><span class="cp-val" id="cpPeak">--</span></div>
+  <div class="cp-row"><span>Online now</span><span class="cp-val" id="cpNow">--</span></div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script>
-/* ═══════════════════════════════════════════════════
-   LiveNote Editor v2
-═══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   LiveNote Editor v3
+═══════════════════════════════════════════════ */
 
-/* ── Constants ── */
 const USER_COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#a855f7'];
 
 /* ── State ── */
-let quill = null;
-let channel = null;
-let currentMode = 'plaintext';
-let docShortId = null;
-let docData = null;
+let cmEditor     = null;   // CodeMirror instance (HTML mode)
+let channel      = null;
+let currentMode  = 'plaintext';
+let docShortId   = null;
+let docData      = null;
 let myUserId, myUsername, myColor;
 let isApplyingRemote = false;
-let isDirty = false;
-let saveTimer = null;
-let plainBcTimer = null; // throttle broadcast in plain mode
-let adEnabled = false;
-let adMinutes = 5;
-let adAt = null;          // timestamp ms when to auto-delete
-let adTimer = null;       // setInterval id
-let expiryTimer = null;
-let secAlertTimer = null;
-let secAlertProgress = null;
-let connPopupOpen = false;
-let currentPresenceCount = 0;
+let isDirty      = false;
+let saveTimer    = null;
+let bcTimer      = null;   // broadcast debounce
 
-/* ── Utils ── */
+/* Auto-delete (inactivity-based) */
+let adEnabled    = true;   // ON by default
+let adMinutes    = 5;
+let adAt         = 0;      // next deletion timestamp (ms)
+let adInterval   = null;
+
+/* Other timers */
+let expiryInterval = null;
+let secInterval    = null;
+let connPopupOpen  = false;
+
+/* ── Helpers ── */
 function toast(msg, ms = 2500) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
+  el.textContent = msg; el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), ms);
 }
-
-function setStatus(state, text) {
-  document.getElementById('sDot').className = `status-dot ${state}`;
-  document.getElementById('sTxt').textContent = text;
+function setStatus(cls, txt) {
+  document.getElementById('sDot').className = 's-dot ' + cls;
+  document.getElementById('sTxt').textContent = txt;
 }
-
-function setSave(text) { document.getElementById('sSave').textContent = text; }
-
+function setSave(t) { document.getElementById('sSave').textContent = t; }
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
 function fmtMs(ms) {
   if (ms <= 0) return '00:00';
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
+  const s = Math.floor(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60);
   if (h > 0) return `${h}h ${m % 60}m`;
   return `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
 }
-
 function pickColor(uid) {
   let h = 0;
   for (let i = 0; i < uid.length; i++) h = (Math.imul(31, h) + uid.charCodeAt(i)) | 0;
   return USER_COLORS[Math.abs(h) % USER_COLORS.length];
 }
-
-function playAlertSound() {
+function playAlert() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'sine';
     gain.gain.setValueAtTime(0, ctx.currentTime);
     gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.05);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
     osc.frequency.setValueAtTime(880, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.9);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.9);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.9);
   } catch (_) {}
 }
 
 /* ── Line numbers ── */
-function updateLineNumbers() {
+function updateLines() {
   const ta = document.getElementById('plainEditor');
-  const lines = (ta.value.match(/\n/g) || []).length + 1;
-  const gutter = document.getElementById('lineGutter');
-  let html = '';
-  for (let i = 1; i <= lines; i++) html += i + '\n';
-  gutter.textContent = html;
-  gutter.scrollTop = ta.scrollTop;
+  const n  = (ta.value.match(/\n/g) || []).length + 1;
+  let s = '';
+  for (let i = 1; i <= n; i++) s += i + '\n';
+  document.getElementById('lineGutter').textContent = s;
+  document.getElementById('lineGutter').scrollTop  = ta.scrollTop;
 }
 
 /* ── Word / line count ── */
@@ -595,340 +494,270 @@ function updateCount() {
   const el = document.getElementById('sCount');
   if (currentMode === 'plaintext') {
     const ta = document.getElementById('plainEditor');
-    const lines = (ta.value.match(/\n/g) || []).length + 1;
-    const words = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0;
-    el.textContent = `${lines} ligne${lines !== 1 ? 's' : ''} · ${words} mot${words !== 1 ? 's' : ''}`;
-  } else if (quill) {
-    const text = quill.getText().trim();
-    const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
-    el.textContent = `${words} mot${words !== 1 ? 's' : ''}`;
+    const ln = (ta.value.match(/\n/g) || []).length + 1;
+    const wd = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0;
+    el.textContent = `${ln} line${ln !== 1 ? 's' : ''} · ${wd} word${wd !== 1 ? 's' : ''}`;
+  } else if (cmEditor) {
+    const wd = cmEditor.getValue().trim().split(/\s+/).filter(Boolean).length;
+    const ln = cmEditor.lineCount();
+    el.textContent = `${ln} line${ln !== 1 ? 's' : ''} · ${wd} word${wd !== 1 ? 's' : ''}`;
   }
 }
 
-/* ── Save ── */
-async function saveNow() {
-  if (!docShortId) return;
-  setSave('Sauvegarde…');
-  document.getElementById('sDot').classList.add('sync');
-  let content = '';
-  if (currentMode === 'plaintext') {
-    content = document.getElementById('plainEditor').value;
-  } else if (quill) {
-    content = JSON.stringify(quill.getContents());
-  }
-  const { error } = await sb.from('livenote_docs').update({ content }).eq('short_id', docShortId);
-  document.getElementById('sDot').classList.remove('sync');
-  isDirty = false;
-  if (error) { setSave('Erreur'); return; }
-  const t = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  setSave(`Sauvegardé ${t}`);
-}
-
-function scheduleSave() {
-  isDirty = true;
-  setSave('Non sauvegardé');
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveNow, 2000);
-}
-
-/* ── Get / Set content ── */
+/* ── Content getters / setters ── */
 function getContent() {
   if (currentMode === 'plaintext') return document.getElementById('plainEditor').value;
-  if (quill) return JSON.stringify(quill.getContents());
+  if (cmEditor) return cmEditor.getValue();
   return '';
 }
 
-function setContent(raw, mode) {
-  if (mode === 'plaintext') {
-    const ta = document.getElementById('plainEditor');
-    ta.value = raw || '';
-    updateLineNumbers();
-    updateCount();
-  } else {
-    if (!quill) return;
+function setContent(raw) {
+  if (currentMode === 'plaintext') {
+    document.getElementById('plainEditor').value = raw || '';
+    updateLines(); updateCount();
+  } else if (cmEditor) {
     isApplyingRemote = true;
-    try {
-      const delta = JSON.parse(raw);
-      quill.setContents(delta, 'api');
-    } catch {
-      quill.setText(raw || '', 'api');
-    }
+    cmEditor.setValue(raw || '');
     isApplyingRemote = false;
     updateCount();
   }
 }
 
-/* ── Mode switch ── */
-async function switchMode(newMode) {
-  if (newMode === currentMode) return;
-  const confirmMsg = newMode === 'plaintext'
-    ? 'Passer en mode texte brut ? La mise en forme HTML sera perdue.'
-    : 'Passer en mode HTML ?';
-  if (!confirm(confirmMsg)) return;
-
-  // Extract current text
-  let text = '';
-  if (currentMode === 'plaintext') {
-    text = document.getElementById('plainEditor').value;
-  } else if (quill) {
-    text = quill.getText();
+function extractFromLegacy(raw) {
+  // Handle old Quill Delta JSON from v1
+  if (raw && raw.trim().startsWith('{"ops":')) {
+    try {
+      return JSON.parse(raw).ops.map(op => typeof op.insert === 'string' ? op.insert : '').join('').replace(/\n$/, '');
+    } catch (_) {}
   }
-
-  currentMode = newMode;
-  applyModeUI(newMode);
-
-  if (newMode === 'plaintext') {
-    document.getElementById('plainEditor').value = text;
-    updateLineNumbers(); updateCount();
-  } else {
-    if (quill) { quill.setText(text, 'api'); updateCount(); }
-  }
-
-  // Save mode + content to DB
-  await sb.from('livenote_docs').update({ mode: newMode, content: getContent() }).eq('short_id', docShortId);
-
-  // Broadcast mode change
-  channel?.send({ type: 'broadcast', event: 'mode-change', payload: { mode: newMode, content: getContent() } });
+  return raw || '';
 }
 
+/* ── Save ── */
+async function saveNow() {
+  if (!docShortId) return;
+  setSave('Saving…');
+  document.getElementById('sDot').classList.add('sync');
+  const { error } = await sb.from('livenote_docs').update({ content: getContent() }).eq('short_id', docShortId);
+  document.getElementById('sDot').classList.remove('sync');
+  isDirty = false;
+  if (error) { setSave('Save error'); return; }
+  const t = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  setSave(`Saved ${t}`);
+}
+function scheduleSave() {
+  isDirty = true; setSave('Unsaved');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 2000);
+}
+
+/* ── Mode switch UI ── */
 function applyModeUI(mode) {
-  const plain = document.getElementById('plainMode');
-  const html  = document.getElementById('htmlMode');
-  const tb    = document.getElementById('toolbar');
-  if (mode === 'plaintext') {
-    plain.style.display = 'flex'; html.style.display = 'none'; tb.style.display = 'none';
-  } else {
-    plain.style.display = 'none'; html.style.display = 'flex'; tb.style.display = 'block';
-  }
+  document.getElementById('plainMode').style.display = mode === 'plaintext' ? 'flex' : 'none';
+  document.getElementById('htmlMode').style.display  = mode === 'html'      ? 'block' : 'none';
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  if (mode === 'html' && cmEditor) setTimeout(() => cmEditor.refresh(), 10);
+}
+
+async function switchMode(newMode) {
+  if (newMode === currentMode) return;
+  const msg = newMode === 'plaintext'
+    ? 'Switch to plain text? HTML formatting will be lost.'
+    : 'Switch to HTML mode?';
+  if (!confirm(msg)) return;
+  const prev = getContent();
+  currentMode = newMode;
+  applyModeUI(newMode);
+  isApplyingRemote = true;
+  if (newMode === 'plaintext') {
+    document.getElementById('plainEditor').value = prev;
+    updateLines();
+  } else if (cmEditor) {
+    cmEditor.setValue(prev);
+  }
+  isApplyingRemote = false;
+  updateCount();
+  await sb.from('livenote_docs').update({ mode: newMode, content: getContent() }).eq('short_id', docShortId);
+  channel?.send({ type: 'broadcast', event: 'mode-change', payload: { mode: newMode, content: getContent() } });
 }
 
 /* ── Presence ── */
 function renderPresence(state) {
-  const bar = document.getElementById('presenceBar');
-  const countEl = document.getElementById('presenceCount');
+  const bar = document.getElementById('presBar');
+  const cnt = document.getElementById('presCount');
   const list = Object.values(state).flat();
-  currentPresenceCount = list.length;
-  const max = 5;
-  const shown = list.slice(0, max);
-  const extra = list.length - shown.length;
-  bar.innerHTML = shown.map(p => `
-    <div class="p-pill" style="background:${esc(p.color)}" data-name="${esc(p.username)}">
-      ${esc(p.username.charAt(0).toUpperCase())}
-    </div>`).join('') +
-    (extra > 0 ? `<div class="p-pill" style="background:#444" data-name="+${extra}">+${extra}</div>` : '');
-  countEl.textContent = list.length > 0 ? `${list.length} en ligne` : '';
+  const shown = list.slice(0, 5), extra = list.length - shown.length;
+  bar.innerHTML = shown.map(p => `<div class="p-pill" style="background:${esc(p.color)}" data-name="${esc(p.username)}">${esc(p.username[0].toUpperCase())}</div>`).join('')
+    + (extra > 0 ? `<div class="p-pill" style="background:#444" data-name="+${extra}">+${extra}</div>` : '');
+  cnt.textContent = list.length > 1 ? `${list.length} online` : '';
   document.getElementById('cpNow').textContent = list.length;
 }
 
-/* ── Auto-delete ── */
-function updateAdPanel() {
-  const adCountdownWrap = document.getElementById('adCountdownWrap');
-  const adCountdown = document.getElementById('adCountdown');
-  if (adEnabled && adAt) {
-    adCountdownWrap.style.display = 'block';
-    const rem = adAt - Date.now();
-    adCountdown.textContent = fmtMs(rem);
-    adCountdown.classList.toggle('urgent', rem < 60000);
-  } else {
-    adCountdownWrap.style.display = 'none';
-  }
+/* ═══════════════════════════════════════════════
+   AUTO-DELETE (inactivity-based)
+═══════════════════════════════════════════════ */
+function resetAd() {
+  // Called on every local input OR received remote input
+  if (!adEnabled) return;
+  adAt = Date.now() + adMinutes * 60000;
 }
 
-function startAdCountdown() {
-  clearInterval(adTimer);
-  adTimer = setInterval(() => {
-    if (!adAt) { clearInterval(adTimer); return; }
+function startAdInterval() {
+  clearInterval(adInterval);
+  adInterval = setInterval(() => {
+    if (!adEnabled || !adAt) return;
     const rem = adAt - Date.now();
-    updateAdPanel();
+    const el  = document.getElementById('adCd');
+    el.textContent = fmtMs(rem);
+    el.classList.toggle('hot', rem > 0 && rem < 60000);
     if (rem <= 0) {
-      clearInterval(adTimer);
-      handleAutoDelete();
+      clearInterval(adInterval);
+      fireAutoDelete();
     }
   }, 500);
 }
 
-async function handleAutoDelete() {
-  adEnabled = false; adAt = null;
-  clearInterval(adTimer);
-  updateAdPanel();
+async function fireAutoDelete() {
+  adEnabled = false;
+  clearInterval(adInterval);
   document.getElementById('adToggle').checked = false;
-  // Clear content locally
-  if (currentMode === 'plaintext') {
-    document.getElementById('plainEditor').value = '';
-    updateLineNumbers();
-  } else if (quill) {
-    isApplyingRemote = true; quill.setText('', 'api'); isApplyingRemote = false;
-  }
-  updateCount(); setSave('Non sauvegardé');
-  // Broadcast
-  channel?.send({ type: 'broadcast', event: 'auto-delete-fired', payload: {} });
-  // Save to DB
+  document.getElementById('adCd').textContent = '00:00';
+  // Clear editor
+  isApplyingRemote = true;
+  if (currentMode === 'plaintext') { document.getElementById('plainEditor').value = ''; updateLines(); }
+  else if (cmEditor) { cmEditor.setValue(''); }
+  isApplyingRemote = false;
+  updateCount(); scheduleSave();
+  // Broadcast to all peers
+  channel?.send({ type: 'broadcast', event: 'ad-fired', payload: {} });
+  // Persist immediately
   await sb.from('livenote_docs').update({ content: '', auto_delete_at: null }).eq('short_id', docShortId);
-  setSave('Supprimé');
-  toast('Contenu supprimé automatiquement');
+  setSave('Cleared');
+  toast('Content automatically deleted (inactivity)');
+  // Re-enable so next input starts fresh
+  adEnabled = true;
+  resetAd();
+  startAdInterval();
 }
 
 function enableAd(minutes) {
-  adEnabled = true;
-  adMinutes = minutes;
-  adAt = Date.now() + minutes * 60000;
-  startAdCountdown();
-  updateAdPanel();
+  adEnabled = true; adMinutes = minutes;
+  resetAd();
+  startAdInterval();
   sb.from('livenote_docs').update({ auto_delete_at: new Date(adAt).toISOString() }).eq('short_id', docShortId);
-  channel?.send({ type: 'broadcast', event: 'auto-delete-set', payload: { at: adAt } });
 }
 
 function disableAd() {
-  adEnabled = false; adAt = null;
-  clearInterval(adTimer);
-  updateAdPanel();
+  adEnabled = false; adAt = 0;
+  clearInterval(adInterval);
+  document.getElementById('adCd').textContent = '--:--';
   sb.from('livenote_docs').update({ auto_delete_at: null }).eq('short_id', docShortId);
-  channel?.send({ type: 'broadcast', event: 'auto-delete-cancel', payload: {} });
 }
 
-/* ── Delete now with confirm ── */
-(function setupDeleteNow() {
-  const btn = document.getElementById('btnDeleteNow');
-  let confirming = false, confirmTimer = null;
+/* ── Delete-now with two-tap confirm ── */
+(function() {
+  const btn = document.getElementById('btnDelNow');
+  let pending = false, t = null;
   btn.addEventListener('click', () => {
-    if (!confirming) {
-      confirming = true;
-      btn.textContent = 'Confirmer la suppression ?';
-      btn.classList.add('confirming');
-      confirmTimer = setTimeout(() => {
-        confirming = false;
-        btn.textContent = '🗑 Supprimer maintenant';
-        btn.classList.remove('confirming');
-      }, 4000);
+    if (!pending) {
+      pending = true;
+      btn.textContent = 'Tap again to confirm';
+      btn.classList.add('conf');
+      t = setTimeout(() => { pending = false; btn.textContent = '🗑 Delete now'; btn.classList.remove('conf'); }, 4000);
     } else {
-      clearTimeout(confirmTimer);
-      confirming = false;
-      btn.textContent = '🗑 Supprimer maintenant';
-      btn.classList.remove('confirming');
-      handleAutoDelete();
+      clearTimeout(t); pending = false;
+      btn.textContent = '🗑 Delete now'; btn.classList.remove('conf');
+      fireAutoDelete();
     }
   });
 })();
 
 /* ── Expiry countdown ── */
-function startExpiryCountdown(expiresAt) {
+function startExpiryCountdown(iso) {
   const el = document.getElementById('sExpiry');
   function tick() {
-    const rem = new Date(expiresAt).getTime() - Date.now();
-    if (rem <= 0) { showExpiredScreen(); return; }
-    el.textContent = `⏳ expire ${fmtMs(rem)}`;
+    const rem = new Date(iso).getTime() - Date.now();
+    if (rem <= 0) { showExpired(); return; }
+    el.textContent = `⏳ expires ${fmtMs(rem)}`;
   }
   tick();
-  expiryTimer = setInterval(tick, 10000);
+  expiryInterval = setInterval(tick, 10000);
 }
 
-function showExpiredScreen() {
-  clearInterval(expiryTimer);
-  const sc = document.getElementById('expiredScreen') || (() => {
-    const d = document.createElement('div'); d.id = 'expiredScreen';
-    document.body.appendChild(d); return d;
-  })();
-  sc.innerHTML = `
-    <div class="exp-icon">⏰</div>
-    <div class="exp-title">Document expiré</div>
-    <div class="exp-body">Ce document a expiré et son contenu a été supprimé.<br>Les liens LiveNote sont valables 24 heures.</div>
-    <a href="livenote.html" class="exp-link">← Créer un nouveau document</a>`;
-  sc.style.display = 'flex';
-  // Delete from DB
+function showExpired() {
+  clearInterval(expiryInterval);
+  document.getElementById('expScreen').style.display = 'flex';
   sb.from('livenote_docs').delete().eq('short_id', docShortId).then(() => {});
 }
 
 /* ── Security alert ── */
-function showSecurityAlert() {
-  // Don't stack alerts
+function showSecAlert() {
   if (document.getElementById('secAlert').style.display !== 'none') return;
-  playAlertSound();
-  const alert = document.getElementById('secAlert');
-  const bar   = document.getElementById('secBar');
-  const timer = document.getElementById('secTimer');
-  alert.style.display = 'block';
+  playAlert();
+  const al = document.getElementById('secAlert');
+  const bar = document.getElementById('secBar');
+  const t   = document.getElementById('secT');
+  al.style.display = 'block';
   bar.style.width = '100%';
-  let rem = 20;
-  timer.textContent = `${rem}s`;
-  clearTimeout(secAlertTimer);
-  clearInterval(secAlertProgress);
-  secAlertProgress = setInterval(() => {
-    rem--;
-    timer.textContent = `${rem}s`;
+  let rem = 20; t.textContent = `${rem}s`;
+  clearInterval(secInterval);
+  secInterval = setInterval(() => {
+    rem--; t.textContent = `${rem}s`;
     bar.style.width = `${(rem / 20) * 100}%`;
-    if (rem <= 0) {
-      clearInterval(secAlertProgress);
-      alert.style.display = 'none';
-    }
+    if (rem <= 0) { clearInterval(secInterval); al.style.display = 'none'; }
   }, 1000);
 }
-
-function dismissSecAlert(clearContent) {
-  clearInterval(secAlertProgress);
+function dismissSec(clear) {
+  clearInterval(secInterval);
   document.getElementById('secAlert').style.display = 'none';
-  if (clearContent) {
-    handleAutoDelete();
-    toast('Contenu effacé par sécurité');
-  }
+  if (clear) { fireAutoDelete(); toast('Content cleared for security'); }
 }
 
-/* ── Offline detection ── */
+/* ── Offline ── */
 function setupOffline() {
-  const banner = document.getElementById('offlineBanner');
-  window.addEventListener('offline', () => { banner.style.display = 'block'; setStatus('err', 'Hors ligne'); });
-  window.addEventListener('online',  () => { banner.style.display = 'none'; setStatus('on', 'Connecté'); });
-  if (!navigator.onLine) banner.style.display = 'block';
+  const b = document.getElementById('offlineBanner');
+  window.addEventListener('offline', () => { b.style.display = 'block'; setStatus('err', 'Offline'); });
+  window.addEventListener('online',  () => { b.style.display = 'none';  setStatus('on',  'Connected'); });
+  if (!navigator.onLine) b.style.display = 'block';
 }
 
-/* ── Connection stats popup ── */
-document.getElementById('sConn').addEventListener('click', () => {
-  const popup = document.getElementById('connPopup');
-  connPopupOpen = !connPopupOpen;
-  popup.style.display = connPopupOpen ? 'block' : 'none';
-});
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('#connPopup') && !e.target.closest('#sConn')) {
-    document.getElementById('connPopup').style.display = 'none';
-    connPopupOpen = false;
-  }
-});
+/* ── Broadcast helper ── */
+function scheduleBroadcast(event, payload) {
+  clearTimeout(bcTimer);
+  bcTimer = setTimeout(() => {
+    channel?.send({ type: 'broadcast', event, payload });
+  }, 16); // 16ms — one frame, imperceptible but batches rapid keystrokes
+}
 
-/* ═══════════════════════════════════════════════════
-   MAIN BOOT
-═══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
 
-  /* ── Auth ── */
   const session = await LazyAuth.requireAuthOrPopup();
   if (!session) return;
   const user = session.user;
   const profile = await LazyAuth.getProfile(user.id);
-  myUserId  = user.id;
-  myUsername = profile?.username || user.email?.split('@')[0] || 'Anonyme';
+  myUserId   = user.id;
+  myUsername = profile?.username || user.email?.split('@')[0] || 'Anonymous';
   myColor    = pickColor(user.id);
 
-  /* ── Get short_id from URL ── */
+  /* ── Short ID from URL ── */
   const params = new URLSearchParams(window.location.search);
   docShortId = params.get('id')?.toUpperCase() || null;
 
   if (!docShortId) {
     // Create new doc
-    const shortId = (() => {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      const bytes = new Uint8Array(9);
-      crypto.getRandomValues(bytes);
-      return Array.from(bytes, b => chars[b % chars.length]).join('');
-    })();
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = new Uint8Array(9);
+    crypto.getRandomValues(bytes);
+    const sid = Array.from(bytes, b => chars[b % chars.length]).join('');
     const { data, error } = await sb.from('livenote_docs').insert({
-      short_id: shortId, title: 'Sans titre', created_by: user.id,
+      short_id: sid, title: 'Untitled', created_by: user.id,
       mode: 'plaintext', content: '',
       expires_at: new Date(Date.now() + 86400000).toISOString()
     }).select().single();
-    if (error) {
-      document.getElementById('loadLbl').textContent = 'Erreur: ' + error.message;
-      return;
-    }
+    if (error) { document.getElementById('loadLbl').textContent = 'Error: ' + error.message; return; }
     window.location.replace(`livenote_editor.html?id=${data.short_id}`);
     return;
   }
@@ -939,45 +768,61 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (docErr || !doc) {
     document.getElementById('loadLbl').innerHTML =
-      `<span style="color:#f87171">Document introuvable</span><br><a href="livenote.html" style="color:#60a5fa;font-size:13px">← Retour</a>`;
+      `<span style="color:#f87171">Document not found</span><br><a href="livenote.html" style="color:#60a5fa;font-size:13px">← Back</a>`;
     return;
   }
   docData = doc;
 
-  /* ── Check expiry ── */
+  // Check expiry
   if (doc.expires_at && new Date(doc.expires_at) < new Date()) {
-    const ov = document.getElementById('loadOverlay');
-    ov.classList.add('out'); setTimeout(() => ov.remove(), 400);
-    showExpiredScreen(); return;
+    document.getElementById('loadOv').classList.add('out');
+    setTimeout(() => document.getElementById('loadOv').remove(), 400);
+    showExpired(); return;
   }
 
   /* ── Set title ── */
-  document.getElementById('titleInput').value = doc.title || 'Sans titre';
-  document.title = `${doc.title || 'Sans titre'} — LiveNote`;
+  document.getElementById('titleInput').value = doc.title || 'Untitled';
+  document.title = `${doc.title || 'Untitled'} — LiveNote`;
 
-  /* ── Init Quill ── */
-  quill = new Quill('#quillEditor', {
-    theme: 'snow', modules: { toolbar: '#toolbar' },
-    placeholder: 'Commence à écrire…'
+  /* ── Init CodeMirror ── */
+  cmEditor = CodeMirror(document.getElementById('cmWrap'), {
+    mode: 'xml',
+    theme: 'lazynote',
+    lineNumbers: true,
+    lineWrapping: true,
+    tabSize: 2,
+    indentWithTabs: false,
+    value: '',
+    extraKeys: {
+      'Ctrl-S':  () => { saveNow(); toast('Saved'); },
+      'Cmd-S':   () => { saveNow(); toast('Saved'); }
+    }
   });
+  cmEditor.setSize('100%', '100%');
 
   /* ── Apply mode & content ── */
   currentMode = doc.mode || 'plaintext';
   applyModeUI(currentMode);
-  setContent(doc.content || '', currentMode);
+  const rawContent = extractFromLegacy(doc.content || '');
+  if (currentMode === 'plaintext') {
+    document.getElementById('plainEditor').value = rawContent;
+    updateLines();
+  } else {
+    cmEditor.setValue(rawContent);
+  }
+  updateCount();
 
-  /* ── Restore auto-delete if set ── */
+  /* ── Auto-delete: enabled by default ── */
+  adEnabled = true;
+  adMinutes = 5;
+  document.getElementById('adToggle').checked = true;
+  resetAd(); // set adAt = now + 5min
+  startAdInterval();
+
+  // Restore from DB if set
   if (doc.auto_delete_at) {
     const at = new Date(doc.auto_delete_at).getTime();
-    if (at > Date.now()) {
-      adEnabled = true; adAt = at;
-      document.getElementById('adToggle').checked = true;
-      startAdCountdown();
-    } else {
-      // Already expired auto-delete — clear it
-      await sb.from('livenote_docs').update({ content: '', auto_delete_at: null }).eq('short_id', docShortId);
-      setContent('', currentMode);
-    }
+    if (at > Date.now()) { adAt = at; } // use the DB value
   }
 
   /* ── Start expiry countdown ── */
@@ -986,251 +831,239 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* ── Offline detection ── */
   setupOffline();
 
-  /* ── Update conn stats display ── */
-  document.getElementById('sConn').textContent = `👥 ${doc.total_connections ?? 0} conn.`;
+  /* ── Connection stats ── */
+  document.getElementById('sConn').textContent = `👥 ${doc.total_connections ?? 0}`;
   document.getElementById('cpTotal').textContent = doc.total_connections ?? 0;
   document.getElementById('cpPeak').textContent  = doc.max_concurrent ?? 0;
 
-  /* ── Setup Supabase Realtime ── */
-  const chName = `livenote:${docShortId}`;
-  channel = sb.channel(chName, {
+  /* ══════════════════════════════════════════
+     SUPABASE REALTIME
+  ══════════════════════════════════════════ */
+  channel = sb.channel(`livenote:${docShortId}`, {
     config: { broadcast: { self: false }, presence: { key: myUserId } }
   });
 
-  /* Remote: delta (plain text) */
+  /* Receive: plain text update */
   channel.on('broadcast', { event: 'plain-update' }, ({ payload }) => {
-    if (payload.userId === myUserId || currentMode !== 'plaintext') return;
+    if (payload.uid === myUserId || currentMode !== 'plaintext') return;
     const ta = document.getElementById('plainEditor');
     const ss = ta.selectionStart, se = ta.selectionEnd, st = ta.scrollTop;
+    isApplyingRemote = true;
     ta.value = payload.content;
+    isApplyingRemote = false;
     ta.selectionStart = Math.min(ss, payload.content.length);
     ta.selectionEnd   = Math.min(se, payload.content.length);
     ta.scrollTop = st;
-    updateLineNumbers(); updateCount();
+    updateLines(); updateCount();
+    resetAd(); // remote user is active
   });
 
-  /* Remote: delta (HTML/Quill) */
-  channel.on('broadcast', { event: 'quill-delta' }, ({ payload }) => {
-    if (payload.userId === myUserId || currentMode !== 'html' || !quill) return;
+  /* Receive: HTML/CodeMirror update */
+  channel.on('broadcast', { event: 'cm-update' }, ({ payload }) => {
+    if (payload.uid === myUserId || currentMode !== 'html' || !cmEditor) return;
+    const cur = cmEditor.getCursor(), sc = cmEditor.getScrollInfo();
     isApplyingRemote = true;
-    quill.updateContents(payload.delta, 'api');
+    cmEditor.setValue(payload.content || '');
     isApplyingRemote = false;
+    cmEditor.setCursor(cur);
+    cmEditor.scrollTo(sc.left, sc.top);
     updateCount();
+    resetAd(); // remote user is active
   });
 
-  /* Remote: full doc (sent to new joiner) */
+  /* Receive: full-doc sync (for new joiners) */
   channel.on('broadcast', { event: 'full-sync' }, ({ payload }) => {
     if (payload.forUser !== myUserId) return;
     isApplyingRemote = true;
     if (currentMode === 'plaintext') {
-      const ta = document.getElementById('plainEditor');
-      ta.value = payload.content || '';
-      updateLineNumbers();
-    } else if (quill) {
-      try { quill.setContents(JSON.parse(payload.content), 'api'); }
-      catch { quill.setText(payload.content || '', 'api'); }
+      document.getElementById('plainEditor').value = payload.content || '';
+      updateLines();
+    } else if (cmEditor) {
+      cmEditor.setValue(payload.content || '');
     }
     isApplyingRemote = false;
     updateCount();
-    if (payload.adAt && payload.adAt > Date.now()) {
-      adEnabled = true; adAt = payload.adAt;
-      document.getElementById('adToggle').checked = true;
-      startAdCountdown();
-    }
   });
 
-  /* Remote: mode change */
+  /* Receive: mode change */
   channel.on('broadcast', { event: 'mode-change' }, ({ payload }) => {
     currentMode = payload.mode;
     applyModeUI(payload.mode);
     isApplyingRemote = true;
-    setContent(payload.content || '', payload.mode);
+    if (payload.mode === 'plaintext') {
+      document.getElementById('plainEditor').value = payload.content || '';
+      updateLines();
+    } else if (cmEditor) {
+      cmEditor.setValue(payload.content || '');
+    }
     isApplyingRemote = false;
+    updateCount();
   });
 
-  /* Remote: auto-delete events */
-  channel.on('broadcast', { event: 'auto-delete-set' }, ({ payload }) => {
-    adEnabled = true; adAt = payload.at;
-    document.getElementById('adToggle').checked = true;
-    startAdCountdown(); updateAdPanel();
-  });
-  channel.on('broadcast', { event: 'auto-delete-cancel' }, () => {
-    adEnabled = false; adAt = null;
-    document.getElementById('adToggle').checked = false;
-    clearInterval(adTimer); updateAdPanel();
-  });
-  channel.on('broadcast', { event: 'auto-delete-fired' }, () => {
-    adEnabled = false; adAt = null;
-    clearInterval(adTimer); updateAdPanel();
-    if (currentMode === 'plaintext') { document.getElementById('plainEditor').value = ''; updateLineNumbers(); }
-    else if (quill) { isApplyingRemote = true; quill.setText('', 'api'); isApplyingRemote = false; }
-    updateCount(); toast('Contenu supprimé par un autre utilisateur');
+  /* Receive: auto-delete fired by peer */
+  channel.on('broadcast', { event: 'ad-fired' }, () => {
+    isApplyingRemote = true;
+    if (currentMode === 'plaintext') { document.getElementById('plainEditor').value = ''; updateLines(); }
+    else if (cmEditor) { cmEditor.setValue(''); }
+    isApplyingRemote = false;
+    updateCount(); toast('Content deleted by another user');
+    resetAd();
   });
 
   /* Presence sync */
   channel.on('presence', { event: 'sync' }, () => {
     const state = channel.presenceState();
     renderPresence(state);
-    // Update peak stats
     const n = Object.keys(state).length;
     if (n > (docData.max_concurrent || 0)) {
       docData.max_concurrent = n;
       document.getElementById('cpPeak').textContent = n;
-      sb.rpc('livenote_track_connection', { p_short_id: docShortId, p_concurrent: n }).then(() => {});
+      sb.rpc('livenote_track_connection', { p_short_id: docShortId, p_concurrent: n });
     }
   });
 
-  /* New user joined → host sends full state */
+  /* New user joined → security alert + host sends full state */
   channel.on('presence', { event: 'join' }, ({ newPresences }) => {
-    // Show security alert for any new user joining
-    showSecurityAlert();
-
+    showSecAlert();
     const state = channel.presenceState();
-    const all = Object.values(state).flat();
-    const mine = all.find(p => p.userId === myUserId);
+    const all   = Object.values(state).flat();
+    const mine  = all.find(p => p.uid === myUserId);
     const isHost = mine && all.every(p => p.joinTime >= mine.joinTime);
     if (isHost) {
       newPresences.forEach(np => {
         channel.send({
           type: 'broadcast', event: 'full-sync',
-          payload: {
-            forUser: np.userId,
-            content: getContent(),
-            adAt: adAt
-          }
+          payload: { forUser: np.uid, content: getContent() }
         });
       });
     }
   });
 
-  /* Subscribe & track presence */
+  /* Subscribe & track */
   channel.subscribe(async (status) => {
     if (status === 'SUBSCRIBED') {
-      setStatus('on', 'Connecté');
-      await channel.track({ userId: myUserId, username: myUsername, color: myColor, joinTime: Date.now() });
-      // Track connection
-      sb.rpc('livenote_track_connection', { p_short_id: docShortId, p_concurrent: 1 }).then(({ data }) => {
-        if (data !== null) {
-          const newTotal = (docData.total_connections || 0) + 1;
-          document.getElementById('sConn').textContent = `👥 ${newTotal} conn.`;
-          document.getElementById('cpTotal').textContent = newTotal;
-        }
-      });
+      setStatus('on', 'Connected');
+      await channel.track({ uid: myUserId, username: myUsername, color: myColor, joinTime: Date.now() });
+      sb.rpc('livenote_track_connection', { p_short_id: docShortId, p_concurrent: 1 });
+      const newTotal = (docData.total_connections || 0) + 1;
+      document.getElementById('sConn').textContent   = `👥 ${newTotal}`;
+      document.getElementById('cpTotal').textContent = newTotal;
     } else if (status === 'CHANNEL_ERROR') {
-      setStatus('err', 'Erreur réseau');
+      setStatus('err', 'Network error');
     } else if (status === 'TIMED_OUT') {
-      setStatus('err', 'Connexion perdue');
+      setStatus('err', 'Connection lost');
     }
   });
 
-  /* ── Plain text editor events ── */
-  const plainEditor = document.getElementById('plainEditor');
+  /* ════════════════════
+     EDITOR EVENTS
+  ════════════════════ */
 
-  plainEditor.addEventListener('input', () => {
+  /* Plain text: input */
+  const ta = document.getElementById('plainEditor');
+  ta.addEventListener('input', () => {
     if (isApplyingRemote) return;
-    updateLineNumbers(); updateCount(); scheduleSave();
-    // Throttled broadcast
-    clearTimeout(plainBcTimer);
-    plainBcTimer = setTimeout(() => {
-      channel?.send({
-        type: 'broadcast', event: 'plain-update',
-        payload: { userId: myUserId, content: plainEditor.value }
-      });
-    }, 50);
+    updateLines(); updateCount(); scheduleSave();
+    resetAd(); // local activity → reset inactivity timer
+    scheduleBroadcast('plain-update', { uid: myUserId, content: ta.value });
+  });
+  ta.addEventListener('scroll', () => {
+    document.getElementById('lineGutter').scrollTop = ta.scrollTop;
   });
 
-  plainEditor.addEventListener('scroll', () => {
-    document.getElementById('lineGutter').scrollTop = plainEditor.scrollTop;
+  /* CodeMirror: change */
+  cmEditor.on('change', (cm, change) => {
+    if (isApplyingRemote) return;
+    updateCount(); scheduleSave();
+    resetAd(); // local activity → reset inactivity timer
+    scheduleBroadcast('cm-update', { uid: myUserId, content: cm.getValue() });
   });
 
-  /* ── Quill events ── */
-  quill.on('text-change', async (delta, _, source) => {
-    updateCount();
-    if (source !== 'user' || isApplyingRemote) return;
-    scheduleSave();
-    await channel?.send({ type: 'broadcast', event: 'quill-delta', payload: { userId: myUserId, delta } });
+  /* ════════════════════
+     UI HANDLERS
+  ════════════════════ */
+
+  /* Mode toggle */
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.addEventListener('click', () => switchMode(b.dataset.mode));
   });
 
-  /* ── Mode toggle buttons ── */
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchMode(btn.dataset.mode));
-  });
-
-  /* ── Title input ── */
+  /* Title */
   let titleTimer = null;
-  document.getElementById('titleInput').addEventListener('input', (e) => {
-    document.title = `${e.target.value || 'Sans titre'} — LiveNote`;
+  document.getElementById('titleInput').addEventListener('input', e => {
+    document.title = `${e.target.value || 'Untitled'} — LiveNote`;
     clearTimeout(titleTimer);
     titleTimer = setTimeout(() => {
-      sb.from('livenote_docs').update({ title: e.target.value || 'Sans titre' }).eq('short_id', docShortId);
+      sb.from('livenote_docs').update({ title: e.target.value || 'Untitled' }).eq('short_id', docShortId);
     }, 1200);
   });
 
-  /* ── Auto-delete panel ── */
+  /* Auto-delete panel */
   const adPanel = document.getElementById('adPanel');
-  document.getElementById('btnAD').addEventListener('click', (e) => {
+  document.getElementById('btnAD').addEventListener('click', e => {
     e.stopPropagation();
     adPanel.style.display = adPanel.style.display === 'none' ? 'block' : 'none';
-    updateAdPanel();
   });
   document.getElementById('adClose').addEventListener('click', () => adPanel.style.display = 'none');
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', e => {
     if (!e.target.closest('#adPanel') && !e.target.closest('#btnAD')) adPanel.style.display = 'none';
   }, true);
 
-  const adToggle = document.getElementById('adToggle');
   const adSlider = document.getElementById('adSlider');
-  const adDurationLabel = document.getElementById('adDurationLabel');
-
+  const adSubLbl = document.getElementById('adSubLbl');
   adSlider.addEventListener('input', () => {
     adMinutes = parseInt(adSlider.value);
-    adDurationLabel.textContent = `Durée : ${adMinutes} min`;
-    if (adEnabled) enableAd(adMinutes); // restart with new duration
+    adSubLbl.textContent = `Inactivity timeout: ${adMinutes} min`;
+    if (adEnabled) resetAd(); // restart countdown with new duration
   });
 
-  adToggle.addEventListener('change', () => {
-    if (adToggle.checked) { enableAd(adMinutes); }
+  document.getElementById('adToggle').addEventListener('change', e => {
+    if (e.target.checked) { adEnabled = true; resetAd(); startAdInterval(); }
     else { disableAd(); }
-    updateAdPanel();
   });
 
-  /* ── Share ── */
+  /* Share */
   document.getElementById('btnShare').addEventListener('click', async () => {
     const url = `${location.origin}${location.pathname}?id=${docShortId}`;
-    try { await navigator.clipboard.writeText(url); toast(`Lien copié ! Code: ${docShortId}`); }
-    catch { prompt('Copie ce lien :', url); }
+    try { await navigator.clipboard.writeText(url); toast(`Link copied! Code: ${docShortId}`); }
+    catch { prompt('Copy this link:', url); }
   });
 
-  /* ── Copy text ── */
+  /* Copy text */
   document.getElementById('btnCopy').addEventListener('click', async () => {
-    const text = currentMode === 'plaintext'
-      ? document.getElementById('plainEditor').value
-      : quill?.getText() || '';
-    try { await navigator.clipboard.writeText(text); toast('Texte copié'); }
-    catch { toast('Impossible de copier'); }
+    const text = currentMode === 'plaintext' ? ta.value : (cmEditor?.getValue() || '');
+    try { await navigator.clipboard.writeText(text); toast('Text copied'); }
+    catch { toast('Copy failed'); }
   });
 
-  /* ── Security alert actions ── */
-  document.getElementById('secYes').addEventListener('click', () => dismissSecAlert(false));
-  document.getElementById('secNo').addEventListener('click',  () => dismissSecAlert(true));
+  /* Security alert */
+  document.getElementById('secYes').addEventListener('click', () => dismissSec(false));
+  document.getElementById('secNo').addEventListener('click',  () => dismissSec(true));
 
-  /* ── Keyboard shortcuts ── */
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      e.preventDefault(); saveNow(); toast('Sauvegardé');
+  /* Connection stats popup */
+  document.getElementById('sConn').addEventListener('click', () => {
+    connPopupOpen = !connPopupOpen;
+    document.getElementById('connPopup').style.display = connPopupOpen ? 'block' : 'none';
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#connPopup') && !e.target.closest('#sConn')) {
+      document.getElementById('connPopup').style.display = 'none';
+      connPopupOpen = false;
     }
   });
 
-  /* ── Save on leave ── */
-  window.addEventListener('beforeunload', (e) => {
-    if (isDirty) { saveNow(); e.preventDefault(); }
+  /* Keyboard shortcuts */
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveNow(); toast('Saved'); }
   });
 
+  /* Save on leave */
+  window.addEventListener('beforeunload', e => { if (isDirty) { saveNow(); e.preventDefault(); } });
+
   /* ── Hide loading ── */
-  const ov = document.getElementById('loadOverlay');
-  ov.classList.add('out');
-  setTimeout(() => ov.remove(), 400);
-  setSave('Chargé');
+  document.getElementById('loadOv').classList.add('out');
+  setTimeout(() => document.getElementById('loadOv').remove(), 400);
+  setSave('Loaded');
   updateCount();
 });
 </script>
