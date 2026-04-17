@@ -3,679 +3,1100 @@
 <head>
 <!--
   ═══════════════════════════════════════════════════════════════
-  LiveNote Editor — Real-time collaborative editor
-  ═══════════════════════════════════════════════════════════════
-
-  SUPABASE SETUP  (run once in Supabase SQL Editor)
+  LiveNote Editor v2 — SUPABASE MIGRATION SQL
+  Run this in Supabase SQL Editor:
   ───────────────────────────────────────────────────────────────
 
-  -- 1. Create documents table
-  create table public.livenote_docs (
-    id           uuid default gen_random_uuid() primary key,
-    title        text not null default 'Sans titre',
-    content      text default '',
-    created_by   uuid references auth.users(id) on delete set null,
-    created_at   timestamptz default now(),
-    updated_at   timestamptz default now()
-  );
+  alter table public.livenote_docs
+    add column if not exists short_id          text unique,
+    add column if not exists mode              text default 'plaintext',
+    add column if not exists expires_at        timestamptz default (now() + interval '24 hours'),
+    add column if not exists total_connections integer default 0,
+    add column if not exists max_concurrent    integer default 0,
+    add column if not exists auto_delete_at    timestamptz;
 
-  -- 2. Enable RLS
-  alter table public.livenote_docs enable row level security;
+  update public.livenote_docs
+    set short_id = upper(substr(replace(gen_random_uuid()::text,'-',''), 1, 9))
+    where short_id is null;
 
-  -- 3. Policies (authenticated users can read/create/update; only creator can delete)
-  create policy "livenote_read" on public.livenote_docs
-    for select using (auth.uid() is not null);
-
-  create policy "livenote_create" on public.livenote_docs
-    for insert with check (auth.uid() = created_by);
-
-  create policy "livenote_update" on public.livenote_docs
-    for update using (auth.uid() is not null);
-
+  drop policy if exists "livenote_delete" on public.livenote_docs;
   create policy "livenote_delete" on public.livenote_docs
-    for delete using (auth.uid() = created_by);
+    for delete using (auth.uid() = created_by or expires_at < now());
 
-  -- 4. Auto-update updated_at on every save
-  create or replace function update_livenote_updated_at()
-  returns trigger language plpgsql as $$
-  begin new.updated_at = now(); return new; end; $$;
+  create or replace function livenote_track_connection(p_short_id text, p_concurrent int)
+  returns void language plpgsql security definer as $$
+  begin
+    update public.livenote_docs
+    set total_connections = total_connections + 1,
+        max_concurrent    = greatest(max_concurrent, p_concurrent)
+    where short_id = p_short_id;
+  end;
+  $$;
 
-  create trigger livenote_updated_at
-    before update on public.livenote_docs
-    for each row execute function update_livenote_updated_at();
-
-  -- 5. Enable Realtime on this table (Dashboard → Database → Replication → livenote_docs)
-  --    Or run: alter publication supabase_realtime add table public.livenote_docs;
+  alter publication supabase_realtime add table public.livenote_docs;
   ═══════════════════════════════════════════════════════════════
 -->
 <script>
-  const path = window.location.pathname;
-  const lower = path.toLowerCase();
-  if (path !== lower) window.location.replace(lower + window.location.search);
+  const p = window.location.pathname, l = p.toLowerCase();
+  if (p !== l) window.location.replace(l + window.location.search);
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LiveNote — LazyPO</title>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<!-- Quill editor -->
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0c0c;--surface:#161616;--surface2:#1c1c1c;
+  --border:#222;--border2:#2a2a2a;
+  --accent:#3b82f6;--accent2:#60a5fa;
+  --text:#f0f0f0;--muted:#6b6b6b;--danger:#ef4444;
+}
+html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
 
-:root {
-  --bg:       #0c0c0c;
-  --surface:  #161616;
-  --surface2: #1c1c1c;
-  --border:   #222222;
-  --border2:  #2a2a2a;
-  --accent:   #3b82f6;
-  --accent2:  #60a5fa;
-  --text:     #f0f0f0;
-  --muted:    #6b6b6b;
-  --r:        10px;
-}
+/* ── Shell ── */
+.editor-shell{display:flex;flex-direction:column;height:100vh}
 
-html, body {
-  height: 100%; overflow: hidden;
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg); color: var(--text);
+/* ── Topbar ── */
+.topbar{
+  display:flex;align-items:center;gap:8px;
+  padding:0 14px;height:50px;flex-shrink:0;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  position:relative;z-index:50;
 }
+.btn-back{
+  display:flex;align-items:center;gap:5px;padding:5px 9px;border-radius:7px;
+  background:transparent;border:1px solid transparent;
+  color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  cursor:pointer;text-decoration:none;flex-shrink:0;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.btn-back:hover{background:var(--surface2);border-color:var(--border2);color:var(--text)}
+.title-input{
+  flex:1;min-width:0;background:transparent;border:none;outline:none;
+  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:var(--text);
+  padding:5px 8px;border-radius:6px;transition:background .15s;
+}
+.title-input:hover,.title-input:focus{background:var(--surface2)}
+.title-input::placeholder{color:var(--muted)}
 
-/* ══════════════════════════════════════
-   LAYOUT — full viewport, no scroll on body
-   sidebar.js adds 64px padding-left
-══════════════════════════════════════ */
-.editor-shell {
-  display: flex; flex-direction: column;
-  height: 100vh;
+/* ── Mode toggle ── */
+.mode-toggle{
+  display:flex;background:var(--bg);border:1px solid var(--border2);
+  border-radius:7px;padding:2px;gap:2px;flex-shrink:0;
 }
+.mode-btn{
+  padding:4px 11px;border-radius:5px;border:none;background:transparent;
+  color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;font-weight:500;
+  cursor:pointer;transition:background .15s,color .15s;
+}
+.mode-btn.active{background:var(--surface2);color:var(--text)}
 
-/* ── Top bar ── */
-.topbar {
-  display: flex; align-items: center; gap: 12px;
-  padding: 0 20px;
-  height: 54px; flex-shrink: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  position: relative; z-index: 10;
+/* ── Presence ── */
+.presence-bar{display:flex;align-items:center;flex-shrink:0}
+.p-pill{
+  width:27px;height:27px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;
+  border:2px solid var(--surface);position:relative;cursor:default;
+  transition:transform .2s;
 }
+.p-pill:not(:first-child){margin-left:-7px}
+.p-pill:hover{transform:scale(1.2);z-index:1}
+.p-pill::after{
+  content:attr(data-name);
+  position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);
+  background:var(--surface2);border:1px solid var(--border2);
+  color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;font-weight:500;
+  padding:3px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;
+  opacity:0;transition:opacity .15s;
+}
+.p-pill:hover::after{opacity:1}
+.p-count{font-size:11.5px;color:var(--muted);margin-left:6px;flex-shrink:0;white-space:nowrap}
 
-.btn-back {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 10px; border-radius: 8px;
-  background: transparent; border: 1px solid transparent;
-  color: var(--muted); font-family: 'DM Sans', sans-serif;
-  font-size: 13px; font-weight: 500; cursor: pointer;
-  text-decoration: none; flex-shrink: 0;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+/* ── Icon buttons ── */
+.btn-icon{
+  width:32px;height:32px;border-radius:7px;
+  background:transparent;border:1px solid var(--border2);
+  color:var(--muted);font-size:14px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;flex-shrink:0;
 }
-.btn-back:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+.btn-icon:hover{background:var(--surface2);color:var(--text)}
+.btn-icon.armed{border-color:rgba(239,68,68,.4);color:#f87171;background:rgba(239,68,68,.08)}
+.btn-share{
+  display:flex;align-items:center;gap:6px;padding:6px 13px;border-radius:7px;
+  background:rgba(59,130,246,.12);border:1px solid rgba(96,165,250,.2);
+  color:var(--accent2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;transition:background .15s;flex-shrink:0;
+}
+.btn-share:hover{background:rgba(59,130,246,.2)}
 
-.title-input {
-  flex: 1; min-width: 0;
-  background: transparent; border: none; outline: none;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 16px; font-weight: 600; color: var(--text);
-  padding: 6px 8px; border-radius: 6px;
-  transition: background 0.15s;
+/* ── Quill toolbar ── */
+#toolbar{
+  background:var(--surface)!important;border:none!important;
+  border-bottom:1px solid var(--border)!important;
+  padding:5px 14px!important;flex-shrink:0;
 }
-.title-input:hover { background: var(--surface2); }
-.title-input:focus { background: var(--surface2); }
-.title-input::placeholder { color: var(--muted); }
-
-/* ── Presence pills ── */
-.presence-bar {
-  display: flex; align-items: center; gap: 4px; flex-shrink: 0;
-}
-.presence-pill {
-  width: 30px; height: 30px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; color: #fff;
-  border: 2px solid var(--bg);
-  position: relative;
-  transition: transform 0.2s;
-  cursor: default;
-  flex-shrink: 0;
-}
-.presence-pill:hover { transform: scale(1.15); z-index: 1; }
-.presence-pill[title]:hover::after {
-  content: attr(title);
-  position: absolute; bottom: calc(100% + 6px); left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface2); border: 1px solid var(--border2);
-  color: var(--text); font-size: 11px; font-weight: 500;
-  padding: 4px 8px; border-radius: 6px; white-space: nowrap;
-  pointer-events: none;
-}
-.presence-pill + .presence-pill { margin-left: -8px; }
-.presence-count {
-  font-size: 12px; color: var(--muted); margin-left: 6px;
-  white-space: nowrap;
-}
-
-/* ── Action buttons ── */
-.btn-share {
-  display: flex; align-items: center; gap: 7px;
-  padding: 7px 14px; border-radius: 8px;
-  background: rgba(59,130,246,0.12); border: 1px solid rgba(96,165,250,0.2);
-  color: var(--accent2); font-family: 'DM Sans', sans-serif;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  transition: background 0.15s, transform 0.15s;
-  flex-shrink: 0;
-}
-.btn-share:hover { background: rgba(59,130,246,0.2); transform: translateY(-1px); }
-
-.btn-export {
-  display: flex; align-items: center; gap: 7px;
-  padding: 7px 12px; border-radius: 8px;
-  background: transparent; border: 1px solid var(--border2);
-  color: var(--muted); font-family: 'DM Sans', sans-serif;
-  font-size: 13px; font-weight: 500; cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  flex-shrink: 0;
-}
-.btn-export:hover { background: var(--surface2); color: var(--text); }
-
-/* ── Quill toolbar dark theme ── */
-#toolbar {
-  background: var(--surface) !important;
-  border: none !important;
-  border-bottom: 1px solid var(--border) !important;
-  padding: 6px 16px !important;
-  flex-shrink: 0;
-}
-
-.ql-toolbar.ql-snow .ql-formats {
-  margin-right: 12px;
-}
-
-.ql-toolbar.ql-snow button,
-.ql-toolbar.ql-snow .ql-picker-label {
-  color: var(--muted) !important;
-}
-.ql-toolbar.ql-snow button:hover,
-.ql-toolbar.ql-snow .ql-picker-label:hover,
-.ql-toolbar.ql-snow button.ql-active,
-.ql-toolbar.ql-snow .ql-picker-label.ql-active {
-  color: var(--text) !important;
-}
-.ql-toolbar.ql-snow .ql-stroke { stroke: var(--muted) !important; }
-.ql-toolbar.ql-snow .ql-fill { fill: var(--muted) !important; }
+.ql-toolbar.ql-snow .ql-stroke{stroke:var(--muted)!important}
+.ql-toolbar.ql-snow .ql-fill{fill:var(--muted)!important}
 .ql-toolbar.ql-snow button:hover .ql-stroke,
-.ql-toolbar.ql-snow button.ql-active .ql-stroke { stroke: var(--text) !important; }
+.ql-toolbar.ql-snow button.ql-active .ql-stroke{stroke:var(--text)!important}
 .ql-toolbar.ql-snow button:hover .ql-fill,
-.ql-toolbar.ql-snow button.ql-active .ql-fill { fill: var(--text) !important; }
-
-.ql-toolbar.ql-snow .ql-picker-options {
-  background: var(--surface2) !important;
-  border: 1px solid var(--border2) !important;
-  border-radius: 8px !important;
+.ql-toolbar.ql-snow button.ql-active .ql-fill{fill:var(--text)!important}
+.ql-toolbar.ql-snow .ql-picker-label{color:var(--muted)!important}
+.ql-toolbar.ql-snow .ql-picker-options{
+  background:var(--surface2)!important;border:1px solid var(--border2)!important;
+  border-radius:8px!important;
 }
-.ql-toolbar.ql-snow .ql-picker-item { color: var(--text) !important; }
-.ql-toolbar.ql-snow .ql-picker-item:hover { background: var(--faint, #2e2e2e) !important; }
+.ql-toolbar.ql-snow .ql-picker-item{color:var(--text)!important}
 
 /* ── Editor area ── */
-.editor-wrap {
-  flex: 1; overflow: hidden; position: relative;
-  display: flex; flex-direction: column;
+.editor-wrap{flex:1;overflow:hidden;display:flex;position:relative}
+
+/* ── Plain text mode ── */
+.plain-wrap{display:flex;width:100%;height:100%;overflow:hidden}
+.line-gutter{
+  width:52px;flex-shrink:0;
+  background:#0f0f0f;border-right:1px solid var(--border);
+  padding:20px 10px 20px 0;text-align:right;
+  font-family:'DM Mono',monospace;font-size:13.5px;line-height:1.65;
+  color:#383838;user-select:none;overflow:hidden;
+}
+#plainEditor{
+  flex:1;resize:none;border:none;outline:none;
+  background:var(--bg);color:var(--text);
+  font-family:'DM Mono',monospace;font-size:13.5px;line-height:1.65;
+  padding:20px 32px;overflow-y:auto;tab-size:2;
+}
+#plainEditor::placeholder{color:var(--muted)}
+#plainEditor::-webkit-scrollbar{width:5px}
+#plainEditor::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── HTML mode (Quill) ── */
+#htmlMode{display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden}
+.ql-container.ql-snow{flex:1;border:none!important;overflow-y:auto;background:var(--bg)!important}
+.ql-editor{
+  max-width:780px;margin:0 auto;
+  padding:40px 32px 100px!important;
+  color:var(--text)!important;
+  font-family:'DM Sans',sans-serif!important;font-size:16px!important;line-height:1.75!important;
+}
+.ql-editor.ql-blank::before{color:var(--muted)!important;font-style:normal!important;left:32px!important}
+.ql-editor h1{font-size:2em;font-weight:700;margin-bottom:.3em}
+.ql-editor h2{font-size:1.5em;font-weight:600;margin-bottom:.3em}
+.ql-editor h3{font-size:1.2em;font-weight:600;color:#c0c0c0;margin-bottom:.3em}
+.ql-editor a{color:var(--accent2)}
+.ql-editor code,.ql-editor pre{background:var(--surface2)!important;border:1px solid var(--border)!important;border-radius:5px!important;color:#93c5fd!important;font-family:'DM Mono',monospace!important}
+.ql-editor blockquote{border-left:3px solid var(--accent)!important;color:var(--muted)!important;margin-left:0!important;padding-left:16px!important}
+.ql-editor ul>li::before,.ql-editor ol>li::before{color:var(--accent2)!important}
+.ql-container::-webkit-scrollbar{width:5px}
+.ql-container::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── Statusbar ── */
+.statusbar{
+  display:flex;align-items:center;gap:12px;padding:0 16px;height:30px;flex-shrink:0;
+  background:var(--surface);border-top:1px solid var(--border);
+  font-family:'DM Mono',monospace;font-size:11.5px;color:var(--muted);
+}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s}
+.status-dot.on{background:#34d399;box-shadow:0 0 5px rgba(52,211,153,.5)}
+.status-dot.sync{background:var(--accent2);animation:blink .7s ease infinite}
+.status-dot.err{background:#f87171}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-sep{width:1px;height:12px;background:var(--border);flex-shrink:0}
+.stat-clickable{cursor:pointer;transition:color .15s}
+.stat-clickable:hover{color:var(--text)}
+
+/* ── Auto-delete panel ── */
+#adPanel{
+  position:fixed;top:58px;right:14px;z-index:400;
+  width:260px;background:var(--surface);border:1px solid var(--border2);
+  border-radius:13px;box-shadow:0 12px 40px rgba(0,0,0,.6);
+  animation:slideDown .2s ease;overflow:hidden;
+}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.ad-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;border-bottom:1px solid var(--border);
+  font-size:13px;font-weight:600;
+}
+.ad-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0 2px}
+.ad-close:hover{color:var(--text)}
+.ad-body{padding:14px}
+.ad-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ad-label{font-size:13px;color:var(--text)}
+.ad-sublabel{font-size:12px;color:var(--muted);margin-bottom:10px}
+
+/* toggle switch */
+.t-switch{position:relative;display:inline-block;width:38px;height:22px}
+.t-switch input{opacity:0;width:0;height:0}
+.t-track{
+  position:absolute;inset:0;border-radius:11px;background:#333;
+  cursor:pointer;transition:background .2s;
+}
+.t-track::before{
+  content:'';position:absolute;width:16px;height:16px;border-radius:50%;
+  left:3px;top:3px;background:#fff;transition:transform .2s;
+}
+.t-switch input:checked+.t-track{background:var(--accent)}
+.t-switch input:checked+.t-track::before{transform:translateX(16px)}
+
+/* range slider */
+.ad-slider{width:100%;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--border2);outline:none;margin:6px 0}
+.ad-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer}
+.ad-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
+.ad-countdown{
+  font-family:'DM Mono',monospace;font-size:22px;font-weight:700;
+  color:var(--accent2);text-align:center;margin:8px 0 14px;
+}
+.ad-countdown.urgent{color:#f87171;animation:pulse .6s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.btn-danger-confirm{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  width:100%;padding:9px;border-radius:8px;
+  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);
+  color:#f87171;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;transition:background .15s;
+}
+.btn-danger-confirm:hover{background:rgba(239,68,68,.2)}
+.btn-danger-confirm.confirming{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5)}
+.btn-delete-now{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  width:100%;padding:9px;border-radius:8px;
+  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);
+  color:#f87171;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;transition:background .15s;margin-top:10px;
+}
+.btn-delete-now:hover{background:rgba(239,68,68,.2)}
+
+/* ── Security alert ── */
+#secAlert{
+  position:fixed;top:62px;right:14px;z-index:500;
+  width:300px;background:var(--surface);border:1px solid rgba(251,191,36,.3);
+  border-radius:13px;box-shadow:0 12px 40px rgba(0,0,0,.7);
+  padding:18px;animation:slideDown .3s ease;
+}
+.sec-icon{font-size:24px;margin-bottom:8px}
+.sec-title{font-size:14px;font-weight:700;color:#fbbf24;margin-bottom:4px}
+.sec-body{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}
+.sec-actions{display:flex;gap:8px;margin-bottom:12px}
+.btn-sec-yes{
+  flex:1;padding:8px;border-radius:7px;border:1px solid var(--border2);
+  background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;
+}
+.btn-sec-yes:hover{background:#2a2a2a}
+.btn-sec-no{
+  flex:1;padding:8px;border-radius:7px;border:1px solid rgba(239,68,68,.3);
+  background:rgba(239,68,68,.1);color:#f87171;font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;
+}
+.btn-sec-no:hover{background:rgba(239,68,68,.2)}
+.sec-progress-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.sec-progress-bar{height:100%;background:#fbbf24;border-radius:2px;width:100%;transition:width 1s linear}
+.sec-timer{font-size:11px;color:var(--muted);margin-top:5px;text-align:right;font-family:'DM Mono',monospace}
+
+/* ── Offline banner ── */
+#offlineBanner{
+  position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:600;
+  background:#7f1d1d;border:1px solid #991b1b;border-top:none;
+  color:#fca5a5;font-size:13px;font-weight:500;
+  padding:8px 20px;border-radius:0 0 10px 10px;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+  animation:slideDown .3s ease;
 }
 
-.ql-container.ql-snow {
-  flex: 1;
-  border: none !important;
-  overflow-y: auto;
-  font-size: 16px;
-  background: var(--bg) !important;
+/* ── Conn stats popup ── */
+#connPopup{
+  position:fixed;bottom:42px;right:14px;z-index:400;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:10px;padding:14px 16px;font-size:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:180px;
+  animation:slideDown .2s ease;
 }
-
-.ql-editor {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 48px 32px 120px !important;
-  color: var(--text) !important;
-  font-family: 'DM Sans', sans-serif !important;
-  font-size: 16px !important;
-  line-height: 1.75 !important;
-  min-height: 100%;
-}
-.ql-editor.ql-blank::before {
-  color: var(--muted) !important;
-  font-style: normal !important;
-  font-size: 16px;
-  left: 32px !important;
-}
-
-/* Headings */
-.ql-editor h1 { font-size: 2em; font-weight: 700; color: var(--text); margin-bottom: 0.4em; }
-.ql-editor h2 { font-size: 1.5em; font-weight: 600; color: var(--text); margin-bottom: 0.4em; }
-.ql-editor h3 { font-size: 1.2em; font-weight: 600; color: #c0c0c0; margin-bottom: 0.4em; }
-
-/* Lists */
-.ql-editor ul > li::before { color: var(--accent2) !important; }
-.ql-editor ol > li::before { color: var(--accent2) !important; }
-
-/* Links */
-.ql-editor a { color: var(--accent2); }
-
-/* Code */
-.ql-editor code, .ql-editor pre {
-  background: var(--surface2) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 6px !important;
-  color: #93c5fd !important;
-  font-family: 'DM Mono', monospace !important;
-}
-
-/* Blockquote */
-.ql-editor blockquote {
-  border-left: 3px solid var(--accent) !important;
-  color: var(--muted) !important;
-  margin-left: 0 !important;
-  padding-left: 16px !important;
-}
-
-/* Scrollbar */
-.ql-container::-webkit-scrollbar { width: 6px; }
-.ql-container::-webkit-scrollbar-track { background: transparent; }
-.ql-container::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-.ql-container::-webkit-scrollbar-thumb:hover { background: #444; }
-
-/* ── Status bar ── */
-.statusbar {
-  display: flex; align-items: center; gap: 16px;
-  padding: 0 20px; height: 32px; flex-shrink: 0;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  font-size: 11.5px; font-family: 'DM Mono', monospace;
-  color: var(--muted);
-}
-.status-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--muted); flex-shrink: 0;
-  transition: background 0.3s;
-}
-.status-dot.connected { background: #34d399; box-shadow: 0 0 6px rgba(52,211,153,0.5); }
-.status-dot.syncing   { background: var(--accent2); animation: blink 0.7s ease infinite; }
-.status-dot.error     { background: #f87171; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-.statusbar-sep { width: 1px; height: 14px; background: var(--border); }
+.conn-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:6px}
+.conn-row:last-child{margin-bottom:0}
+.conn-val{font-family:'DM Mono',monospace;color:var(--accent2);font-weight:600}
 
 /* ── Toast ── */
-#toast {
-  position: fixed; bottom: 52px; left: 50%; transform: translateX(-50%) translateY(80px);
-  background: var(--surface2); border: 1px solid var(--border2);
-  color: var(--text); font-size: 13px; font-weight: 500;
-  padding: 10px 18px; border-radius: 100px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  z-index: 999; white-space: nowrap; pointer-events: none;
+#toast{
+  position:fixed;bottom:44px;left:50%;transform:translateX(-50%) translateY(70px);
+  background:var(--surface2);border:1px solid var(--border2);
+  color:var(--text);font-size:13px;font-weight:500;
+  padding:9px 18px;border-radius:100px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+  z-index:700;white-space:nowrap;pointer-events:none;
 }
-#toast.show { transform: translateX(-50%) translateY(0); }
+#toast.show{transform:translateX(-50%) translateY(0)}
 
 /* ── Loading overlay ── */
-#loadingOverlay {
-  position: fixed; inset: 0; z-index: 500;
-  background: var(--bg);
-  display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 14px;
-  transition: opacity 0.4s;
+#loadOverlay{
+  position:fixed;inset:0;z-index:800;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:12px;transition:opacity .4s;
 }
-#loadingOverlay.hidden { opacity: 0; pointer-events: none; }
-.loading-spinner {
-  width: 32px; height: 32px; border-radius: 50%;
-  border: 2px solid var(--border2);
-  border-top-color: var(--accent);
-  animation: spin 0.7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.loading-label { font-size: 13px; color: var(--muted); }
+#loadOverlay.out{opacity:0;pointer-events:none}
+.spin{width:30px;height:30px;border-radius:50%;border:2px solid var(--border2);border-top-color:var(--accent);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-lbl{font-size:13px;color:var(--muted)}
 
-/* ── Responsive ── */
-@media (max-width: 768px) {
-  .btn-export { display: none; }
-  .ql-editor { padding: 24px 16px 80px !important; }
+/* ── Expired screen (replaces editor) ── */
+#expiredScreen{
+  position:fixed;inset:0;z-index:700;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:12px;text-align:center;padding:32px;
 }
-@media (max-width: 500px) {
-  .btn-share span { display: none; }
+.exp-icon{font-size:40px;opacity:.5;margin-bottom:4px}
+.exp-title{font-size:18px;font-weight:700}
+.exp-body{font-size:14px;color:var(--muted);line-height:1.6}
+.exp-link{display:inline-block;margin-top:16px;color:var(--accent2);font-size:13px;text-decoration:none}
+.exp-link:hover{text-decoration:underline}
+
+@media(max-width:768px){
+  .btn-share span{display:none}
+  .ql-editor{padding:24px 16px 80px!important}
+  #plainEditor{padding:16px}
 }
 </style>
 </head>
 <body>
-
 <script src="sidebar.js"></script>
 <script src="auth.js"></script>
 
-<!-- Loading overlay -->
-<div id="loadingOverlay">
-  <div class="loading-spinner"></div>
-  <div class="loading-label">Chargement du document…</div>
+<!-- Loading -->
+<div id="loadOverlay">
+  <div class="spin"></div>
+  <div class="load-lbl" id="loadLbl">Chargement du document…</div>
 </div>
 
-<!-- Main shell -->
+<!-- Editor shell -->
 <div class="editor-shell">
 
-  <!-- Top bar -->
+  <!-- Topbar -->
   <div class="topbar">
     <a href="livenote.html" class="btn-back">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       Docs
     </a>
-
-    <input type="text" class="title-input" id="titleInput" value="Sans titre" placeholder="Titre du document…" maxlength="120">
-
+    <input id="titleInput" class="title-input" type="text" placeholder="Sans titre…" maxlength="120">
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="plaintext">TXT</button>
+      <button class="mode-btn" data-mode="html">HTML</button>
+    </div>
     <div class="presence-bar" id="presenceBar"></div>
-    <span class="presence-count" id="presenceCount"></span>
-
-    <button class="btn-export" id="btnExport" title="Copier le texte">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-      Copier
-    </button>
-
+    <span class="p-count" id="presenceCount"></span>
+    <button class="btn-icon" id="btnAD" title="Auto-Delete">⏱</button>
     <button class="btn-share" id="btnShare">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       <span>Partager</span>
+    </button>
+    <button class="btn-icon" id="btnCopy" title="Copier le texte">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
     </button>
   </div>
 
-  <!-- Quill toolbar (injected here by Quill) -->
+  <!-- Quill toolbar -->
   <div id="toolbar">
     <span class="ql-formats">
-      <select class="ql-header">
-        <option value="1">Titre 1</option>
-        <option value="2">Titre 2</option>
-        <option value="3">Titre 3</option>
-        <option selected>Normal</option>
-      </select>
+      <select class="ql-header"><option value="1">H1</option><option value="2">H2</option><option value="3">H3</option><option selected>Normal</option></select>
     </span>
     <span class="ql-formats">
-      <button class="ql-bold"></button>
-      <button class="ql-italic"></button>
-      <button class="ql-underline"></button>
-      <button class="ql-strike"></button>
+      <button class="ql-bold"></button><button class="ql-italic"></button>
+      <button class="ql-underline"></button><button class="ql-strike"></button>
     </span>
     <span class="ql-formats">
       <button class="ql-list" value="ordered"></button>
       <button class="ql-list" value="bullet"></button>
     </span>
     <span class="ql-formats">
-      <button class="ql-blockquote"></button>
-      <button class="ql-code-block"></button>
+      <button class="ql-blockquote"></button><button class="ql-code-block"></button>
     </span>
     <span class="ql-formats">
-      <button class="ql-link"></button>
-    </span>
-    <span class="ql-formats">
-      <button class="ql-clean"></button>
+      <button class="ql-link"></button><button class="ql-clean"></button>
     </span>
   </div>
 
-  <!-- Editor -->
+  <!-- Editor area -->
   <div class="editor-wrap">
-    <div id="quill-editor"></div>
+    <!-- Plain text -->
+    <div class="plain-wrap" id="plainMode">
+      <div class="line-gutter" id="lineGutter">1</div>
+      <textarea id="plainEditor" placeholder="Commence à écrire…" spellcheck="false" autocomplete="off" autocorrect="off"></textarea>
+    </div>
+    <!-- HTML / Quill -->
+    <div id="htmlMode" style="display:none;width:100%;height:100%;overflow:hidden;display:none;flex-direction:column">
+      <div id="quillEditor"></div>
+    </div>
   </div>
 
   <!-- Status bar -->
   <div class="statusbar">
-    <div class="status-dot" id="statusDot"></div>
-    <span id="statusText">Connexion…</span>
-    <div class="statusbar-sep"></div>
-    <span id="wordCount">0 mots</span>
-    <div class="statusbar-sep"></div>
-    <span id="saveStatus">Non sauvegardé</span>
+    <div class="status-dot" id="sDot"></div>
+    <span id="sTxt">Connexion…</span>
+    <div class="sb-sep"></div>
+    <span id="sExpiry">⏳ --</span>
+    <div class="sb-sep"></div>
+    <span id="sCount">0 lignes</span>
+    <div class="sb-sep"></div>
+    <span id="sSave">--</span>
+    <div class="sb-sep"></div>
+    <span id="sConn" class="stat-clickable" title="Historique des connexions">👥 --</span>
   </div>
 </div>
 
+<!-- Auto-delete panel -->
+<div id="adPanel" style="display:none">
+  <div class="ad-header">
+    <span>⏱ Auto-Delete</span>
+    <button class="ad-close" id="adClose">✕</button>
+  </div>
+  <div class="ad-body">
+    <div class="ad-row">
+      <span class="ad-label">Activer</span>
+      <label class="t-switch"><input type="checkbox" id="adToggle"><span class="t-track"></span></label>
+    </div>
+    <div id="adSettings">
+      <div class="ad-sublabel" id="adDurationLabel">Durée : 5 min</div>
+      <input type="range" class="ad-slider" id="adSlider" min="1" max="60" value="5">
+      <div id="adCountdownWrap" style="display:none">
+        <div class="ad-countdown" id="adCountdown">05:00</div>
+      </div>
+    </div>
+    <button class="btn-delete-now" id="btnDeleteNow">🗑 Supprimer maintenant</button>
+  </div>
+</div>
+
+<!-- Security alert -->
+<div id="secAlert" style="display:none">
+  <div class="sec-icon">🔔</div>
+  <div class="sec-title">Nouvelle connexion détectée</div>
+  <div class="sec-body">Un nouvel utilisateur a rejoint ce document. Le reconnaissez-vous ?</div>
+  <div class="sec-actions">
+    <button class="btn-sec-yes" id="secYes">✓ Oui</button>
+    <button class="btn-sec-no" id="secNo">✗ Non — Effacer</button>
+  </div>
+  <div class="sec-progress-track"><div class="sec-progress-bar" id="secBar"></div></div>
+  <div class="sec-timer" id="secTimer">20s</div>
+</div>
+
+<!-- Offline banner -->
+<div id="offlineBanner" style="display:none">
+  ⚡ Pas de connexion internet — les modifications peuvent ne pas être sauvegardées
+</div>
+
+<!-- Connection stats popup -->
+<div id="connPopup" style="display:none">
+  <div class="conn-row"><span>Connexions totales</span><span class="conn-val" id="cpTotal">--</span></div>
+  <div class="conn-row"><span>Pic simultané</span><span class="conn-val" id="cpPeak">--</span></div>
+  <div class="conn-row"><span>En ligne maintenant</span><span class="conn-val" id="cpNow">--</span></div>
+</div>
+
+<!-- Toast -->
 <div id="toast"></div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════
-   LiveNote Editor
-   ─ Real-time collaborative editor via Supabase Realtime
-   ─ Quill.js for rich text editing
-   ─ CRDT-lite: broadcast deltas, debounced save to DB
-═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   LiveNote Editor v2
+═══════════════════════════════════════════════════ */
 
-/* ── User color palette ── */
-const COLORS = [
-  '#3b82f6','#10b981','#f59e0b','#ef4444',
-  '#8b5cf6','#ec4899','#06b6d4','#84cc16',
-  '#f97316','#a855f7'
-];
-function pickColor(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
-  return COLORS[Math.abs(h) % COLORS.length];
-}
+/* ── Constants ── */
+const USER_COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#a855f7'];
 
-/* ── Helpers ── */
-function toast(msg, duration = 2800) {
+/* ── State ── */
+let quill = null;
+let channel = null;
+let currentMode = 'plaintext';
+let docShortId = null;
+let docData = null;
+let myUserId, myUsername, myColor;
+let isApplyingRemote = false;
+let isDirty = false;
+let saveTimer = null;
+let plainBcTimer = null; // throttle broadcast in plain mode
+let adEnabled = false;
+let adMinutes = 5;
+let adAt = null;          // timestamp ms when to auto-delete
+let adTimer = null;       // setInterval id
+let expiryTimer = null;
+let secAlertTimer = null;
+let secAlertProgress = null;
+let connPopupOpen = false;
+let currentPresenceCount = 0;
+
+/* ── Utils ── */
+function toast(msg, ms = 2500) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), duration);
+  setTimeout(() => el.classList.remove('show'), ms);
 }
 
 function setStatus(state, text) {
-  const dot  = document.getElementById('statusDot');
-  const label = document.getElementById('statusText');
-  dot.className = `status-dot ${state}`;
-  label.textContent = text;
+  document.getElementById('sDot').className = `status-dot ${state}`;
+  document.getElementById('sTxt').textContent = text;
 }
 
-function setSaveStatus(text) {
-  document.getElementById('saveStatus').textContent = text;
+function setSave(text) { document.getElementById('sSave').textContent = text; }
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function updateWordCount(quill) {
-  const text = quill.getText().trim();
-  const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
-  document.getElementById('wordCount').textContent = `${words} mot${words !== 1 ? 's' : ''}`;
+function fmtMs(ms) {
+  if (ms <= 0) return '00:00';
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m`;
+  return `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
 }
 
-/* ── Presence render ── */
-function renderPresence(presences) {
-  const bar   = document.getElementById('presenceBar');
-  const count = document.getElementById('presenceCount');
-  const list  = Object.values(presences).flat();
-  const max   = 4;
+function pickColor(uid) {
+  let h = 0;
+  for (let i = 0; i < uid.length; i++) h = (Math.imul(31, h) + uid.charCodeAt(i)) | 0;
+  return USER_COLORS[Math.abs(h) % USER_COLORS.length];
+}
+
+function playAlertSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.9);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.9);
+  } catch (_) {}
+}
+
+/* ── Line numbers ── */
+function updateLineNumbers() {
+  const ta = document.getElementById('plainEditor');
+  const lines = (ta.value.match(/\n/g) || []).length + 1;
+  const gutter = document.getElementById('lineGutter');
+  let html = '';
+  for (let i = 1; i <= lines; i++) html += i + '\n';
+  gutter.textContent = html;
+  gutter.scrollTop = ta.scrollTop;
+}
+
+/* ── Word / line count ── */
+function updateCount() {
+  const el = document.getElementById('sCount');
+  if (currentMode === 'plaintext') {
+    const ta = document.getElementById('plainEditor');
+    const lines = (ta.value.match(/\n/g) || []).length + 1;
+    const words = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0;
+    el.textContent = `${lines} ligne${lines !== 1 ? 's' : ''} · ${words} mot${words !== 1 ? 's' : ''}`;
+  } else if (quill) {
+    const text = quill.getText().trim();
+    const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+    el.textContent = `${words} mot${words !== 1 ? 's' : ''}`;
+  }
+}
+
+/* ── Save ── */
+async function saveNow() {
+  if (!docShortId) return;
+  setSave('Sauvegarde…');
+  document.getElementById('sDot').classList.add('sync');
+  let content = '';
+  if (currentMode === 'plaintext') {
+    content = document.getElementById('plainEditor').value;
+  } else if (quill) {
+    content = JSON.stringify(quill.getContents());
+  }
+  const { error } = await sb.from('livenote_docs').update({ content }).eq('short_id', docShortId);
+  document.getElementById('sDot').classList.remove('sync');
+  isDirty = false;
+  if (error) { setSave('Erreur'); return; }
+  const t = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  setSave(`Sauvegardé ${t}`);
+}
+
+function scheduleSave() {
+  isDirty = true;
+  setSave('Non sauvegardé');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 2000);
+}
+
+/* ── Get / Set content ── */
+function getContent() {
+  if (currentMode === 'plaintext') return document.getElementById('plainEditor').value;
+  if (quill) return JSON.stringify(quill.getContents());
+  return '';
+}
+
+function setContent(raw, mode) {
+  if (mode === 'plaintext') {
+    const ta = document.getElementById('plainEditor');
+    ta.value = raw || '';
+    updateLineNumbers();
+    updateCount();
+  } else {
+    if (!quill) return;
+    isApplyingRemote = true;
+    try {
+      const delta = JSON.parse(raw);
+      quill.setContents(delta, 'api');
+    } catch {
+      quill.setText(raw || '', 'api');
+    }
+    isApplyingRemote = false;
+    updateCount();
+  }
+}
+
+/* ── Mode switch ── */
+async function switchMode(newMode) {
+  if (newMode === currentMode) return;
+  const confirmMsg = newMode === 'plaintext'
+    ? 'Passer en mode texte brut ? La mise en forme HTML sera perdue.'
+    : 'Passer en mode HTML ?';
+  if (!confirm(confirmMsg)) return;
+
+  // Extract current text
+  let text = '';
+  if (currentMode === 'plaintext') {
+    text = document.getElementById('plainEditor').value;
+  } else if (quill) {
+    text = quill.getText();
+  }
+
+  currentMode = newMode;
+  applyModeUI(newMode);
+
+  if (newMode === 'plaintext') {
+    document.getElementById('plainEditor').value = text;
+    updateLineNumbers(); updateCount();
+  } else {
+    if (quill) { quill.setText(text, 'api'); updateCount(); }
+  }
+
+  // Save mode + content to DB
+  await sb.from('livenote_docs').update({ mode: newMode, content: getContent() }).eq('short_id', docShortId);
+
+  // Broadcast mode change
+  channel?.send({ type: 'broadcast', event: 'mode-change', payload: { mode: newMode, content: getContent() } });
+}
+
+function applyModeUI(mode) {
+  const plain = document.getElementById('plainMode');
+  const html  = document.getElementById('htmlMode');
+  const tb    = document.getElementById('toolbar');
+  if (mode === 'plaintext') {
+    plain.style.display = 'flex'; html.style.display = 'none'; tb.style.display = 'none';
+  } else {
+    plain.style.display = 'none'; html.style.display = 'flex'; tb.style.display = 'block';
+  }
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+}
+
+/* ── Presence ── */
+function renderPresence(state) {
+  const bar = document.getElementById('presenceBar');
+  const countEl = document.getElementById('presenceCount');
+  const list = Object.values(state).flat();
+  currentPresenceCount = list.length;
+  const max = 5;
   const shown = list.slice(0, max);
   const extra = list.length - shown.length;
-
   bar.innerHTML = shown.map(p => `
-    <div class="presence-pill" style="background:${p.color}" title="${escHtml(p.username)}">
-      ${escHtml(p.username.charAt(0).toUpperCase())}
-    </div>`).join('');
+    <div class="p-pill" style="background:${esc(p.color)}" data-name="${esc(p.username)}">
+      ${esc(p.username.charAt(0).toUpperCase())}
+    </div>`).join('') +
+    (extra > 0 ? `<div class="p-pill" style="background:#444" data-name="+${extra}">+${extra}</div>` : '');
+  countEl.textContent = list.length > 0 ? `${list.length} en ligne` : '';
+  document.getElementById('cpNow').textContent = list.length;
+}
 
-  if (extra > 0) {
-    bar.innerHTML += `
-      <div class="presence-pill" style="background:#444" title="${extra} autres">+${extra}</div>`;
+/* ── Auto-delete ── */
+function updateAdPanel() {
+  const adCountdownWrap = document.getElementById('adCountdownWrap');
+  const adCountdown = document.getElementById('adCountdown');
+  if (adEnabled && adAt) {
+    adCountdownWrap.style.display = 'block';
+    const rem = adAt - Date.now();
+    adCountdown.textContent = fmtMs(rem);
+    adCountdown.classList.toggle('urgent', rem < 60000);
+  } else {
+    adCountdownWrap.style.display = 'none';
   }
-
-  const n = list.length;
-  count.textContent = n > 0
-    ? `${n} en ligne`
-    : '';
 }
 
-function escHtml(s) {
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function startAdCountdown() {
+  clearInterval(adTimer);
+  adTimer = setInterval(() => {
+    if (!adAt) { clearInterval(adTimer); return; }
+    const rem = adAt - Date.now();
+    updateAdPanel();
+    if (rem <= 0) {
+      clearInterval(adTimer);
+      handleAutoDelete();
+    }
+  }, 500);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MAIN
-═══════════════════════════════════════════════════════════════ */
+async function handleAutoDelete() {
+  adEnabled = false; adAt = null;
+  clearInterval(adTimer);
+  updateAdPanel();
+  document.getElementById('adToggle').checked = false;
+  // Clear content locally
+  if (currentMode === 'plaintext') {
+    document.getElementById('plainEditor').value = '';
+    updateLineNumbers();
+  } else if (quill) {
+    isApplyingRemote = true; quill.setText('', 'api'); isApplyingRemote = false;
+  }
+  updateCount(); setSave('Non sauvegardé');
+  // Broadcast
+  channel?.send({ type: 'broadcast', event: 'auto-delete-fired', payload: {} });
+  // Save to DB
+  await sb.from('livenote_docs').update({ content: '', auto_delete_at: null }).eq('short_id', docShortId);
+  setSave('Supprimé');
+  toast('Contenu supprimé automatiquement');
+}
+
+function enableAd(minutes) {
+  adEnabled = true;
+  adMinutes = minutes;
+  adAt = Date.now() + minutes * 60000;
+  startAdCountdown();
+  updateAdPanel();
+  sb.from('livenote_docs').update({ auto_delete_at: new Date(adAt).toISOString() }).eq('short_id', docShortId);
+  channel?.send({ type: 'broadcast', event: 'auto-delete-set', payload: { at: adAt } });
+}
+
+function disableAd() {
+  adEnabled = false; adAt = null;
+  clearInterval(adTimer);
+  updateAdPanel();
+  sb.from('livenote_docs').update({ auto_delete_at: null }).eq('short_id', docShortId);
+  channel?.send({ type: 'broadcast', event: 'auto-delete-cancel', payload: {} });
+}
+
+/* ── Delete now with confirm ── */
+(function setupDeleteNow() {
+  const btn = document.getElementById('btnDeleteNow');
+  let confirming = false, confirmTimer = null;
+  btn.addEventListener('click', () => {
+    if (!confirming) {
+      confirming = true;
+      btn.textContent = 'Confirmer la suppression ?';
+      btn.classList.add('confirming');
+      confirmTimer = setTimeout(() => {
+        confirming = false;
+        btn.textContent = '🗑 Supprimer maintenant';
+        btn.classList.remove('confirming');
+      }, 4000);
+    } else {
+      clearTimeout(confirmTimer);
+      confirming = false;
+      btn.textContent = '🗑 Supprimer maintenant';
+      btn.classList.remove('confirming');
+      handleAutoDelete();
+    }
+  });
+})();
+
+/* ── Expiry countdown ── */
+function startExpiryCountdown(expiresAt) {
+  const el = document.getElementById('sExpiry');
+  function tick() {
+    const rem = new Date(expiresAt).getTime() - Date.now();
+    if (rem <= 0) { showExpiredScreen(); return; }
+    el.textContent = `⏳ expire ${fmtMs(rem)}`;
+  }
+  tick();
+  expiryTimer = setInterval(tick, 10000);
+}
+
+function showExpiredScreen() {
+  clearInterval(expiryTimer);
+  const sc = document.getElementById('expiredScreen') || (() => {
+    const d = document.createElement('div'); d.id = 'expiredScreen';
+    document.body.appendChild(d); return d;
+  })();
+  sc.innerHTML = `
+    <div class="exp-icon">⏰</div>
+    <div class="exp-title">Document expiré</div>
+    <div class="exp-body">Ce document a expiré et son contenu a été supprimé.<br>Les liens LiveNote sont valables 24 heures.</div>
+    <a href="livenote.html" class="exp-link">← Créer un nouveau document</a>`;
+  sc.style.display = 'flex';
+  // Delete from DB
+  sb.from('livenote_docs').delete().eq('short_id', docShortId).then(() => {});
+}
+
+/* ── Security alert ── */
+function showSecurityAlert() {
+  // Don't stack alerts
+  if (document.getElementById('secAlert').style.display !== 'none') return;
+  playAlertSound();
+  const alert = document.getElementById('secAlert');
+  const bar   = document.getElementById('secBar');
+  const timer = document.getElementById('secTimer');
+  alert.style.display = 'block';
+  bar.style.width = '100%';
+  let rem = 20;
+  timer.textContent = `${rem}s`;
+  clearTimeout(secAlertTimer);
+  clearInterval(secAlertProgress);
+  secAlertProgress = setInterval(() => {
+    rem--;
+    timer.textContent = `${rem}s`;
+    bar.style.width = `${(rem / 20) * 100}%`;
+    if (rem <= 0) {
+      clearInterval(secAlertProgress);
+      alert.style.display = 'none';
+    }
+  }, 1000);
+}
+
+function dismissSecAlert(clearContent) {
+  clearInterval(secAlertProgress);
+  document.getElementById('secAlert').style.display = 'none';
+  if (clearContent) {
+    handleAutoDelete();
+    toast('Contenu effacé par sécurité');
+  }
+}
+
+/* ── Offline detection ── */
+function setupOffline() {
+  const banner = document.getElementById('offlineBanner');
+  window.addEventListener('offline', () => { banner.style.display = 'block'; setStatus('err', 'Hors ligne'); });
+  window.addEventListener('online',  () => { banner.style.display = 'none'; setStatus('on', 'Connecté'); });
+  if (!navigator.onLine) banner.style.display = 'block';
+}
+
+/* ── Connection stats popup ── */
+document.getElementById('sConn').addEventListener('click', () => {
+  const popup = document.getElementById('connPopup');
+  connPopupOpen = !connPopupOpen;
+  popup.style.display = connPopupOpen ? 'block' : 'none';
+});
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#connPopup') && !e.target.closest('#sConn')) {
+    document.getElementById('connPopup').style.display = 'none';
+    connPopupOpen = false;
+  }
+});
+
+/* ═══════════════════════════════════════════════════
+   MAIN BOOT
+═══════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
 
-  /* ── Auth guard ── */
+  /* ── Auth ── */
   const session = await LazyAuth.requireAuthOrPopup();
   if (!session) return;
-
-  const user   = session.user;
+  const user = session.user;
   const profile = await LazyAuth.getProfile(user.id);
-  const username = profile?.username || user.email?.split('@')[0] || 'Anonyme';
-  const myColor  = pickColor(user.id);
+  myUserId  = user.id;
+  myUsername = profile?.username || user.email?.split('@')[0] || 'Anonyme';
+  myColor    = pickColor(user.id);
 
-  /* ── Get doc ID from URL ── */
+  /* ── Get short_id from URL ── */
   const params = new URLSearchParams(window.location.search);
-  const docId  = params.get('id');
+  docShortId = params.get('id')?.toUpperCase() || null;
 
-  if (!docId) {
-    // No ID → create a new doc and redirect
-    const { data, error } = await sb
-      .from('livenote_docs')
-      .insert({ title: 'Sans titre', created_by: user.id })
-      .select().single();
-
+  if (!docShortId) {
+    // Create new doc
+    const shortId = (() => {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const bytes = new Uint8Array(9);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, b => chars[b % chars.length]).join('');
+    })();
+    const { data, error } = await sb.from('livenote_docs').insert({
+      short_id: shortId, title: 'Sans titre', created_by: user.id,
+      mode: 'plaintext', content: '',
+      expires_at: new Date(Date.now() + 86400000).toISOString()
+    }).select().single();
     if (error) {
-      document.getElementById('loadingOverlay').innerHTML =
-        `<div style="color:#f87171;font-size:14px">Erreur: ${error.message}</div>`;
+      document.getElementById('loadLbl').textContent = 'Erreur: ' + error.message;
       return;
     }
-    window.location.replace(`livenote_editor.html?id=${data.id}`);
+    window.location.replace(`livenote_editor.html?id=${data.short_id}`);
     return;
   }
 
-  /* ── Load document ── */
-  const { data: doc, error: docError } = await sb
-    .from('livenote_docs')
-    .select('*')
-    .eq('id', docId)
-    .single();
+  /* ── Load doc ── */
+  const { data: doc, error: docErr } = await sb
+    .from('livenote_docs').select('*').eq('short_id', docShortId).single();
 
-  if (docError || !doc) {
-    document.getElementById('loadingOverlay').innerHTML = `
-      <div style="text-align:center;color:var(--muted)">
-        <div style="font-size:32px;margin-bottom:12px">🔍</div>
-        <div style="font-size:14px">Document introuvable</div>
-        <a href="livenote.html" style="color:#60a5fa;font-size:13px;margin-top:10px;display:block">
-          ← Retour à mes documents
-        </a>
-      </div>`;
+  if (docErr || !doc) {
+    document.getElementById('loadLbl').innerHTML =
+      `<span style="color:#f87171">Document introuvable</span><br><a href="livenote.html" style="color:#60a5fa;font-size:13px">← Retour</a>`;
     return;
   }
+  docData = doc;
 
-  /* ── Update page title ── */
-  document.title = `${doc.title || 'Sans titre'} — LiveNote`;
+  /* ── Check expiry ── */
+  if (doc.expires_at && new Date(doc.expires_at) < new Date()) {
+    const ov = document.getElementById('loadOverlay');
+    ov.classList.add('out'); setTimeout(() => ov.remove(), 400);
+    showExpiredScreen(); return;
+  }
+
+  /* ── Set title ── */
   document.getElementById('titleInput').value = doc.title || 'Sans titre';
+  document.title = `${doc.title || 'Sans titre'} — LiveNote`;
 
   /* ── Init Quill ── */
-  const quill = new Quill('#quill-editor', {
-    theme: 'snow',
-    modules: { toolbar: '#toolbar' },
-    placeholder: 'Commence à écrire…',
+  quill = new Quill('#quillEditor', {
+    theme: 'snow', modules: { toolbar: '#toolbar' },
+    placeholder: 'Commence à écrire…'
   });
 
-  // Load saved content
-  if (doc.content) {
-    try {
-      const delta = JSON.parse(doc.content);
-      quill.setContents(delta, 'api');
-    } catch (e) {
-      // Fallback: treat as plain text
-      quill.setText(doc.content, 'api');
-    }
-  }
+  /* ── Apply mode & content ── */
+  currentMode = doc.mode || 'plaintext';
+  applyModeUI(currentMode);
+  setContent(doc.content || '', currentMode);
 
-  updateWordCount(quill);
-
-  /* ── Hide loading overlay ── */
-  const overlay = document.getElementById('loadingOverlay');
-  overlay.classList.add('hidden');
-  setTimeout(() => overlay.remove(), 500);
-
-  /* ── Auto-save logic ── */
-  let saveTimer = null;
-  let isSaving  = false;
-  let isDirty   = false;
-
-  async function saveDoc() {
-    if (isSaving) return;
-    isSaving = true;
-    setSaveStatus('Sauvegarde…');
-    document.getElementById('statusDot').classList.add('syncing');
-
-    const content = JSON.stringify(quill.getContents());
-    const { error } = await sb
-      .from('livenote_docs')
-      .update({ content })
-      .eq('id', docId);
-
-    isSaving = false;
-    isDirty  = false;
-    if (error) {
-      setSaveStatus('Erreur de sauvegarde');
+  /* ── Restore auto-delete if set ── */
+  if (doc.auto_delete_at) {
+    const at = new Date(doc.auto_delete_at).getTime();
+    if (at > Date.now()) {
+      adEnabled = true; adAt = at;
+      document.getElementById('adToggle').checked = true;
+      startAdCountdown();
     } else {
-      const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-      setSaveStatus(`Sauvegardé à ${now}`);
-      document.getElementById('statusDot').classList.remove('syncing');
+      // Already expired auto-delete — clear it
+      await sb.from('livenote_docs').update({ content: '', auto_delete_at: null }).eq('short_id', docShortId);
+      setContent('', currentMode);
     }
   }
 
-  function scheduleSave() {
-    isDirty = true;
-    setSaveStatus('Non sauvegardé');
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveDoc, 2000);
-  }
+  /* ── Start expiry countdown ── */
+  if (doc.expires_at) startExpiryCountdown(doc.expires_at);
 
-  /* ── Supabase Realtime ── */
-  const channelName = `livenote:${docId}`;
-  let isApplyingRemote = false;
+  /* ── Offline detection ── */
+  setupOffline();
 
-  const channel = sb.channel(channelName, {
-    config: {
-      broadcast: { self: false },
-      presence:  { key: user.id }
-    }
+  /* ── Update conn stats display ── */
+  document.getElementById('sConn').textContent = `👥 ${doc.total_connections ?? 0} conn.`;
+  document.getElementById('cpTotal').textContent = doc.total_connections ?? 0;
+  document.getElementById('cpPeak').textContent  = doc.max_concurrent ?? 0;
+
+  /* ── Setup Supabase Realtime ── */
+  const chName = `livenote:${docShortId}`;
+  channel = sb.channel(chName, {
+    config: { broadcast: { self: false }, presence: { key: myUserId } }
   });
 
-  /* Listen for deltas from other users */
-  channel.on('broadcast', { event: 'delta' }, ({ payload }) => {
-    if (payload.userId === user.id) return; // ignore own echoes
+  /* Remote: delta (plain text) */
+  channel.on('broadcast', { event: 'plain-update' }, ({ payload }) => {
+    if (payload.userId === myUserId || currentMode !== 'plaintext') return;
+    const ta = document.getElementById('plainEditor');
+    const ss = ta.selectionStart, se = ta.selectionEnd, st = ta.scrollTop;
+    ta.value = payload.content;
+    ta.selectionStart = Math.min(ss, payload.content.length);
+    ta.selectionEnd   = Math.min(se, payload.content.length);
+    ta.scrollTop = st;
+    updateLineNumbers(); updateCount();
+  });
+
+  /* Remote: delta (HTML/Quill) */
+  channel.on('broadcast', { event: 'quill-delta' }, ({ payload }) => {
+    if (payload.userId === myUserId || currentMode !== 'html' || !quill) return;
     isApplyingRemote = true;
     quill.updateContents(payload.delta, 'api');
     isApplyingRemote = false;
-    updateWordCount(quill);
+    updateCount();
   });
 
-  /* Listen for full-doc sync (sent when new user joins) */
-  channel.on('broadcast', { event: 'full-doc' }, ({ payload }) => {
-    if (payload.forUserId !== user.id) return; // only apply if addressed to me
+  /* Remote: full doc (sent to new joiner) */
+  channel.on('broadcast', { event: 'full-sync' }, ({ payload }) => {
+    if (payload.forUser !== myUserId) return;
     isApplyingRemote = true;
-    try {
-      quill.setContents(payload.delta, 'api');
-    } catch (e) { /* ignore */ }
+    if (currentMode === 'plaintext') {
+      const ta = document.getElementById('plainEditor');
+      ta.value = payload.content || '';
+      updateLineNumbers();
+    } else if (quill) {
+      try { quill.setContents(JSON.parse(payload.content), 'api'); }
+      catch { quill.setText(payload.content || '', 'api'); }
+    }
     isApplyingRemote = false;
-    updateWordCount(quill);
+    updateCount();
+    if (payload.adAt && payload.adAt > Date.now()) {
+      adEnabled = true; adAt = payload.adAt;
+      document.getElementById('adToggle').checked = true;
+      startAdCountdown();
+    }
+  });
+
+  /* Remote: mode change */
+  channel.on('broadcast', { event: 'mode-change' }, ({ payload }) => {
+    currentMode = payload.mode;
+    applyModeUI(payload.mode);
+    isApplyingRemote = true;
+    setContent(payload.content || '', payload.mode);
+    isApplyingRemote = false;
+  });
+
+  /* Remote: auto-delete events */
+  channel.on('broadcast', { event: 'auto-delete-set' }, ({ payload }) => {
+    adEnabled = true; adAt = payload.at;
+    document.getElementById('adToggle').checked = true;
+    startAdCountdown(); updateAdPanel();
+  });
+  channel.on('broadcast', { event: 'auto-delete-cancel' }, () => {
+    adEnabled = false; adAt = null;
+    document.getElementById('adToggle').checked = false;
+    clearInterval(adTimer); updateAdPanel();
+  });
+  channel.on('broadcast', { event: 'auto-delete-fired' }, () => {
+    adEnabled = false; adAt = null;
+    clearInterval(adTimer); updateAdPanel();
+    if (currentMode === 'plaintext') { document.getElementById('plainEditor').value = ''; updateLineNumbers(); }
+    else if (quill) { isApplyingRemote = true; quill.setText('', 'api'); isApplyingRemote = false; }
+    updateCount(); toast('Contenu supprimé par un autre utilisateur');
   });
 
   /* Presence sync */
   channel.on('presence', { event: 'sync' }, () => {
     const state = channel.presenceState();
     renderPresence(state);
+    // Update peak stats
+    const n = Object.keys(state).length;
+    if (n > (docData.max_concurrent || 0)) {
+      docData.max_concurrent = n;
+      document.getElementById('cpPeak').textContent = n;
+      sb.rpc('livenote_track_connection', { p_short_id: docShortId, p_concurrent: n }).then(() => {});
+    }
   });
 
-  /* New user joined → oldest user sends full doc state */
+  /* New user joined → host sends full state */
   channel.on('presence', { event: 'join' }, ({ newPresences }) => {
-    const state      = channel.presenceState();
-    const allPresent = Object.values(state).flat();
-    const myEntry    = allPresent.find(p => p.userId === user.id);
+    // Show security alert for any new user joining
+    showSecurityAlert();
 
-    // Am I the oldest connected user? (smallest joinTime)
-    const isHost = myEntry && allPresent.every(p => p.joinTime >= myEntry.joinTime);
-
-    if (isHost && newPresences.length > 0) {
-      newPresences.forEach(async (np) => {
-        await channel.send({
-          type: 'broadcast',
-          event: 'full-doc',
+    const state = channel.presenceState();
+    const all = Object.values(state).flat();
+    const mine = all.find(p => p.userId === myUserId);
+    const isHost = mine && all.every(p => p.joinTime >= mine.joinTime);
+    if (isHost) {
+      newPresences.forEach(np => {
+        channel.send({
+          type: 'broadcast', event: 'full-sync',
           payload: {
-            forUserId: np.userId,
-            delta: quill.getContents()
+            forUser: np.userId,
+            content: getContent(),
+            adAt: adAt
           }
         });
       });
@@ -685,91 +1106,132 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* Subscribe & track presence */
   channel.subscribe(async (status) => {
     if (status === 'SUBSCRIBED') {
-      setStatus('connected', 'Connecté');
-      await channel.track({
-        userId:   user.id,
-        username: username,
-        color:    myColor,
-        joinTime: Date.now()
+      setStatus('on', 'Connecté');
+      await channel.track({ userId: myUserId, username: myUsername, color: myColor, joinTime: Date.now() });
+      // Track connection
+      sb.rpc('livenote_track_connection', { p_short_id: docShortId, p_concurrent: 1 }).then(({ data }) => {
+        if (data !== null) {
+          const newTotal = (docData.total_connections || 0) + 1;
+          document.getElementById('sConn').textContent = `👥 ${newTotal} conn.`;
+          document.getElementById('cpTotal').textContent = newTotal;
+        }
       });
     } else if (status === 'CHANNEL_ERROR') {
-      setStatus('error', 'Erreur de connexion');
+      setStatus('err', 'Erreur réseau');
     } else if (status === 'TIMED_OUT') {
-      setStatus('error', 'Connexion perdue');
-    } else {
-      setStatus('', 'Connexion…');
+      setStatus('err', 'Connexion perdue');
     }
   });
 
-  /* ── Quill change → broadcast delta ── */
-  quill.on('text-change', async (delta, _old, source) => {
-    updateWordCount(quill);
+  /* ── Plain text editor events ── */
+  const plainEditor = document.getElementById('plainEditor');
 
-    if (source !== 'user' || isApplyingRemote) return;
-
-    scheduleSave();
-
-    // Broadcast to peers
-    await channel.send({
-      type: 'broadcast',
-      event: 'delta',
-      payload: { delta, userId: user.id }
-    });
+  plainEditor.addEventListener('input', () => {
+    if (isApplyingRemote) return;
+    updateLineNumbers(); updateCount(); scheduleSave();
+    // Throttled broadcast
+    clearTimeout(plainBcTimer);
+    plainBcTimer = setTimeout(() => {
+      channel?.send({
+        type: 'broadcast', event: 'plain-update',
+        payload: { userId: myUserId, content: plainEditor.value }
+      });
+    }, 50);
   });
 
-  /* ── Title save ── */
-  let titleTimer = null;
-  const titleInput = document.getElementById('titleInput');
+  plainEditor.addEventListener('scroll', () => {
+    document.getElementById('lineGutter').scrollTop = plainEditor.scrollTop;
+  });
 
-  titleInput.addEventListener('input', () => {
-    document.title = `${titleInput.value || 'Sans titre'} — LiveNote`;
+  /* ── Quill events ── */
+  quill.on('text-change', async (delta, _, source) => {
+    updateCount();
+    if (source !== 'user' || isApplyingRemote) return;
+    scheduleSave();
+    await channel?.send({ type: 'broadcast', event: 'quill-delta', payload: { userId: myUserId, delta } });
+  });
+
+  /* ── Mode toggle buttons ── */
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchMode(btn.dataset.mode));
+  });
+
+  /* ── Title input ── */
+  let titleTimer = null;
+  document.getElementById('titleInput').addEventListener('input', (e) => {
+    document.title = `${e.target.value || 'Sans titre'} — LiveNote`;
     clearTimeout(titleTimer);
-    titleTimer = setTimeout(async () => {
-      await sb.from('livenote_docs').update({ title: titleInput.value || 'Sans titre' }).eq('id', docId);
+    titleTimer = setTimeout(() => {
+      sb.from('livenote_docs').update({ title: e.target.value || 'Sans titre' }).eq('short_id', docShortId);
     }, 1200);
   });
 
-  /* ── Share button ── */
+  /* ── Auto-delete panel ── */
+  const adPanel = document.getElementById('adPanel');
+  document.getElementById('btnAD').addEventListener('click', (e) => {
+    e.stopPropagation();
+    adPanel.style.display = adPanel.style.display === 'none' ? 'block' : 'none';
+    updateAdPanel();
+  });
+  document.getElementById('adClose').addEventListener('click', () => adPanel.style.display = 'none');
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#adPanel') && !e.target.closest('#btnAD')) adPanel.style.display = 'none';
+  }, true);
+
+  const adToggle = document.getElementById('adToggle');
+  const adSlider = document.getElementById('adSlider');
+  const adDurationLabel = document.getElementById('adDurationLabel');
+
+  adSlider.addEventListener('input', () => {
+    adMinutes = parseInt(adSlider.value);
+    adDurationLabel.textContent = `Durée : ${adMinutes} min`;
+    if (adEnabled) enableAd(adMinutes); // restart with new duration
+  });
+
+  adToggle.addEventListener('change', () => {
+    if (adToggle.checked) { enableAd(adMinutes); }
+    else { disableAd(); }
+    updateAdPanel();
+  });
+
+  /* ── Share ── */
   document.getElementById('btnShare').addEventListener('click', async () => {
-    const url = `${window.location.origin}${window.location.pathname}?id=${docId}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      toast('Lien copié dans le presse-papier !');
-    } catch {
-      prompt('Copie ce lien :', url);
-    }
+    const url = `${location.origin}${location.pathname}?id=${docShortId}`;
+    try { await navigator.clipboard.writeText(url); toast(`Lien copié ! Code: ${docShortId}`); }
+    catch { prompt('Copie ce lien :', url); }
   });
 
-  /* ── Export (copy text) ── */
-  document.getElementById('btnExport').addEventListener('click', async () => {
-    const text = quill.getText();
-    try {
-      await navigator.clipboard.writeText(text);
-      toast('Texte copié dans le presse-papier');
-    } catch {
-      toast('Impossible de copier');
-    }
+  /* ── Copy text ── */
+  document.getElementById('btnCopy').addEventListener('click', async () => {
+    const text = currentMode === 'plaintext'
+      ? document.getElementById('plainEditor').value
+      : quill?.getText() || '';
+    try { await navigator.clipboard.writeText(text); toast('Texte copié'); }
+    catch { toast('Impossible de copier'); }
   });
 
-  /* ── Save on page unload ── */
-  window.addEventListener('beforeunload', (e) => {
-    if (isDirty) {
-      saveDoc();
-      e.preventDefault();
-    }
-  });
+  /* ── Security alert actions ── */
+  document.getElementById('secYes').addEventListener('click', () => dismissSecAlert(false));
+  document.getElementById('secNo').addEventListener('click',  () => dismissSecAlert(true));
 
   /* ── Keyboard shortcuts ── */
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      e.preventDefault();
-      saveDoc();
-      toast('Document sauvegardé');
+      e.preventDefault(); saveNow(); toast('Sauvegardé');
     }
   });
 
-  // Initial status
-  setSaveStatus('Chargé');
+  /* ── Save on leave ── */
+  window.addEventListener('beforeunload', (e) => {
+    if (isDirty) { saveNow(); e.preventDefault(); }
+  });
+
+  /* ── Hide loading ── */
+  const ov = document.getElementById('loadOverlay');
+  ov.classList.add('out');
+  setTimeout(() => ov.remove(), 400);
+  setSave('Chargé');
+  updateCount();
 });
 </script>
 </body>

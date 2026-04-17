@@ -2,9 +2,8 @@
 <html lang="fr">
 <head>
 <script>
-  const path = window.location.pathname;
-  const lower = path.toLowerCase();
-  if (path !== lower) window.location.replace(lower);
+  const p = window.location.pathname, l = p.toLowerCase();
+  if (p !== l) window.location.replace(l);
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,195 +11,138 @@
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:       #0c0c0c;
-  --surface:  #161616;
-  --surface2: #1c1c1c;
-  --border:   #222222;
-  --border2:  #2a2a2a;
-  --accent:   #3b82f6;
-  --accent2:  #60a5fa;
-  --text:     #f0f0f0;
-  --muted:    #6b6b6b;
-  --faint:    #2e2e2e;
-  --r:        10px;
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0c0c;--surface:#161616;--surface2:#1c1c1c;
+  --border:#222;--border2:#2a2a2a;
+  --accent:#3b82f6;--accent2:#60a5fa;
+  --text:#f0f0f0;--muted:#6b6b6b;--r:10px;
 }
+html,body{min-height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
 
-html, body { min-height: 100%; }
-body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+.main-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 60% 50% at 50% 20%,rgba(20,40,80,.5) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 85% 80%,rgba(30,58,110,.15) 0%,transparent 60%)}
+.main-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(59,130,246,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.03) 1px,transparent 1px);background-size:52px 52px;mask-image:radial-gradient(ellipse 90% 90% at 50% 50%,black,transparent)}
 
-/* ── Background effects ── */
-.main-bg {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(ellipse 60% 50% at 50% 20%, rgba(20,40,80,0.5) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 40% at 85% 80%, rgba(30,58,110,0.15) 0%, transparent 60%);
-}
-.main-grid {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
-  background-size: 52px 52px;
-  mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black, transparent);
-}
-
-/* ── Layout ── */
-.main {
-  position: relative; z-index: 1;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 52px 32px 80px;
-}
+.main{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:52px 32px 80px}
 
 /* ── Header ── */
-.page-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 40px; gap: 16px; flex-wrap: wrap;
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:36px;gap:16px;flex-wrap:wrap}
+.page-header-left{display:flex;align-items:center;gap:14px}
+.page-icon{width:44px;height:44px;border-radius:12px;background:rgba(59,130,246,.12);border:1px solid rgba(96,165,250,.2);display:flex;align-items:center;justify-content:center;font-size:20px}
+.page-title{font-size:24px;font-weight:700}
+.page-subtitle{font-size:13px;color:var(--muted);margin-top:2px}
+.btn-new{
+  display:flex;align-items:center;gap:8px;padding:10px 18px;
+  background:var(--accent);color:#fff;border:none;border-radius:var(--r);
+  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
+  cursor:pointer;text-decoration:none;transition:background .15s,transform .15s;
 }
-.page-header-left { display: flex; align-items: center; gap: 14px; }
-.page-icon {
-  width: 44px; height: 44px; border-radius: 12px;
-  background: rgba(59,130,246,0.12); border: 1px solid rgba(96,165,250,0.2);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-}
-.page-title { font-size: 24px; font-weight: 700; color: var(--text); }
-.page-subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.btn-new:hover{background:#2563eb;transform:translateY(-1px)}
 
-.btn-new {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 18px;
-  background: var(--accent); color: #fff;
-  border: none; border-radius: var(--r);
-  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
-  cursor: pointer; text-decoration: none;
-  transition: background 0.15s, transform 0.15s;
+/* ── Join bar ── */
+.join-bar{display:flex;gap:10px;margin-bottom:32px}
+.join-input{
+  flex:1;padding:10px 14px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-family:'DM Mono',monospace;font-size:13px;
+  outline:none;transition:border-color .15s;
 }
-.btn-new:hover { background: #2563eb; transform: translateY(-1px); }
-.btn-new svg { flex-shrink: 0; }
-
-/* ── Search / join ── */
-.join-bar {
-  display: flex; gap: 10px; margin-bottom: 32px;
+.join-input::placeholder{color:var(--muted)}
+.join-input:focus{border-color:var(--accent)}
+.btn-join{
+  padding:10px 16px;background:var(--surface2);border:1px solid var(--border2);
+  color:var(--text);border-radius:var(--r);font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:500;cursor:pointer;transition:background .15s;white-space:nowrap;
 }
-.join-input {
-  flex: 1; padding: 10px 14px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); color: var(--text);
-  font-family: 'DM Mono', monospace; font-size: 13px;
-  transition: border-color 0.15s;
-  outline: none;
-}
-.join-input::placeholder { color: var(--muted); }
-.join-input:focus { border-color: var(--accent); }
-.btn-join {
-  padding: 10px 16px;
-  background: var(--surface2); border: 1px solid var(--border2);
-  color: var(--text); border-radius: var(--r);
-  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
-  cursor: pointer; transition: background 0.15s;
-  white-space: nowrap;
-}
-.btn-join:hover { background: var(--faint); }
+.btn-join:hover{background:#2e2e2e}
 
 /* ── Section label ── */
-.section-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
-  color: var(--muted); text-transform: uppercase;
-  margin-bottom: 16px;
-  display: flex; align-items: center; gap: 8px;
+.section-label{
+  font-family:'DM Mono',monospace;font-size:11px;font-weight:500;
+  letter-spacing:.08em;color:var(--muted);text-transform:uppercase;
+  margin-bottom:16px;display:flex;align-items:center;gap:8px;
 }
-.section-label::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Notice ── */
+.notice{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:rgba(59,130,246,.07);border:1px solid rgba(96,165,250,.15);
+  border-radius:8px;font-size:12.5px;color:var(--muted);margin-bottom:28px;
 }
+.notice svg{flex-shrink:0;color:var(--accent2)}
 
 /* ── Doc grid ── */
-.doc-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:14px}
+
+.doc-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:18px 20px;cursor:pointer;text-decoration:none;color:inherit;
+  transition:border-color .18s,transform .18s,background .18s;
+  display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;
+}
+.doc-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(59,130,246,.4),transparent);
+  opacity:0;transition:opacity .2s;
+}
+.doc-card:hover{border-color:var(--border2);background:var(--surface2);transform:translateY(-2px)}
+.doc-card:hover::before{opacity:1}
+.doc-card.expired{opacity:.45;pointer-events:none}
+
+.dc-top{display:flex;align-items:center;gap:10px}
+.dc-emoji{font-size:20px;line-height:1;flex-shrink:0}
+.dc-title{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+
+.dc-meta{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);gap:8px}
+.dc-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.badge{
+  padding:2px 8px;border-radius:100px;font-size:11px;font-weight:500;
+  border:1px solid;white-space:nowrap;
+}
+.badge-mode{background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.25);color:#c084fc}
+.badge-expiry{background:rgba(59,130,246,.1);border-color:rgba(96,165,250,.2);color:var(--accent2)}
+.badge-expired{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.2);color:#f87171}
+.badge-conn{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.2);color:#34d399}
+
+.dc-shortid{
+  font-family:'DM Mono',monospace;font-size:11px;color:#333;
+  letter-spacing:.05em;
 }
 
-.doc-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; padding: 20px;
-  cursor: pointer; text-decoration: none; color: inherit;
-  transition: border-color 0.18s, transform 0.18s, background 0.18s;
-  display: flex; flex-direction: column; gap: 10px;
-  position: relative; overflow: hidden;
+.doc-card-del{
+  position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:6px;
+  background:transparent;border:none;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;opacity:0;transition:opacity .15s,background .15s,color .15s;
 }
-.doc-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.4), transparent);
-  opacity: 0; transition: opacity 0.2s;
-}
-.doc-card:hover {
-  border-color: var(--border2);
-  background: var(--surface2);
-  transform: translateY(-2px);
-}
-.doc-card:hover::before { opacity: 1; }
+.doc-card:hover .doc-card-del{opacity:1}
+.doc-card-del:hover{background:rgba(239,68,68,.12);color:#f87171}
 
-.doc-card-emoji { font-size: 22px; line-height: 1; }
-.doc-card-title {
-  font-size: 15px; font-weight: 600; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+/* ── Empty / skeleton ── */
+.empty-state{
+  grid-column:1/-1;text-align:center;padding:56px 24px;color:var(--muted);
 }
-.doc-card-meta {
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 12px; color: var(--muted);
-}
-.doc-card-delete {
-  position: absolute; top: 12px; right: 12px;
-  width: 28px; height: 28px; border-radius: 7px;
-  background: transparent; border: none;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: var(--muted);
-  opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s;
-}
-.doc-card:hover .doc-card-delete { opacity: 1; }
-.doc-card-delete:hover { background: rgba(239,68,68,0.12); color: #f87171; }
+.empty-icon{font-size:38px;margin-bottom:12px;opacity:.4}
+.empty-state p{font-size:14px;line-height:1.6}
 
-/* ── Empty state ── */
-.empty-state {
-  grid-column: 1 / -1;
-  text-align: center; padding: 60px 24px;
-  color: var(--muted);
-}
-.empty-state-icon { font-size: 40px; margin-bottom: 14px; opacity: 0.5; }
-.empty-state p { font-size: 14px; line-height: 1.6; }
-
-/* ── Loading skeleton ── */
-.skeleton-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; padding: 20px; height: 110px;
-  animation: skele 1.4s ease infinite;
-}
-@keyframes skele {
-  0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; }
-}
+.skeleton{background:var(--surface);border:1px solid var(--border);border-radius:14px;height:108px;animation:sk 1.4s ease infinite}
+@keyframes sk{0%,100%{opacity:.4}50%{opacity:.8}}
 
 /* ── Toast ── */
-#toast {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-  background: var(--surface2); border: 1px solid var(--border2);
-  color: var(--text); font-size: 13px; font-weight: 500;
-  padding: 10px 18px; border-radius: 100px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  z-index: 999; white-space: nowrap;
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(70px);
+  background:var(--surface2);border:1px solid var(--border2);color:var(--text);
+  font-size:13px;font-weight:500;padding:9px 18px;border-radius:100px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+  z-index:999;white-space:nowrap;pointer-events:none;
 }
-#toast.show { transform: translateX(-50%) translateY(0); }
+#toast.show{transform:translateX(-50%) translateY(0)}
 
-/* ── Responsive ── */
-@media (max-width: 640px) {
-  .main { padding: 52px 16px 60px; }
-  .page-header { flex-direction: column; align-items: flex-start; }
-  .doc-grid { grid-template-columns: 1fr; }
+@media(max-width:640px){
+  .main{padding:52px 16px 60px}
+  .page-header{flex-direction:column;align-items:flex-start}
+  .doc-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -222,75 +164,106 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       </div>
     </div>
     <button class="btn-new" id="btnNew">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Nouveau document
     </button>
   </div>
 
-  <!-- Join by link -->
+  <!-- Notice -->
+  <div class="notice">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Les liens LiveNote expirent après <strong>&nbsp;24 heures&nbsp;</strong>. Tout contenu est supprimé automatiquement.
+  </div>
+
+  <!-- Join by link or code -->
   <div class="join-bar">
-    <input type="text" class="join-input" id="joinInput" placeholder="Colle un lien LiveNote pour rejoindre un document…">
+    <input type="text" class="join-input" id="joinInput" placeholder="Colle un lien ou un code (ex: K7M3XNQAB)…">
     <button class="btn-join" id="btnJoin">Rejoindre →</button>
   </div>
 
-  <!-- Recent docs -->
+  <!-- Docs list -->
   <div class="section-label">Mes documents</div>
   <div class="doc-grid" id="docGrid">
-    <div class="skeleton-card"></div>
-    <div class="skeleton-card"></div>
-    <div class="skeleton-card"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
   </div>
 </div>
 
 <div id="toast"></div>
 
 <script>
-/* ═══════════════════════════════════════════════
-   LiveNote — Document Hub
-═══════════════════════════════════════════════ */
+const EMOJIS = ['📄','📃','📋','🗒️','📑','📜','🗂️','📂','✏️','🖊️'];
 
-const DOC_EMOJIS = ['📄','📃','📋','🗒️','📑','📜','🗂️','📂'];
-
-function relativeTime(isoStr) {
-  const diff = Date.now() - new Date(isoStr).getTime();
-  const mins  = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days  = Math.floor(diff / 86400000);
-  if (mins < 1)   return 'à l\'instant';
-  if (mins < 60)  return `il y a ${mins} min`;
-  if (hours < 24) return `il y a ${hours}h`;
-  return `il y a ${days}j`;
+function toast(msg, ms = 2600) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
 }
 
-function toast(msg, duration = 2500) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), duration);
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtExpiry(isoStr) {
+  if (!isoStr) return null;
+  const rem = new Date(isoStr).getTime() - Date.now();
+  if (rem <= 0) return null; // expired
+  const h = Math.floor(rem / 3600000);
+  const m = Math.floor((rem % 3600000) / 60000);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function relTime(isoStr) {
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const mins = Math.floor(diff / 60000), h = Math.floor(diff / 3600000), d = Math.floor(diff / 86400000);
+  if (mins < 1) return 'à l\'instant';
+  if (mins < 60) return `${mins} min`;
+  if (h < 24) return `${h}h`;
+  return `${d}j`;
+}
+
+function genShortId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = new Uint8Array(9);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => chars[b % chars.length]).join('');
 }
 
 function renderGrid(docs) {
   const grid = document.getElementById('docGrid');
   if (!docs.length) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📝</div>
-        <p>Aucun document pour l'instant.<br>Crée ton premier document collaboratif.</p>
-      </div>`;
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📝</div><p>Aucun document pour l'instant.<br>Crée ton premier document collaboratif.</p></div>`;
     return;
   }
-
   grid.innerHTML = docs.map((doc, i) => {
-    const emoji = DOC_EMOJIS[i % DOC_EMOJIS.length];
+    const emoji   = EMOJIS[i % EMOJIS.length];
+    const expiry  = fmtExpiry(doc.expires_at);
+    const expired = !expiry;
+    const mode    = doc.mode === 'html' ? 'HTML' : 'TXT';
+    const conns   = doc.total_connections ?? 0;
     return `
-      <a class="doc-card" href="livenote_editor.html?id=${doc.id}">
-        <div class="doc-card-emoji">${emoji}</div>
-        <div class="doc-card-title">${escHtml(doc.title || 'Sans titre')}</div>
-        <div class="doc-card-meta">
-          <span>${relativeTime(doc.updated_at)}</span>
+      <a class="doc-card${expired ? ' expired' : ''}" href="livenote_editor.html?id=${esc(doc.short_id || doc.id)}">
+        <div class="dc-top">
+          <div class="dc-emoji">${emoji}</div>
+          <div class="dc-title">${esc(doc.title || 'Sans titre')}</div>
         </div>
-        <button class="doc-card-delete" data-id="${doc.id}" title="Supprimer" onclick="deleteDoc(event, '${doc.id}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        <div class="dc-meta">
+          <div class="dc-badges">
+            <span class="badge badge-mode">${mode}</span>
+            ${expired
+              ? `<span class="badge badge-expired">Expiré</span>`
+              : `<span class="badge badge-expiry">⏳ ${expiry}</span>`}
+            ${conns > 0 ? `<span class="badge badge-conn">👥 ${conns}</span>` : ''}
+          </div>
+          <span>il y a ${relTime(doc.updated_at)}</span>
+        </div>
+        <div class="dc-meta">
+          <span class="dc-shortid">${esc(doc.short_id || '').toUpperCase()}</span>
+        </div>
+        <button class="doc-card-del" title="Supprimer" onclick="delDoc(event,'${esc(doc.short_id || doc.id)}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
         </button>
       </a>`;
   }).join('');
@@ -299,14 +272,12 @@ function renderGrid(docs) {
 async function loadDocs(userId) {
   const { data, error } = await sb
     .from('livenote_docs')
-    .select('id, title, updated_at')
+    .select('id, short_id, title, mode, updated_at, expires_at, total_connections')
     .eq('created_by', userId)
     .order('updated_at', { ascending: false })
     .limit(50);
-
   if (error) {
-    document.getElementById('docGrid').innerHTML =
-      `<div class="empty-state"><p style="color:#f87171">Erreur lors du chargement.<br>${error.message}</p></div>`;
+    document.getElementById('docGrid').innerHTML = `<div class="empty-state"><p style="color:#f87171">Erreur: ${esc(error.message)}</p></div>`;
     return;
   }
   renderGrid(data || []);
@@ -315,66 +286,56 @@ async function loadDocs(userId) {
 async function createDoc(userId) {
   const btn = document.getElementById('btnNew');
   btn.disabled = true; btn.textContent = 'Création…';
-
-  const { data, error } = await sb
-    .from('livenote_docs')
-    .insert({ title: 'Sans titre', created_by: userId })
-    .select()
-    .single();
-
+  const shortId = genShortId();
+  const { data, error } = await sb.from('livenote_docs').insert({
+    short_id:   shortId,
+    title:      'Sans titre',
+    created_by: userId,
+    mode:       'plaintext',
+    content:    '',
+    expires_at: new Date(Date.now() + 86400000).toISOString()
+  }).select().single();
   if (error) {
     toast('Erreur : ' + error.message);
     btn.disabled = false;
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nouveau document`;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nouveau document`;
     return;
   }
-  window.location.href = `livenote_editor.html?id=${data.id}`;
+  window.location.href = `livenote_editor.html?id=${data.short_id}`;
 }
 
-window.deleteDoc = async function(e, docId) {
+window.delDoc = async function(e, shortId) {
   e.preventDefault(); e.stopPropagation();
   if (!confirm('Supprimer ce document définitivement ?')) return;
-  const { error } = await sb.from('livenote_docs').delete().eq('id', docId);
+  const { error } = await sb.from('livenote_docs').delete().eq('short_id', shortId);
   if (error) { toast('Erreur : ' + error.message); return; }
   toast('Document supprimé');
-  const card = e.target.closest('.doc-card');
-  if (card) card.remove();
-  // If grid is now empty, re-render
-  const remaining = document.querySelectorAll('.doc-card');
-  if (!remaining.length) renderGrid([]);
+  e.target.closest('.doc-card')?.remove();
+  if (!document.querySelectorAll('.doc-card').length) renderGrid([]);
 };
 
-function joinFromLink() {
-  const val = document.getElementById('joinInput').value.trim();
+function joinDoc() {
+  const val = document.getElementById('joinInput').value.trim().toUpperCase();
   if (!val) return;
-  // Extract doc ID from URL or treat as raw ID
-  const match = val.match(/livenote_editor\.html\?id=([a-f0-9-]{36})/i)
-               || val.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
-  if (match) {
-    window.location.href = `livenote_editor.html?id=${match[1]}`;
+  // Match full URL with id param
+  const urlMatch = val.match(/[?&]ID=([A-Z0-9]{9})/i);
+  // Match raw 9-char code
+  const codeMatch = val.match(/\b([A-Z0-9]{9})\b/);
+  const id = urlMatch?.[1] || codeMatch?.[1];
+  if (id) {
+    window.location.href = `livenote_editor.html?id=${id}`;
   } else {
-    toast('Lien invalide — colle l\'URL complète du document');
+    toast('Code invalide — 9 caractères attendus (ex: K7M3XNQAB)');
   }
 }
 
-function escHtml(s) {
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-/* ── Boot ── */
 document.addEventListener('DOMContentLoaded', async () => {
   const session = await LazyAuth.requireAuthOrPopup();
   if (!session) return;
-
   await loadDocs(session.user.id);
-
   document.getElementById('btnNew').addEventListener('click', () => createDoc(session.user.id));
-  document.getElementById('btnJoin').addEventListener('click', joinFromLink);
-  document.getElementById('joinInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') joinFromLink();
-  });
+  document.getElementById('btnJoin').addEventListener('click', joinDoc);
+  document.getElementById('joinInput').addEventListener('keydown', e => { if (e.key === 'Enter') joinDoc(); });
 });
 </script>
 </body>
