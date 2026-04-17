@@ -410,6 +410,25 @@ body {
       </div>
     </div>
 
+    <!-- ── Sign out ── -->
+    <div class="acc-section" style="border-color:rgba(239,68,68,0.15);">
+      <div class="acc-section-title" style="border-color:rgba(239,68,68,0.12);color:#f87171;">Danger zone</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Sign out</div>
+          <div style="font-size:13px;color:var(--muted);">You will be redirected to the login page.</div>
+        </div>
+        <button id="btnSignOut" onclick="signOut()" style="
+          padding:10px 22px;border-radius:var(--r);
+          background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);
+          color:#f87171;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
+          cursor:pointer;transition:background 0.15s,transform 0.15s;white-space:nowrap;
+        " onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">
+          Sign out
+        </button>
+      </div>
+    </div>
+
   </div>
 </main>
 
@@ -575,6 +594,15 @@ async function savePassword() {
 
   btn.disabled = false;
   btn.innerHTML = 'Update password';
+}
+
+/* ── Sign out ── */
+async function signOut() {
+  const btn = document.getElementById('btnSignOut');
+  btn.disabled = true;
+  btn.textContent = 'Signing out…';
+  await window.sb.auth.signOut();
+  window.location.href = 'login.html';
 }
 
 /* ── Helpers ── */

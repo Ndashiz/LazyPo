@@ -871,10 +871,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     resetAd(); // remote user is active
   });
 
-  /* Receive: full-doc sync (for new joiners) */
+  /* Receive: full-doc sync (response to our request-sync) */
   channel.on('broadcast', { event: 'full-sync' }, ({ payload }) => {
     if (payload.forUser !== myUserId) return;
     isApplyingRemote = true;
+    if (payload.mode && payload.mode !== currentMode) {
+      currentMode = payload.mode;
+      applyModeUI(currentMode);
+    }
     if (currentMode === 'plaintext') {
       document.getElementById('plainEditor').value = payload.content || '';
       updateLines();
@@ -883,6 +887,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     isApplyingRemote = false;
     updateCount();
+    setSave('Synced');
+  });
+
+  /* Receive: a peer is requesting the full doc state */
+  channel.on('broadcast', { event: 'request-sync' }, ({ payload }) => {
+    // Any peer can respond — first one wins (others are ignored by receiver)
+    channel.send({
+      type: 'broadcast',
+      event: 'full-sync',
+      payload: {
+        forUser: payload.fromUser,
+        content: getContent(),
+        mode: currentMode,
+      }
+    });
   });
 
   /* Receive: mode change */
@@ -922,24 +941,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  /* New user joined → security alert + host sends full state */
-  channel.on('presence', { event: 'join' }, ({ newPresences }) => {
+  /* New user joined → show security alert only */
+  channel.on('presence', { event: 'join' }, () => {
     showSecAlert();
-    const state = channel.presenceState();
-    const all   = Object.values(state).flat();
-    const mine  = all.find(p => p.uid === myUserId);
-    const isHost = mine && all.every(p => p.joinTime >= mine.joinTime);
-    if (isHost) {
-      newPresences.forEach(np => {
-        channel.send({
-          type: 'broadcast', event: 'full-sync',
-          payload: { forUser: np.uid, content: getContent() }
-        });
-      });
-    }
   });
 
   /* Subscribe & track */
+  let syncRequested = false;
   channel.subscribe(async (status) => {
     if (status === 'SUBSCRIBED') {
       setStatus('on', 'Connected');
@@ -948,6 +956,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       const newTotal = (docData.total_connections || 0) + 1;
       document.getElementById('sConn').textContent   = `👥 ${newTotal}`;
       document.getElementById('cpTotal').textContent = newTotal;
+
+      // Pull latest content from any peer already in the channel
+      // Small delay lets presence state settle first
+      if (!syncRequested) {
+        syncRequested = true;
+        setTimeout(() => {
+          const others = Object.values(channel.presenceState()).flat()
+            .filter(p => p.uid !== myUserId);
+          if (others.length > 0) {
+            channel.send({
+              type: 'broadcast',
+              event: 'request-sync',
+              payload: { fromUser: myUserId }
+            });
+            setSave('Syncing…');
+          }
+        }, 300);
+      }
     } else if (status === 'CHANNEL_ERROR') {
       setStatus('err', 'Network error');
     } else if (status === 'TIMED_OUT') {
