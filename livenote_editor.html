@@ -609,17 +609,17 @@ function updateLines() {
 
 /* ── Word / line count ── */
 function updateCount() {
-  const el = document.getElementById('sCount');
+  const statusEl = document.getElementById('sCount');
   if (currentMode === 'plaintext') {
-    const el = document.getElementById('plainEditor');
-    const txt = el.innerText || '';
+    const editor = document.getElementById('plainEditor');
+    const txt = editor.innerText || '';
     const ln = (txt.match(/\n/g) || []).length + 1;
     const wd = txt.trim() ? txt.trim().split(/\s+/).length : 0;
-    el.textContent = `${ln} line${ln !== 1 ? 's' : ''} · ${wd} word${wd !== 1 ? 's' : ''}`;
+    statusEl.textContent = `${ln} line${ln !== 1 ? 's' : ''} · ${wd} word${wd !== 1 ? 's' : ''}`;
   } else if (cmEditor) {
     const wd = cmEditor.getValue().trim().split(/\s+/).filter(Boolean).length;
     const ln = cmEditor.lineCount();
-    el.textContent = `${ln} line${ln !== 1 ? 's' : ''} · ${wd} word${wd !== 1 ? 's' : ''}`;
+    statusEl.textContent = `${ln} line${ln !== 1 ? 's' : ''} · ${wd} word${wd !== 1 ? 's' : ''}`;
   }
 }
 
