@@ -1464,11 +1464,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     broadcastCursor(cm.getCursor());
   });
 
-  /* Plain text: cursor/selection moves — broadcast position */
-  ['keyup', 'click', 'select'].forEach(evt => {
-    ta.addEventListener(evt, () => {
+  /* Plain text: typing indicator broadcast (contenteditable — no selectionStart) */
+  ['keyup', 'click'].forEach(evt => {
+    el.addEventListener(evt, () => {
       if (isApplyingRemote) return;
-      broadcastCursor({ offset: ta.selectionStart });
+      broadcastCursor({ offset: 0 });
     });
   });
 
@@ -1529,7 +1529,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /* Copy text */
   document.getElementById('btnCopy').addEventListener('click', async () => {
-    const text = currentMode === 'plaintext' ? ta.value : (cmEditor?.getValue() || '');
+    const text = currentMode === 'plaintext' ? document.getElementById('plainEditor').innerText : (cmEditor?.getValue() || '');
     try { await navigator.clipboard.writeText(text); toast('Text copied'); }
     catch { toast('Copy failed'); }
   });
