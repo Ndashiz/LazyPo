@@ -58,10 +58,10 @@
     },
     {
       id: 'focusfm',
-      icon: '🎯',
+      icon: '🎵',
       label: 'Focus FM',
       url: null,
-      desc: 'Stay focused on your priorities and ship faster.'
+      desc: 'Spotify integration — play your playlists without leaving the app.'
     },
     { divider: true },
     {

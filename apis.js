@@ -42,4 +42,11 @@ window.LAZYPO_APIS = [
     desc:  'PowerPoint generation (.pptx export)',
     tools: ['sprint-planning']
   },
+  {
+    id:    'spotify',
+    name:  'Spotify',
+    icon:  '🎵',
+    desc:  'Web Playback SDK + OAuth PKCE for Focus FM',
+    tools: ['focus-fm']
+  },
 ];

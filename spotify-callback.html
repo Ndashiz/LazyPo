@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>if(location.protocol==="http:"&&location.hostname!=="localhost"&&location.hostname!=="127.0.0.1")location.replace("https:"+location.href.slice(5));</script>
+<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connecting Spotify… — LazyPO</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #0c0c0c; color: #f0f0f0;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 24px;
+}
+.card {
+  background: #161616; border: 1px solid #222;
+  border-radius: 20px; padding: 48px 40px;
+  max-width: 440px; width: 100%; text-align: center;
+}
+.icon {
+  width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 24px;
+  background: linear-gradient(135deg, #1db954 0%, #0f5c2a 100%);
+  display: flex; align-items: center; justify-content: center; font-size: 28px;
+}
+h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+.msg { font-size: 14px; color: #6b6b6b; line-height: 1.6; }
+.msg.error { color: #f87171; }
+.msg.success { color: #34d399; }
+.spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid #2a2a2a; border-top-color: #1db954;
+  animation: spin 0.7s linear infinite;
+  margin: 20px auto 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.back-link {
+  display: inline-block; margin-top: 20px;
+  font-size: 13px; color: #555; text-decoration: none;
+  transition: color 0.15s;
+}
+.back-link:hover { color: #f0f0f0; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">🎵</div>
+  <h1 id="title">Connecting Spotify</h1>
+  <div class="msg" id="msg">Exchanging authorization code…</div>
+  <div class="spinner" id="spinner"></div>
+</div>
+
+<script>
+/* ─── MUST match focusfm.js exactly ─── */
+const CLIENT_ID    = 'YOUR_SPOTIFY_CLIENT_ID';
+const REDIRECT_URI = 'https://ndashiz.be/lazypo/spotify-callback.html';
+
+(async () => {
+  const params     = new URLSearchParams(location.search);
+  const code       = params.get('code');
+  const state      = params.get('state');
+  const error      = params.get('error');
+  const verifier   = localStorage.getItem('fm_pkce_verifier');
+  const savedState = localStorage.getItem('fm_pkce_state');
+  const returnUrl  = localStorage.getItem('fm_return_url') || 'index.html';
+
+  const spinner = document.getElementById('spinner');
+
+  function fail(msg) {
+    document.getElementById('title').textContent = 'Connection failed';
+    const el = document.getElementById('msg');
+    el.textContent = msg;
+    el.className = 'msg error';
+    spinner.style.display = 'none';
+    const a = document.createElement('a');
+    a.href = returnUrl; a.className = 'back-link'; a.textContent = '← Back to LazyPO';
+    document.querySelector('.card').appendChild(a);
+  }
+
+  function succeed() {
+    document.getElementById('title').textContent = 'Spotify connected ✓';
+    const el = document.getElementById('msg');
+    el.textContent = 'Redirecting you back to LazyPO…';
+    el.className = 'msg success';
+    spinner.style.display = 'none';
+    setTimeout(() => location.replace(returnUrl), 1200);
+  }
+
+  if (error)          return fail(`Spotify denied access: ${error}`);
+  if (!code)          return fail('No authorization code received from Spotify.');
+  if (!verifier)      return fail('Session expired — please try connecting again.');
+  if (state !== savedState) return fail('Security check failed (state mismatch). Please try again.');
+
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type:    'authorization_code',
+        code,
+        redirect_uri:  REDIRECT_URI,
+        client_id:     CLIENT_ID,
+        code_verifier: verifier,
+      }),
+    });
+
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      return fail(`Token exchange failed: ${d.error_description || `HTTP ${res.status}`}`);
+    }
+
+    const data = await res.json();
+    localStorage.setItem('fm_access_token',  data.access_token);
+    localStorage.setItem('fm_refresh_token',  data.refresh_token);
+    localStorage.setItem('fm_token_expiry',   Date.now() + data.expires_in * 1000);
+    localStorage.removeItem('fm_pkce_verifier');
+    localStorage.removeItem('fm_pkce_state');
+
+    succeed();
+  } catch (e) {
+    fail('Network error: ' + e.message);
+  }
+})();
+</script>
+</body>
+</html>
