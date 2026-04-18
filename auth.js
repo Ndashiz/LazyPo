@@ -373,10 +373,7 @@
 
   window.LazyAuth.requireAuthOrPopup = async () => {
     const { data: { session } } = await window.sb.auth.getSession();
-    if (!session) {
-      _showAuthPopup();
-      return null;
-    }
+    if (!session) { window.location.href = LOGIN_PAGE; return null; }
     return session;
   };
 

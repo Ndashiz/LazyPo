@@ -987,7 +987,18 @@ function showFileCard(info) {
   }, 500);
 }
 
+let dropZoneDisabled = false;
+
+function disableDropZone() {
+  dropZoneDisabled = true;
+  const overlay = document.getElementById('dropOverlay');
+  if (overlay) overlay.classList.remove('active');
+  const wrap = document.querySelector('.editor-wrap');
+  if (wrap) wrap.removeAttribute('data-drop-active');
+}
+
 async function uploadTempFile(file) {
+  if (dropZoneDisabled) return;
   if (file.size > 50 * 1024 * 1024) { toast('File too large — max 50 MB'); return; }
   toast(`Uploading ${file.name}…`);
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -1000,6 +1011,8 @@ async function uploadTempFile(file) {
   channel?.send({ type: 'broadcast', event: 'file-share', payload: { uid: myUserId, ...info } });
   setTimeout(() => sb.storage.from(FILE_BUCKET).remove([path]).catch(()=>{}), FILE_TTL_MS);
   toast(`${file.name} shared — 30s to download`);
+  // One file per session — disable drop zone immediately after upload
+  disableDropZone();
 }
 
 function setupDropZone() {
@@ -1007,16 +1020,20 @@ function setupDropZone() {
   const overlay = document.getElementById('dropOverlay');
   let dragCount = 0;
   wrap.addEventListener('dragenter', e => {
+    if (dropZoneDisabled) return;
     if (!e.dataTransfer.types.includes('Files')) return;
     e.preventDefault(); dragCount++; overlay.classList.add('active');
   });
   wrap.addEventListener('dragleave', () => {
     if (--dragCount <= 0) { dragCount = 0; overlay.classList.remove('active'); }
   });
-  wrap.addEventListener('dragover',  e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); });
+  wrap.addEventListener('dragover',  e => { if (!dropZoneDisabled && e.dataTransfer.types.includes('Files')) e.preventDefault(); });
   wrap.addEventListener('drop', async e => {
+    if (dropZoneDisabled) return;
     e.preventDefault(); dragCount = 0; overlay.classList.remove('active');
-    for (const f of Array.from(e.dataTransfer.files)) await uploadTempFile(f);
+    // Only process the first file
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) await uploadTempFile(files[0]);
   });
 }
 
