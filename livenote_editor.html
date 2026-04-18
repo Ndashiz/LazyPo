@@ -327,6 +327,40 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .typing-dots span:nth-child(3) { animation-delay: .3s }
 @keyframes tdot { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-3px)} }
 
+/* ── File sharing ── */
+.drop-overlay{
+  position:absolute;inset:0;z-index:200;pointer-events:none;
+  background:rgba(59,130,246,.06);border:2px dashed var(--accent2);border-radius:8px;
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;
+}
+.drop-overlay.active{display:flex}
+.drop-ico{font-size:36px}
+.drop-lbl{font-size:13px;font-weight:600;color:var(--accent2)}
+#filePanel{
+  position:fixed;bottom:42px;left:14px;z-index:400;
+  display:flex;flex-direction:column;gap:7px;width:272px;max-height:55vh;overflow-y:auto;
+}
+.file-card{
+  background:var(--surface);border:1px solid var(--border2);border-radius:10px;
+  padding:10px 12px;animation:sld .2s ease;transition:opacity .5s;
+}
+.file-card.fc-expired{opacity:0;pointer-events:none}
+.fc-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.fc-ico{font-size:18px;flex-shrink:0}
+.fc-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-size{font-size:11px;color:var(--muted);flex-shrink:0}
+.fc-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:7px}
+.fc-fill{height:100%;background:var(--accent);border-radius:2px}
+.fc-bot{display:flex;align-items:center;justify-content:space-between}
+.fc-t{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.fc-t.hot{color:#f87171}
+.btn-dl{
+  padding:4px 10px;border-radius:5px;
+  background:rgba(59,130,246,.12);border:1px solid rgba(96,165,250,.2);
+  color:var(--accent2);font-size:11px;font-weight:600;cursor:pointer;text-decoration:none;
+}
+.btn-dl:hover{background:rgba(59,130,246,.22)}
+
 /* ── Deletion dissolve animation ── */
 @keyframes dissolve-out {
   0%   { opacity:1; filter:blur(0px) brightness(1); }
@@ -391,6 +425,11 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 
   <!-- Editor area -->
   <div class="editor-wrap">
+    <!-- Drag-and-drop overlay -->
+    <div class="drop-overlay" id="dropOverlay">
+      <div class="drop-ico">📎</div>
+      <div class="drop-lbl">Drop to share (30 s auto-delete)</div>
+    </div>
     <!-- Plain text -->
     <div class="plain-wrap" id="plainMode">
       <div class="line-gutter" id="lineGutter">1</div>
@@ -399,6 +438,9 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <!-- HTML / CodeMirror -->
     <div id="htmlMode"><div id="cmWrap"></div></div>
   </div>
+
+<!-- Shared files panel -->
+<div id="filePanel"></div>
 
   <!-- Status bar -->
   <div class="statusbar">
@@ -479,7 +521,13 @@ let myUserId, myUsername, myColor;
 let isApplyingRemote = false;
 let isDirty      = false;
 let saveTimer    = null;
-let prevPlainValue = '';   // for delta computation
+let isEditing    = false;  // true while user is actively typing
+let editingTimer = null;
+
+/* Versioned broadcast sync */
+const peerSeqs   = {};   // uid -> last seq we applied from that peer
+let mySeq        = 0;    // monotonically increasing counter for our own broadcasts
+let contentBcTimer = null;
 
 /* Auto-delete (inactivity-based) */
 let adEnabled    = true;   // ON by default
@@ -497,7 +545,10 @@ const remoteBookmarks = {};   // uid -> CM bookmark
 const remoteUsers     = {};   // uid -> {username, color}
 const typingTimers    = {};   // uid -> timeout id (clear "typing" after silence)
 let cursorBcTimer     = null; // throttle cursor broadcast
-let reconcileTimer    = null; // periodic full-sync safety net
+
+/* File sharing */
+const FILE_BUCKET = 'livenote-temp';
+const FILE_TTL_MS = 30000;
 
 /* ── Helpers ── */
 function toast(msg, ms = 2500) {
@@ -834,27 +885,139 @@ function broadcastCursor(pos) {
   }, 80);
 }
 
-/* ── Delta computation for plain text ── */
-function computeDelta(oldVal, newVal) {
-  let from = 0;
-  const minLen = Math.min(oldVal.length, newVal.length);
-  while (from < minLen && oldVal[from] === newVal[from]) from++;
-  let oldEnd = oldVal.length, newEnd = newVal.length;
-  while (oldEnd > from && newEnd > from && oldVal[oldEnd - 1] === newVal[newEnd - 1]) { oldEnd--; newEnd--; }
-  return { from, to: oldEnd, text: newVal.slice(from, newEnd) };
+/* ── Apply remote content, preserving local cursor ── */
+function applyRemoteContent(content, mode) {
+  const raw = content || '';
+  if (mode && mode !== currentMode) {
+    currentMode = mode; applyModeUI(mode);
+  }
+  if (currentMode === 'plaintext') {
+    const ta = document.getElementById('plainEditor');
+    const ss = ta.selectionStart, se = ta.selectionEnd, st = ta.scrollTop;
+    isApplyingRemote = true;
+    ta.value = raw;
+    isApplyingRemote = false;
+    ta.selectionStart = Math.min(ss, raw.length);
+    ta.selectionEnd   = Math.min(se, raw.length);
+    ta.scrollTop = st;
+    updateLines(); updateCount();
+  } else if (cmEditor) {
+    const cur = cmEditor.getCursor(), sc = cmEditor.getScrollInfo();
+    isApplyingRemote = true;
+    cmEditor.setValue(raw);
+    isApplyingRemote = false;
+    try { cmEditor.setCursor(cur); } catch(_) {}
+    cmEditor.scrollTo(sc.left, sc.top);
+    updateCount();
+  }
 }
 
-/* ── Apply a plain-text delta to a textarea, preserving cursor ── */
-function applyPlainDelta(ta, payload) {
-  const ss = ta.selectionStart, se = ta.selectionEnd, st = ta.scrollTop;
-  isApplyingRemote = true;
-  ta.value = ta.value.slice(0, payload.from) + payload.text + ta.value.slice(payload.to);
-  prevPlainValue = ta.value;
-  isApplyingRemote = false;
-  const shift = payload.text.length - (payload.to - payload.from);
-  ta.selectionStart = ss <= payload.from ? ss : Math.max(payload.from, ss + shift);
-  ta.selectionEnd   = se <= payload.from ? se : Math.max(payload.from, se + shift);
-  ta.scrollTop = st;
+/* ── Broadcast full content (versioned, 80ms debounce) ── */
+function scheduleBroadcastContent() {
+  clearTimeout(contentBcTimer);
+  contentBcTimer = setTimeout(() => {
+    mySeq++;
+    channel?.send({ type: 'broadcast', event: 'content-update', payload: {
+      uid: myUserId, seq: mySeq, content: getContent(), mode: currentMode
+    }});
+  }, 80);
+}
+
+/* ── Look up a peer from presence state ── */
+function getPeerFromPresence(uid) {
+  return Object.values(channel?.presenceState() || {}).flat().find(p => p.uid === uid) || null;
+}
+
+/* ═══════════════════════════════════════════════
+   FILE SHARING
+═══════════════════════════════════════════════ */
+function fileIcon(type) {
+  if (!type) return '📄';
+  if (type.startsWith('image/')) return '🖼️';
+  if (type.startsWith('video/')) return '🎬';
+  if (type.startsWith('audio/')) return '🎵';
+  if (type.includes('pdf')) return '📕';
+  if (type.includes('zip') || type.includes('rar') || type.includes('compress')) return '📦';
+  if (type.includes('word') || type.includes('document')) return '📝';
+  if (type.includes('sheet') || type.includes('excel') || type.includes('csv')) return '📊';
+  return '📄';
+}
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+function showFileCard(info) {
+  const panel = document.getElementById('filePanel');
+  const card  = document.createElement('div');
+  card.className = 'file-card';
+  card.dataset.path = info.path;
+  card.innerHTML = `
+    <div class="fc-top">
+      <span class="fc-ico">${fileIcon(info.type)}</span>
+      <span class="fc-name" title="${esc(info.name)}">${esc(info.name)}</span>
+      <span class="fc-size">${fmtSize(info.size)}</span>
+    </div>
+    <div class="fc-bar"><div class="fc-fill" style="width:100%"></div></div>
+    <div class="fc-bot">
+      <span class="fc-t">⏳ <span class="fc-cd">30s</span></span>
+      <a class="btn-dl" href="${esc(info.url)}" target="_blank" download="${esc(info.name)}">⬇ Download</a>
+    </div>`;
+  panel.prepend(card);
+  // Animate bar from 100% → 0% over TTL
+  const fill = card.querySelector('.fc-fill');
+  const cdEl = card.querySelector('.fc-cd');
+  const tEl  = card.querySelector('.fc-t');
+  const rem  = Math.max(0, info.expiresAt - Date.now());
+  requestAnimationFrame(() => {
+    fill.style.transition = `width ${rem}ms linear`;
+    fill.style.width = '0%';
+  });
+  const endAt = info.expiresAt;
+  const tick = setInterval(() => {
+    const left = Math.max(0, endAt - Date.now());
+    cdEl.textContent = Math.ceil(left / 1000) + 's';
+    tEl.classList.toggle('hot', left < 10000);
+    if (left <= 0) {
+      clearInterval(tick);
+      card.classList.add('fc-expired');
+      setTimeout(() => card.remove(), 500);
+    }
+  }, 500);
+}
+
+async function uploadTempFile(file) {
+  if (file.size > 50 * 1024 * 1024) { toast('File too large — max 50 MB'); return; }
+  toast(`Uploading ${file.name}…`);
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `${docShortId}/${Date.now()}-${safeName}`;
+  const { error } = await sb.storage.from(FILE_BUCKET).upload(path, file, { upsert: true });
+  if (error) { toast('Upload failed: ' + error.message); return; }
+  const { data: { publicUrl } } = sb.storage.from(FILE_BUCKET).getPublicUrl(path);
+  const info = { name: file.name, size: file.size, type: file.type, url: publicUrl, path, expiresAt: Date.now() + FILE_TTL_MS };
+  showFileCard(info);
+  channel?.send({ type: 'broadcast', event: 'file-share', payload: { uid: myUserId, ...info } });
+  setTimeout(() => sb.storage.from(FILE_BUCKET).remove([path]).catch(()=>{}), FILE_TTL_MS);
+  toast(`${file.name} shared — 30s to download`);
+}
+
+function setupDropZone() {
+  const wrap    = document.querySelector('.editor-wrap');
+  const overlay = document.getElementById('dropOverlay');
+  let dragCount = 0;
+  wrap.addEventListener('dragenter', e => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault(); dragCount++; overlay.classList.add('active');
+  });
+  wrap.addEventListener('dragleave', () => {
+    if (--dragCount <= 0) { dragCount = 0; overlay.classList.remove('active'); }
+  });
+  wrap.addEventListener('dragover',  e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); });
+  wrap.addEventListener('drop', async e => {
+    e.preventDefault(); dragCount = 0; overlay.classList.remove('active');
+    for (const f of Array.from(e.dataTransfer.files)) await uploadTempFile(f);
+  });
 }
 
 /* ═══════════════════════════════════════════════
@@ -934,7 +1097,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const rawContent = extractFromLegacy(doc.content || '');
   if (currentMode === 'plaintext') {
     document.getElementById('plainEditor').value = rawContent;
-    prevPlainValue = rawContent;
     updateLines();
   } else {
     cmEditor.setValue(rawContent);
@@ -972,42 +1134,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     config: { broadcast: { self: false }, presence: { key: myUserId } }
   });
 
-  /* Receive: plain text delta (real-time per-keystroke) */
-  channel.on('broadcast', { event: 'plain-delta' }, ({ payload }) => {
-    if (payload.uid === myUserId || currentMode !== 'plaintext') return;
-    const ta = document.getElementById('plainEditor');
-    applyPlainDelta(ta, payload);
-    updateLines(); updateCount();
+  /* Receive: real-time content update (versioned) */
+  channel.on('broadcast', { event: 'content-update' }, ({ payload }) => {
+    if (payload.uid === myUserId) return;
+    // Reject stale updates: only apply if newer than last seen from this peer
+    if ((peerSeqs[payload.uid] || 0) >= payload.seq) return;
+    peerSeqs[payload.uid] = payload.seq;
+    applyRemoteContent(payload.content, payload.mode);
     resetAd();
+    // Show typing indicator
+    const peer = getPeerFromPresence(payload.uid);
+    if (peer) showTyping(peer.uid, peer.username, peer.color);
   });
 
-  /* Receive: HTML/CodeMirror delta (real-time per-keystroke) */
-  channel.on('broadcast', { event: 'cm-delta' }, ({ payload }) => {
-    if (payload.uid === myUserId || currentMode !== 'html' || !cmEditor) return;
-    isApplyingRemote = true;
-    cmEditor.replaceRange(payload.text.join('\n'), payload.from, payload.to, '+remote');
-    isApplyingRemote = false;
-    updateCount();
-    resetAd();
+  /* Receive: temporary file shared by a peer */
+  channel.on('broadcast', { event: 'file-share' }, ({ payload }) => {
+    if (payload.uid === myUserId) return; // already shown locally
+    showFileCard(payload);
+    // Also schedule our-side cleanup attempt
+    const ttl = Math.max(0, payload.expiresAt - Date.now());
+    setTimeout(() => sb.storage.from(FILE_BUCKET).remove([payload.path]).catch(()=>{}), ttl);
   });
 
   /* Receive: full-doc sync (response to our request-sync) */
   channel.on('broadcast', { event: 'full-sync' }, ({ payload }) => {
     if (payload.forUser !== myUserId) return;
-    isApplyingRemote = true;
-    if (payload.mode && payload.mode !== currentMode) {
-      currentMode = payload.mode;
-      applyModeUI(currentMode);
-    }
-    if (currentMode === 'plaintext') {
-      document.getElementById('plainEditor').value = payload.content || '';
-      prevPlainValue = payload.content || '';
-      updateLines();
-    } else if (cmEditor) {
-      cmEditor.setValue(payload.content || '');
-    }
-    isApplyingRemote = false;
-    updateCount();
+    applyRemoteContent(payload.content, payload.mode);
     setSave('Synced');
   });
 
@@ -1129,32 +1281,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  /* ══════════════════════════════════════════
+     POSTGRES CHANGES — authoritative fallback
+     Catches any drift when Broadcast events
+     are lost / peer was offline.
+  ══════════════════════════════════════════ */
+  sb.channel('db:livenote:' + docShortId)
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public',
+      table: 'livenote_docs',
+      filter: `short_id=eq.${docShortId}`
+    }, (payload) => {
+      // Don't disrupt active typing — the broadcaster will eventually save
+      if (isEditing) return;
+      const c = payload.new.content || '';
+      const m = payload.new.mode || currentMode;
+      if (c !== getContent() || m !== currentMode) {
+        applyRemoteContent(c, m);
+        setSave('Synced from DB');
+      }
+    })
+    .subscribe();
+
   /* ════════════════════
      EDITOR EVENTS
   ════════════════════ */
 
-  /* Plain text: input */
   const ta = document.getElementById('plainEditor');
-  prevPlainValue = ta.value; // init after doc loaded
+
+  /* Plain text: input */
   ta.addEventListener('input', () => {
     if (isApplyingRemote) return;
-    const delta = computeDelta(prevPlainValue, ta.value);
-    prevPlainValue = ta.value;
-    updateLines(); updateCount(); scheduleSave();
-    resetAd();
-    channel?.send({ type: 'broadcast', event: 'plain-delta', payload: { uid: myUserId, ...delta } });
+    // Mark editing active (guards postgres_changes from clobbering us)
+    isEditing = true;
+    clearTimeout(editingTimer);
+    editingTimer = setTimeout(() => { isEditing = false; }, 2000);
+    updateLines(); updateCount(); scheduleSave(); resetAd();
+    scheduleBroadcastContent();
   });
   ta.addEventListener('scroll', () => {
     document.getElementById('lineGutter').scrollTop = ta.scrollTop;
   });
 
-  /* CodeMirror: change — broadcast delta */
-  cmEditor.on('change', (cm, change) => {
+  /* CodeMirror: change — broadcast full content (versioned) */
+  cmEditor.on('change', (cm) => {
     if (isApplyingRemote) return;
+    isEditing = true;
+    clearTimeout(editingTimer);
+    editingTimer = setTimeout(() => { isEditing = false; }, 2000);
     updateCount(); scheduleSave(); resetAd();
-    channel?.send({ type: 'broadcast', event: 'cm-delta', payload: {
-      uid: myUserId, from: change.from, to: change.to, text: change.text
-    }});
+    scheduleBroadcastContent();
   });
 
   /* CodeMirror: cursor activity — broadcast position */
@@ -1163,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     broadcastCursor(cm.getCursor());
   });
 
-  /* Plain text: cursor/selection moves — broadcast position as char offset */
+  /* Plain text: cursor/selection moves — broadcast position */
   ['keyup', 'click', 'select'].forEach(evt => {
     ta.addEventListener(evt, () => {
       if (isApplyingRemote) return;
@@ -1171,11 +1347,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  /* ── Periodic reconciliation: every 8s save + re-check DB state ── */
-  reconcileTimer = setInterval(async () => {
-    if (!docShortId || !isDirty) return;
-    await saveNow();
-  }, 8000);
+  /* Periodic reconciliation: save every 10s if dirty */
+  setInterval(async () => {
+    if (docShortId && isDirty) await saveNow();
+  }, 10000);
 
   /* ════════════════════
      UI HANDLERS
@@ -1262,6 +1437,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /* Save on leave */
   window.addEventListener('beforeunload', e => { if (isDirty) { saveNow(); e.preventDefault(); } });
+
+  /* ── Drop zone for file sharing ── */
+  setupDropZone();
 
   /* ── Hide loading ── */
   document.getElementById('loadOv').classList.add('out');
