@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -212,19 +212,19 @@ input[type="text"]:focus, select:focus, textarea:focus {
   <div class="header-actions">
     <div class="status-pill" id="status-pill">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-      Email generated!
+      Email généré !
     </div>
     <button class="btn btn-ghost" id="copy-btn" onclick="copyEmailHtml()" disabled>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-      Copy HTML
+      Copier HTML
     </button>
     <button class="btn btn-success" id="eml-btn" onclick="downloadEml()" disabled>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Download .eml
+      Télécharger .eml
     </button>
     <button class="btn btn-primary" onclick="generate()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      Generate
+      Générer
     </button>
   </div>
 </header>
@@ -237,14 +237,14 @@ input[type="text"]:focus, select:focus, textarea:focus {
     <!-- THEME PICKER -->
     <div class="theme-section">
       <div class="theme-row">
-        <span class="theme-label">🎨 Theme</span>
+        <span class="theme-label">🎨 Thème</span>
         <div class="theme-swatches" id="theme-swatches"></div>
         <div class="theme-sep"></div>
         <div class="field" style="margin:0;flex:1;min-width:120px;">
           <input type="text" id="email-title" placeholder="Titre (ex: DPnxt CLM)" value="" style="font-size:12px;padding:5px 9px;" />
         </div>
         <div class="field" style="margin:0;flex:1.5;min-width:160px;">
-          <input type="text" id="email-subtitle" placeholder="Subtitle" value="" style="font-size:12px;padding:5px 9px;" />
+          <input type="text" id="email-subtitle" placeholder="Sous-titre" value="" style="font-size:12px;padding:5px 9px;" />
         </div>
       </div>
     </div>
@@ -253,33 +253,32 @@ input[type="text"]:focus, select:focus, textarea:focus {
       <div class="section-header">
         Import Excel
         <span style="font-size:10px;color:var(--text-faint);text-transform:none;letter-spacing:0;">Jira · Epic Name · Description · Benefits · Release</span>
-
       </div>
       <div class="drop-zone" id="drop-zone">
         <input type="file" accept=".xlsx,.xls,.csv" id="file-input" />
         <div class="drop-icon">📊</div>
-        <p><strong>Drag your Excel file here</strong> or click to browse</p>
+        <p><strong>Glisse ton fichier Excel ici</strong> ou clique pour parcourir</p>
         <p class="drop-hint">.xlsx · .xls · .csv</p>
         <div class="drop-status" id="drop-status"></div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-header">General</div>
+      <div class="section-header">Général</div>
       <div class="row">
-        <div class="field"><label>Current PI</label><input type="text" id="pi-current" value="" /></div>
-        <div class="field"><label>Next PI</label><input type="text" id="pi-next" value="" /></div>
+        <div class="field"><label>PI en cours</label><input type="text" id="pi-current" value="" /></div>
+        <div class="field"><label>Prochain PI</label><input type="text" id="pi-next" value="" /></div>
       </div>
       <div class="row">
-        <div class="field"><label>Prioritization deadline</label><input type="text" id="deadline" value="" /></div>
-        <div class="field"><label>Email subject</label><input type="text" id="email-subject" value="" /></div>
+        <div class="field"><label>Deadline prioritisation</label><input type="text" id="deadline" value="" /></div>
+        <div class="field"><label>Sujet email</label><input type="text" id="email-subject" value="" /></div>
       </div>
       <div class="field">
-        <label>Introduction text</label>
+        <label>Texte d'introduction</label>
         <textarea id="intro-text">We are pleased to inform you the PI Planning for Q2 26' has successfully concluded today. Objectives have been defined based on backlog review sessions and aligned with the overall product strategy &amp; roadmap.</textarea>
       </div>
       <div class="field">
-        <label>"Next PI" block message (light blue text)</label>
+        <label>Message bloc "Next PI" (texte bleu clair)</label>
         <textarea id="backlog-text">The backlog review sessions to assess all requests priority will start at the end of May.</textarea>
       </div>
     </div>
@@ -287,19 +286,19 @@ input[type="text"]:focus, select:focus, textarea:focus {
     <div class="section">
       <div class="section-header">Signature &amp; Footer</div>
       <div class="row">
-        <div class="field"><label>Name</label><input type="text" id="sig-name" placeholder="ex: Jane Doe" /></div>
-        <div class="field"><label>Title / Role</label><input type="text" id="sig-title" placeholder="ex: Product Owner · Digital" /></div>
+        <div class="field"><label>Nom</label><input type="text" id="sig-name" placeholder="ex: Jane Doe" /></div>
+        <div class="field"><label>Titre / Rôle</label><input type="text" id="sig-title" placeholder="ex: Product Owner · Digital" /></div>
       </div>
-      <div class="field"><label>Office phone</label><input type="text" id="sig-phone" placeholder="ex: +32 2 000 00 00" /></div>
+      <div class="field"><label>Téléphone fixe</label><input type="text" id="sig-phone" placeholder="ex: +32 2 000 00 00" /></div>
       <div class="field"><label>Mobile</label><input type="text" id="sig-mobile" placeholder="ex: +32 479 00 00 00" /></div>
       <div class="field"><label>Email</label><input type="text" id="sig-email" placeholder="ex: j.doe@company.com" /></div>
-      <div class="field"><label>Footer line (bank / address)</label><textarea id="footer-text" style="min-height:44px;">Bank | Company Name · Address</textarea></div>
+      <div class="field"><label>Ligne footer (banque / adresse)</label><textarea id="footer-text" style="min-height:44px;">Bank | Company Name · Address</textarea></div>
     </div>
 
     <div class="section">
       <div class="section-header">
-        PI Objectives
-        <button class="add-btn small-add-btn" onclick="addObj()">+ Add</button>
+        Objectifs PI
+        <button class="add-btn small-add-btn" onclick="addObj()">+ Ajouter</button>
       </div>
       <div id="objectives-list">
 
@@ -309,10 +308,10 @@ input[type="text"]:focus, select:focus, textarea:focus {
     <div class="section">
       <div class="section-header">
         Epics / Features
-        <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">↕ drag to reorder</span>
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">↕ glisser pour réordonner</span>
       </div>
       <div id="epics-list"></div>
-      <button class="add-btn" onclick="addEpic()">+ Add an epic</button>
+      <button class="add-btn" onclick="addEpic()">+ Ajouter un epic</button>
     </div>
 
   </div>
@@ -321,13 +320,13 @@ input[type="text"]:focus, select:focus, textarea:focus {
   <div class="right-panel">
     <div class="preview-bar">
       <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
-      <span class="preview-bar-label">Email preview</span>
+      <span class="preview-bar-label">Aperçu email</span>
       <div style="flex:1"></div>
-      <button class="btn" style="font-size:11px;padding:5px 12px;background:transparent;color:var(--text-muted);border:1px solid var(--border);" onclick="generate()">↻ Refresh</button>
+      <button class="btn" style="font-size:11px;padding:5px 12px;background:transparent;color:var(--text-muted);border:1px solid var(--border);" onclick="generate()">↻ Rafraîchir</button>
     </div>
     <div class="preview-empty" id="preview-empty">
       <div class="preview-empty-icon">✉️</div>
-      <p><strong>Click "Generate"</strong> to preview the email<br>and unlock the <code style="background:var(--bg);padding:1px 6px;border-radius:4px;font-size:12px;">.eml</code> download</p>
+      <p><strong>Clique sur "Générer"</strong> pour voir l'aperçu de l'email<br>et débloquer le téléchargement <code style="background:var(--bg);padding:1px 6px;border-radius:4px;font-size:12px;">.eml</code></p>
     </div>
     <iframe id="preview-frame"></iframe>
   </div>
@@ -337,15 +336,15 @@ input[type="text"]:focus, select:focus, textarea:focus {
 <script>
 // ── THEMES ──
 const THEMES = [
-  // Dark blues
-  { id:'navy',      label:'Navy (default)',     header:'#002060', headerMid:'#0a3575', table:'#1e3a6e', pill:'#0a3575', pillBorder:'#1e5799', accent:'#0078d4', objBg:'#f0f6ff', benefitBg:'#e0f2fe', benefitText:'#0369a1' },
+  // Blues foncés
+  { id:'navy',      label:'Navy (défaut)',     header:'#002060', headerMid:'#0a3575', table:'#1e3a6e', pill:'#0a3575', pillBorder:'#1e5799', accent:'#0078d4', objBg:'#f0f6ff', benefitBg:'#e0f2fe', benefitText:'#0369a1' },
   { id:'royal',     label:'Royal Blue',        header:'#003399', headerMid:'#0d47a1', table:'#1565c0', pill:'#0d47a1', pillBorder:'#1565c0', accent:'#1976d2', objBg:'#e3f2fd', benefitBg:'#bbdefb', benefitText:'#0d47a1' },
   { id:'steel',     label:'Steel Blue',        header:'#1a3a5c', headerMid:'#1e4976', table:'#235789', pill:'#1e4976', pillBorder:'#235789', accent:'#2196f3', objBg:'#e8f4fd', benefitBg:'#d0eaf9', benefitText:'#1565c0' },
-  // Light blues
+  // Blues clairs
   { id:'sky',       label:'Sky Blue',          header:'#0369a1', headerMid:'#0284c7', table:'#0284c7', pill:'#0369a1', pillBorder:'#0284c7', accent:'#38bdf8', objBg:'#f0f9ff', benefitBg:'#bae6fd', benefitText:'#0369a1' },
   { id:'cerulean',  label:'Cerulean',          header:'#0e7490', headerMid:'#0891b2', table:'#0891b2', pill:'#0e7490', pillBorder:'#0891b2', accent:'#22d3ee', objBg:'#ecfeff', benefitBg:'#a5f3fc', benefitText:'#0e7490' },
   { id:'slate',     label:'Slate',             header:'#334155', headerMid:'#475569', table:'#475569', pill:'#334155', pillBorder:'#475569', accent:'#64748b', objBg:'#f8fafc', benefitBg:'#e2e8f0', benefitText:'#334155' },
-  // Other colors
+  // Autres couleurs
   { id:'emerald',   label:'Emerald',           header:'#065f46', headerMid:'#047857', table:'#059669', pill:'#047857', pillBorder:'#059669', accent:'#10b981', objBg:'#ecfdf5', benefitBg:'#a7f3d0', benefitText:'#065f46' },
   { id:'violet',    label:'Violet',            header:'#4c1d95', headerMid:'#5b21b6', table:'#6d28d9', pill:'#5b21b6', pillBorder:'#6d28d9', accent:'#7c3aed', objBg:'#f5f3ff', benefitBg:'#ddd6fe', benefitText:'#5b21b6' },
   { id:'rose',      label:'Rose',              header:'#881337', headerMid:'#9f1239', table:'#be123c', pill:'#9f1239', pillBorder:'#be123c', accent:'#f43f5e', objBg:'#fff1f2', benefitBg:'#fecdd3', benefitText:'#9f1239' },
@@ -440,7 +439,7 @@ function parseExcel(file) {
       epics = imported; renderEpics();
       const st = document.getElementById('drop-status');
       st.style.display = 'block';
-      st.textContent = `✓ ${imported.length} epic${imported.length>1?'s':''} imported`;
+      st.textContent = `✓ ${imported.length} epic${imported.length>1?'s':''} importé${imported.length>1?'s':''}`;
     }
   };
   reader.readAsArrayBuffer(file);
@@ -470,14 +469,14 @@ function renderEpics() {
       <div class="epic-body">
         <div class="epic-row">
           <div class="epic-field" style="max-width:110px;"><label>Ticket</label><input type="text" class="epic-ticket" value="${ep.ticket||''}" /></div>
-          <div class="epic-field"><label>Description <span style="font-weight:400;color:var(--text-faint)">(separate points with " ; ")</span></label><textarea class="epic-desc">${(ep.desc||'').replace(/</g,'&lt;')}</textarea></div>
+          <div class="epic-field"><label>Description <span style="font-weight:400;color:var(--text-faint)">(sépare les points par " ; ")</span></label><textarea class="epic-desc">${(ep.desc||'').replace(/</g,'&lt;')}</textarea></div>
         </div>
         <div class="epic-row" style="align-items:flex-end;">
           <div class="epic-field">
-            <label>Benefits <span style="font-weight:400;color:var(--text-faint)">(Enter to add)</span></label>
+            <label>Bénéfices <span style="font-weight:400;color:var(--text-faint)">(Entrée pour ajouter)</span></label>
             <div class="tags-wrap" id="tw-${i}">
               ${ep.benefits.map((b,bi)=>`<span class="tag">${b}<span class="tag-x" data-i="${i}" data-bi="${bi}">×</span></span>`).join('')}
-              <input class="tag-input" placeholder="Add..." data-idx="${i}" />
+              <input class="tag-input" placeholder="Ajouter..." data-idx="${i}" />
             </div>
           </div>
           <div class="epic-field" style="max-width:155px;">
@@ -529,11 +528,11 @@ function addObj() {
   const list = document.getElementById('objectives-list');
   const item = document.createElement('div');
   item.className = 'obj-item';
-  item.innerHTML = `<div class="obj-num obj-counter">${list.children.length+1}</div><input type="text" placeholder="New objective..." /><button class="del-btn" onclick="removeObj(this)">×</button>`;
+  item.innerHTML = `<div class="obj-num obj-counter">${list.children.length+1}</div><input type="text" placeholder="Nouvel objectif..." /><button class="del-btn" onclick="removeObj(this)">×</button>`;
   list.appendChild(item); item.querySelector('input').focus();
 }
 function addEpic() {
-  epics.push({ name:'New Epic', ticket:'CRM-XXXX', desc:'Description...', benefits:['Benefit'], release:'May (21 May)' });
+  epics.push({ name:'Nouvel Epic', ticket:'CRM-XXXX', desc:'Description...', benefits:['Bénéfice'], release:'May (21 May)' });
   renderEpics();
   setTimeout(() => { const inputs = document.querySelectorAll('.epic-name-input'); inputs[inputs.length-1]?.focus(); inputs[inputs.length-1]?.select(); }, 50);
 }
@@ -804,7 +803,7 @@ function copyEmailHtml() {
   navigator.clipboard.writeText(lastEmailHtml).then(() => {
     const btn = document.getElementById('copy-btn');
     const orig = btn.innerHTML;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copié !`;
     setTimeout(() => { btn.innerHTML = orig; }, 2000);
   });
 }
@@ -882,5 +881,68 @@ attachLiveListeners();
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>document.addEventListener("DOMContentLoaded", function(){ LazyAuth.requireAuthOrPopup(); });</script>
+<script>
+/* ── Demo Mode ── */
+window.loadDemoData = function () {
+  /* Form fields */
+  document.getElementById('email-title').value    = 'Scope of Work — PI 2026.2';
+  document.getElementById('email-subtitle').value = 'Platform Delivery Team';
+  document.getElementById('pi-current').value     = 'PI 2026.2';
+  document.getElementById('pi-next').value        = 'PI 2026.3';
+  document.getElementById('deadline').value       = '2026-05-02';
+  document.getElementById('email-subject').value  = '[LazyPO] SoW — PI 2026.2 · Platform Delivery';
+  document.getElementById('intro-text').value     =
+    'Please find below the Scope of Work for PI 2026.2, covering all committed deliverables for the Platform Delivery team. This document reflects the outcomes of our last PI Planning session.';
+  document.getElementById('backlog-text').value   =
+    'Items deferred to PI 2026.3 will be reviewed during the upcoming PI Planning session. Contact the PO to prioritise your backlog entries before the deadline.';
+  document.getElementById('sig-name').value       = 'Alex Martin';
+  document.getElementById('sig-title').value      = 'Product Owner — Platform Delivery';
+  document.getElementById('sig-email').value      = 'alex.martin@company.com';
+  document.getElementById('sig-phone').value      = '+32 2 123 45 67';
+  document.getElementById('sig-mobile').value     = '+32 477 89 01 23';
+  document.getElementById('footer-text').value    = 'Platform Delivery · LazyPO v2.0 · Confidential';
+
+  /* Objectives */
+  var objList = document.getElementById('objectives-list');
+  objList.innerHTML = '';
+  ['Deliver API Gateway v2 on time', 'Achieve 99.9% platform uptime', 'Reduce onboarding time by 50%'].forEach(function (txt, i) {
+    var item = document.createElement('div');
+    item.className = 'obj-item';
+    item.innerHTML = '<div class="obj-num obj-counter">' + (i + 1) + '</div><input type="text" value="' + txt + '" /><button class="del-btn" onclick="removeObj(this)">×</button>';
+    objList.appendChild(item);
+  });
+
+  /* Epics */
+  epics = [
+    {
+      name: 'Authentication Overhaul', ticket: 'PLT-101',
+      desc: 'Migrate to OAuth 2.0 SSO and implement MFA across all platform services.',
+      benefits: ['Security compliance', 'Reduced login friction', 'GDPR alignment'],
+      release: '1/04/26 (16 Apr)'
+    },
+    {
+      name: 'API Gateway v2', ticket: 'PLT-102',
+      desc: 'Deploy new API gateway with rate limiting, versioning and real-time analytics dashboard.',
+      benefits: ['99.9% SLA guaranteed', '3× faster routing', 'Live monitoring'],
+      release: 'May (21 May)'
+    },
+    {
+      name: 'Data Pipeline Refactor', ticket: 'PLT-103',
+      desc: 'Replace legacy batch ETL with an event-driven streaming architecture (Kafka + Flink).',
+      benefits: ['Sub-second latency', 'Scales to 10M events/day', '30% lower infra cost'],
+      release: 'May (21 May)'
+    },
+    {
+      name: 'Developer Portal Launch', ticket: 'PLT-104',
+      desc: 'Public dev portal with interactive API docs, sandbox environment and usage analytics.',
+      benefits: ['Onboarding in under 1 hour', 'Self-service API keys', 'Partner ecosystem ready'],
+      release: 'June 26'
+    },
+  ];
+  renderEpics();
+  generate();
+};
+</script>
+<script src="demo.js"></script>
 </body>
 </html>

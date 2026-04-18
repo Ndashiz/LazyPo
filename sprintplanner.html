@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -575,7 +575,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     </button>
     <button class="btn btn-primary" onclick="downloadPptx()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Download .pptx
+      Télécharger .pptx
     </button>
   </div>
 </header>
@@ -593,14 +593,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <div class="section">
       <div class="section-header">
         <div class="section-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-        <div><div class="section-title">Import Jira</div><div class="section-subtitle">Drop a Jira export (.xlsx) here or click to select</div></div>
+        <div><div class="section-title">Import Jira</div><div class="section-subtitle">Glissez un export Jira (.xlsx) ou cliquez pour sélectionner</div></div>
       </div>
       <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
         <input type="file" id="fileInput" accept=".xlsx,.xls,.csv"/>
         <div id="dropContent">
           <div style="font-size:40px;margin-bottom:12px;opacity:.5">📋</div>
-          <div style="font-size:14px;color:var(--text-muted)">Drop your Jira export here</div>
-          <div style="font-size:12px;color:var(--text-dim);margin-top:6px">.xlsx · Key, Summary, Description, Fix Version/s, Sprint columns auto-mapped</div>
+          <div style="font-size:14px;color:var(--text-muted)">Glissez votre export Jira ici</div>
+          <div style="font-size:12px;color:var(--text-dim);margin-top:6px">.xlsx · Colonnes Key, Summary, Description, Fix Version/s, Sprint mappées automatiquement</div>
         </div>
       </div>
     </div>
@@ -609,14 +609,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <div class="section">
       <div class="section-header">
         <div class="section-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-        <div><div class="section-title">Program Increment</div><div class="section-subtitle">14-day sprints calculated automatically</div></div>
+        <div><div class="section-title">Program Increment</div><div class="section-subtitle">Sprints de 14 jours calculés automatiquement</div></div>
       </div>
       <div class="card">
         <div class="pi-row">
-          <div class="field"><label>Start</label><input type="date" id="piStart"/></div>
+          <div class="field"><label>Début</label><input type="date" id="piStart"/></div>
           <div class="field"><label>Fin</label><input type="date" id="piEnd"/></div>
           <button class="btn btn-primary" onclick="genSprints()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Calculer</button>
-          <div class="pi-summary" id="piSummary" style="display:none"><span id="piDays">0</span> days → <strong id="piCount">0</strong> sprints</div>
+          <div class="pi-summary" id="piSummary" style="display:none"><span id="piDays">0</span> jours → <strong id="piCount">0</strong> sprints</div>
         </div>
       </div>
     </div>
@@ -625,17 +625,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <div class="section">
       <div class="section-header">
         <div class="section-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-        <div><div class="section-title">Sprints</div><div class="section-subtitle">2 weeks · Flag releases</div></div>
+        <div><div class="section-title">Sprints</div><div class="section-subtitle">2 semaines · Flaggez les releases</div></div>
       </div>
-      <div class="sprint-grid" id="sprintGrid"><div class="empty">Configure PI dates above</div></div>
-      <div class="add-row" id="addSprintBar" style="display:none"><button class="btn btn-ghost btn-sm" onclick="addSprint()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add sprint</button></div>
+      <div class="sprint-grid" id="sprintGrid"><div class="empty">Configurez les dates du PI ci-dessus</div></div>
+      <div class="add-row" id="addSprintBar" style="display:none"><button class="btn btn-ghost btn-sm" onclick="addSprint()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Ajouter un sprint</button></div>
     </div>
 
     <!-- EPICS -->
     <div class="section">
       <div class="section-header">
         <div class="section-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-        <div><div class="section-title">Epics</div><div class="section-subtitle">Status, sprint, sizing — number shown in planner and roadmap</div></div>
+        <div><div class="section-title">Epics</div><div class="section-subtitle">Statut, sprint, sizing — numéro affiché dans le planner et la roadmap</div></div>
         <div class="spacer"></div>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-muted);white-space:nowrap">
           <input type="checkbox" id="tshirtToggle" checked onchange="showTshirt=this.checked" style="accent-color:var(--blue);width:14px;height:14px"/>
@@ -649,7 +649,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
             <th style="width:130px">Sprint</th><th style="width:120px">Statut</th><th style="width:80px">T-Shirt</th><th style="width:40px"></th>
           </tr></thead><tbody id="epicBody"></tbody></table>
         </div>
-        <div class="add-row"><button class="btn btn-ghost btn-sm" onclick="addEpic()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add epic</button></div>
+        <div class="add-row"><button class="btn btn-ghost btn-sm" onclick="addEpic()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Ajouter une epic</button></div>
       </div>
     </div>
   </div>
@@ -659,9 +659,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <div class="section">
       <div class="section-header">
         <div class="section-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></div>
-        <div><div class="section-title">Planner View</div><div class="section-subtitle">Epics by sprint with statuses</div></div>
+        <div><div class="section-title">Vue Planner</div><div class="section-subtitle">Epics par sprint avec statuts</div></div>
       </div>
-      <div class="card" style="padding:0;overflow:hidden"><div class="planner-wrap" id="plannerWrap"><div class="empty">Create sprints and assign epics</div></div></div>
+      <div class="card" style="padding:0;overflow:hidden"><div class="planner-wrap" id="plannerWrap"><div class="empty">Créez des sprints et assignez des epics</div></div></div>
     </div>
   </div>
 
@@ -670,13 +670,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <div class="section">
       <div class="section-header">
         <div class="section-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-        <div><div class="section-title">Slide preview</div><div class="section-subtitle">Synced in real time with your changes</div></div>
+        <div><div class="section-title">Aperçu des slides</div><div class="section-subtitle">Synchronisé en temps réel avec vos modifications</div></div>
       </div>
       <div class="preview-container">
         <div class="preview-nav">
-          <button onclick="prevSlide()" id="btnPrev">← Previous</button>
+          <button onclick="prevSlide()" id="btnPrev">← Précédent</button>
           <span class="nav-label" id="slideLabel">Slide 1 / 3</span>
-          <button onclick="nextSlide()" id="btnNext">Next →</button>
+          <button onclick="nextSlide()" id="btnNext">Suivant →</button>
         </div>
         <div class="slide-viewport"><div class="slide-inner" id="slideInner"></div></div>
       </div>
@@ -688,7 +688,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 <div class="modal-overlay" id="templateModal">
   <div class="modal">
     <h2>🎨 Template PowerPoint</h2>
-    <p>The current template reproduces the structure of your file: white background, navy header with % logo, feature tables with navy columns, and roadmap in sprint columns with status-colored blocks.</p>
+    <p>Le template actuel reproduit la structure de votre fichier : fond blanc, header navy avec logo %, tableaux features avec colonnes navy, et roadmap en colonnes de sprint avec blocs colorés par statut.</p>
     <div class="radio-group" id="templateRadios">
       <label class="selected"><input type="radio" name="tpl" value="existing" checked/>Utiliser le template existant</label>
       <label><input type="radio" name="tpl" value="new"/>Importer un nouveau template</label>
@@ -696,9 +696,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <div id="tplPromptArea" style="display:none">
       <p>Copiez ce prompt dans Claude en joignant votre nouveau fichier .pptx :</p>
       <pre id="tplPrompt"></pre>
-      <button class="btn btn-ghost btn-sm" onclick="copyPrompt()" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyPrompt()" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copier</button>
     </div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeTemplate()">Close</button></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeTemplate()">Fermer</button></div>
   </div>
 </div>
 
@@ -762,9 +762,9 @@ function processFile(file){
     }
     epics.forEach(ep=>{const l=(ep.description+ep.benefits).length;ep.tshirt=l<80?'S':l<200?'M':'L'});
     dz.classList.add('loaded');
-    document.getElementById('dropContent').innerHTML=`<div class="loaded-info"><div><div class="count">${epics.length}</div><div style="font-size:12px;color:var(--text-dim)">epics imported from Jira</div></div></div>`;
+    document.getElementById('dropContent').innerHTML=`<div class="loaded-info"><div><div class="count">${epics.length}</div><div style="font-size:12px;color:var(--text-dim)">epics importées depuis Jira</div></div></div>`;
     autoAssign();
-    renderEpics();renderSprints();pill(`✓ ${epics.length} epics imported`);
+    renderEpics();renderSprints();pill(`✓ ${epics.length} epics importées`);
   };
   reader.readAsArrayBuffer(file);
 }
@@ -787,7 +787,7 @@ function genSprints(){
 }
 function renderSprints(){
   const g=document.getElementById('sprintGrid');
-  if(!sprints.length){g.innerHTML='<div class="empty">Configure PI dates above</div>';return}
+  if(!sprints.length){g.innerHTML='<div class="empty">Configurez les dates du PI ci-dessus</div>';return}
   g.innerHTML=sprints.map((s,i)=>{
     const chips=epics.filter(f=>f.sprintId===s.id).map(f=>`<span class="chip">#${f.number}</span>`).join('');
     return `<div class="sprint-card ${s.hasRelease?'has-release':''}" style="animation-delay:${i*30}ms">
@@ -845,14 +845,14 @@ function autoAssign(){
     });
     if(match){ep.sprintId=match.id;assigned++}
   });
-  if(assigned)pill(`✓ ${assigned} auto-assigned epics`);
+  if(assigned)pill(`✓ ${assigned} epics auto-assignées`);
 }
-function delS(id){sprints=sprints.filter(x=>x.id!==id);sprints.forEach((s,i)=>s.number=i+1);epics.forEach(f=>{if(f.sprintId===id)f.sprintId=''});renderSprints();renderEpics();pill('✓ Sprint deleted')}
-function addSprint(){const l=sprints[sprints.length-1];const ns=l?addDays(l.end,1):new Date().toISOString().split('T')[0];const n=sprints.length+1;const yr=new Date(ns).getFullYear(),q=Math.floor(new Date(ns).getMonth()/3)+1;sprints.push({id:uid(),number:n,label:`Sprint ${yr}.${q}.${n}`,start:ns,end:addDays(ns,13),hasRelease:false,releaseDate:''});renderSprints();renderEpics();pill('✓ Sprint added')}
+function delS(id){sprints=sprints.filter(x=>x.id!==id);sprints.forEach((s,i)=>s.number=i+1);epics.forEach(f=>{if(f.sprintId===id)f.sprintId=''});renderSprints();renderEpics();pill('✓ Sprint supprimé')}
+function addSprint(){const l=sprints[sprints.length-1];const ns=l?addDays(l.end,1):new Date().toISOString().split('T')[0];const n=sprints.length+1;const yr=new Date(ns).getFullYear(),q=Math.floor(new Date(ns).getMonth()/3)+1;sprints.push({id:uid(),number:n,label:`Sprint ${yr}.${q}.${n}`,start:ns,end:addDays(ns,13),hasRelease:false,releaseDate:''});renderSprints();renderEpics();pill('✓ Sprint ajouté')}
 
 // ═══ EPICS ═══
 function addEpic(){epics.push({id:uid(),number:nextNum++,key:'',name:'',description:'',benefits:'',fixVersion:'',jiraSprint:'',components:'',sprintId:'',status:'todo',tshirt:''});renderEpics()}
-function delEpic(id){epics=epics.filter(f=>f.id!==id);renderEpics();renderSprints();pill('✓ Epic deleted')}
+function delEpic(id){epics=epics.filter(f=>f.id!==id);renderEpics();renderSprints();pill('✓ Epic supprimée')}
 function updE(id,k,v){const f=epics.find(x=>x.id===id);if(!f)return;if(k==='number')v=parseInt(v)||0;f[k]=v;if(k==='sprintId')renderSprints()}
 function renderEpics(){
   document.getElementById('epicBody').innerHTML=epics.map(f=>{
@@ -874,7 +874,7 @@ let dragEpicId=null;
 
 function renderPlanner(){
   const w=document.getElementById('plannerWrap');
-  if(!sprints.length||!epics.length){w.innerHTML='<div class="empty">Create sprints and assign epics</div>';return}
+  if(!sprints.length||!epics.length){w.innerHTML='<div class="empty">Créez des sprints et assignez des epics</div>';return}
 
   const counts={todo:0,ongoing:0,completed:0,delayed:0,canceled:0};
   epics.forEach(ep=>{if(counts[ep.status]!==undefined)counts[ep.status]++});
@@ -946,7 +946,7 @@ function renderPlanner(){
     <div class="plan-legend-item"><div class="plan-legend-dot pld-ongoing"></div>Ongoing</div>
     <div class="plan-legend-item"><div class="plan-legend-dot pld-delayed"></div>Delayed</div>
     <div class="plan-legend-item"><div class="plan-legend-dot pld-canceled"></div>Cancelled</div>
-    <div style="margin-left:auto;font-size:9px;color:var(--text-dim)">Drag cards between sprints · Click status to change</div>
+    <div style="margin-left:auto;font-size:9px;color:var(--text-dim)">Glissez les cards entre sprints · Cliquez le statut pour changer</div>
   </div>`;
 
   html+=`</div>`;
@@ -985,7 +985,7 @@ function planDrop(e,sprintId){
   renderPlanner();
   renderSprints();
   renderEpics();
-  pill('✓ Epic moved');
+  pill('✓ Epic déplacée');
 }
 
 // ═══ STATUS DROPDOWN ═══
@@ -1036,7 +1036,7 @@ function renderPreview(){
   const sl=slides[curSlide],inner=document.getElementById('slideInner');
 
   if(sl.type==='empty'){
-    inner.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:16px;font-family:DM Sans,sans-serif">Add epics to see the preview</div>';
+    inner.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:16px;font-family:DM Sans,sans-serif">Ajoutez des epics pour voir l\'aperçu</div>';
     return;
   }
 
@@ -1150,44 +1150,44 @@ document.querySelectorAll('#templateRadios input[type=radio]').forEach(r=>{
 });
 
 function genPromptText(){
-  document.getElementById('tplPrompt').textContent=`Analyze this PowerPoint file (.pptx) that I am attaching and provide me with a JSON configuration I can use in my Sprint Planner Slide Generator (LazyPO).
+  document.getElementById('tplPrompt').textContent=`Analyse ce fichier PowerPoint (.pptx) que je joins et fournis-moi une configuration JSON que je pourrai utiliser dans mon Sprint Planner Slide Generator (LazyPO).
 
-For EACH slide in the file, extract:
+Pour CHAQUE slide du fichier, extrais :
 
 1. LAYOUT
-   - Slide dimensions (width × height in inches)
-   - Layout: columns, grid, content zones
-   - Margins and spacing
+   - Dimensions du slide (largeur × hauteur en pouces)
+   - Disposition : colonnes, grille, zones de contenu
+   - Marges et espacements
 
-2. COLORS (in HEX)
-   - Background of each zone
-   - Text colors (title, subtitle, body)
-   - Table header / column colors
-   - Status colors for Epic blocks:
-     → "To be started": background + text
-     → "Ongoing": background + text
-     → "Completed": background + text
-     → "Delayed": background + text + optional pattern (stripes…)
-     → "Canceled": background + text + style (strikethrough…)
-   - Release date color
-   - Border color
+2. COULEURS (en HEX)
+   - Background de chaque zone
+   - Couleur des textes (titre, sous-titre, body)
+   - Couleur des headers de tableau / colonnes
+   - Couleurs de statut pour les blocs Epic :
+     → "To be started" : fond + texte
+     → "Ongoing" : fond + texte
+     → "Completed" : fond + texte
+     → "Delayed" : fond + texte + pattern éventuel (rayures…)
+     → "Canceled" : fond + texte + style (barré…)
+   - Couleur des dates de Release
+   - Couleur des bordures
 
-3. TYPOGRAPHY
-   - Font name for titles / body / labels
-   - Sizes in pt
-   - Weight (regular, bold, italic)
+3. TYPOGRAPHIE
+   - Nom de la police pour titres / body / labels
+   - Tailles en pt
+   - Poids (regular, bold, italic)
 
-4. VISUAL ELEMENTS
-   - Logo (shape, color, position)
-   - Decorative shapes (badge "Under Discussion", etc.)
-   - Epic number style (white circle with shadow?)
-   - Block borders
+4. ÉLÉMENTS VISUELS
+   - Logo (forme, couleur, position)
+   - Formes décoratives (badge "Under Discussion", etc.)
+   - Style des numéros d'Epic (cercle blanc avec ombre ?)
+   - Bordures des blocs
 
-5. DATA STRUCTURE
-   - FEATURES SLIDE: table columns (names, relative widths)
-   - ROADMAP SLIDE: sprint column structure, Epic block placement, legend
+5. STRUCTURE DE DONNÉES
+   - SLIDE FEATURES : colonnes du tableau (noms, largeurs relatives)
+   - SLIDE ROADMAP : structure des colonnes de sprint, placement des blocs Epic, légende
 
-Respond ONLY with a JSON object structured as follows:
+Réponds UNIQUEMENT avec un objet JSON structuré comme ceci :
 {
   "slideWidth": 13.33,
   "slideHeight": 7.5,
@@ -1227,16 +1227,16 @@ Respond ONLY with a JSON object structured as follows:
 }`;
 }
 
-function copyPrompt(){navigator.clipboard.writeText(document.getElementById('tplPrompt').textContent);pill('✓ Prompt copied')}
+function copyPrompt(){navigator.clipboard.writeText(document.getElementById('tplPrompt').textContent);pill('✓ Prompt copié')}
 
 // ═══ DOWNLOAD PPTX ═══
 function downloadPptx(){
-  if(!epics.length){pill('⚠ No epics');return}
+  if(!epics.length){pill('⚠ Aucune epic');return}
   
-  if(typeof PptxGenJS==='undefined'){pill('⚠ PptxGenJS not loaded — check your connection');return}
+  if(typeof PptxGenJS==='undefined'){pill('⚠ PptxGenJS non chargé — vérifiez la connexion');return}
   
   try{
-  pill('⏳ Generating .pptx…');
+  pill('⏳ Génération du .pptx…');
 
   const pres=new PptxGenJS();
   pres.layout='LAYOUT_WIDE';
@@ -1382,15 +1382,15 @@ function downloadPptx(){
   }
 
   pres.writeFile({fileName:'Sprint_Planning.pptx'}).then(()=>{
-    pill('✓ .pptx downloaded');
+    pill('✓ .pptx téléchargé');
   }).catch(err=>{
     console.error('PPTX write error:',err);
-    pill('⚠ Write error: '+err.message);
+    pill('⚠ Erreur écriture: '+err.message);
   });
 
   }catch(err){
     console.error('PPTX generation error:',err);
-    pill('⚠ Error: '+err.message);
+    pill('⚠ Erreur: '+err.message);
   }
 }
 
@@ -1437,30 +1437,27 @@ function loadTestData(){
 
   const dz=document.getElementById('dropzone');
   dz.classList.add('loaded');
-  document.getElementById('dropContent').innerHTML=`<div class="loaded-info"><div><div class="count">${epics.length}</div><div style="font-size:12px;color:var(--text-dim)">epics loaded (test mode 🚗)</div></div></div>`;
+  document.getElementById('dropContent').innerHTML=`<div class="loaded-info"><div><div class="count">${epics.length}</div><div style="font-size:12px;color:var(--text-dim)">epics chargées (mode test 🚗)</div></div></div>`;
 
   renderSprints();renderEpics();
-  pill('🧪 Test mode — car project loaded');
+  pill('🧪 Test mode — projet voiture chargé');
 }
 
 // ═══ INIT ═══
 renderEpics();
 </script>
 
-<!-- TEST MODE FAB -->
-<button onclick="loadTestData()" title="Load test data" style="
-  position:fixed;bottom:24px;right:24px;z-index:200;
-  width:48px;height:48px;border-radius:50%;border:2px solid rgba(245,158,11,.4);
-  background:rgba(30,41,59,.95);color:#fbbf24;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,.4);
-  transition:all .2s;backdrop-filter:blur(8px);
-" onmouseover="this.style.transform='scale(1.1)';this.style.borderColor='#fbbf24'" onmouseout="this.style.transform='scale(1)';this.style.borderColor='rgba(245,158,11,.4)'">🧪</button>
-
 <script src="popup.js"></script>
 <script src="sidebar.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>document.addEventListener("DOMContentLoaded", function(){ LazyAuth.requireAuthOrPopup(); });</script>
+<script>
+/* ── Demo Mode — alias vers la fonction existante ── */
+window.loadDemoData = function () {
+  if (typeof loadTestData === 'function') loadTestData();
+};
+</script>
+<script src="demo.js"></script>
 </body>
 </html>

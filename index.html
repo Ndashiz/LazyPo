@@ -321,8 +321,8 @@ body {
       </div>
       <div class="stats-sep"></div>
       <div class="stat">
-        <span class="stat-val">0</span>
-        <div class="stat-label">API required</div>
+        <span class="stat-val" id="apiCount">–</span>
+        <div class="stat-label">External APIs</div>
       </div>
       <div class="stats-sep"></div>
       <div class="stat">
@@ -392,6 +392,13 @@ body {
 <script src="sidebar.js"></script>
 <script src="auth.js"></script>
 <script src="countdown.js"></script>
+<script src="apis.js"></script>
+<script>
+  (function () {
+    var el = document.getElementById('apiCount');
+    if (el && window.LAZYPO_APIS) el.textContent = window.LAZYPO_APIS.length;
+  })();
+</script>
 
 </body>
 </html>

@@ -337,6 +337,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnJoin').addEventListener('click', joinDoc);
   document.getElementById('joinInput').addEventListener('keydown', e => { if (e.key === 'Enter') joinDoc(); });
 });
+
+/* ── Demo Mode ── */
+window.loadDemoData = function () {
+  const now = Date.now();
+  const mockDocs = [
+    { short_id: 'DEMO0A1B2', title: '📋 Sprint Review — PI 2026.2',   mode: 'plaintext', total_connections: 3, updated_at: new Date(now - 2 * 60000).toISOString(),    expires_at: new Date(now + 22 * 3600000).toISOString() },
+    { short_id: 'DEMO0C3D4', title: '🚀 Product Roadmap Q3 2026',     mode: 'html',      total_connections: 1, updated_at: new Date(now - 10 * 60000).toISOString(),   expires_at: new Date(now + 20 * 3600000).toISOString() },
+    { short_id: 'DEMO0E5F6', title: '🐛 Bug Triage — Platform Team',  mode: 'plaintext', total_connections: 2, updated_at: new Date(now - 60 * 60000).toISOString(),   expires_at: new Date(now + 18 * 3600000).toISOString() },
+    { short_id: 'DEMO0G7H8', title: '✍️ Retrospective Notes S2026.2', mode: 'plaintext', total_connections: 5, updated_at: new Date(now - 3 * 3600000).toISOString(),  expires_at: new Date(now + 14 * 3600000).toISOString() },
+  ];
+  renderGrid(mockDocs);
+  /* Make mock cards non-navigating with a visual demo hint */
+  document.querySelectorAll('.doc-card').forEach(card => {
+    card.removeAttribute('href');
+    card.style.cursor = 'default';
+    card.addEventListener('click', e => {
+      e.preventDefault();
+      const t = document.getElementById('toast');
+      if (t) { t.textContent = '🧪 Demo mode — create a real document to collaborate'; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800); }
+    });
+  });
+  /* Demo banner above the grid */
+  const existing = document.getElementById('_demoBanner');
+  if (!existing) {
+    const banner = document.createElement('div');
+    banner.id = '_demoBanner';
+    banner.style.cssText = 'background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:11px 16px;font-size:13px;color:#fbbf24;margin-bottom:16px;display:flex;align-items:center;gap:8px;';
+    banner.innerHTML = '🧪 <span><strong>Demo mode</strong> — mock documents shown. Click "New document" to start collaborating for real.</span>';
+    const grid = document.getElementById('docGrid');
+    grid.parentNode.insertBefore(banner, grid);
+  }
+};
 </script>
+<script src="demo.js"></script>
 </body>
 </html>
