@@ -251,7 +251,9 @@ body {
 </head>
 <body>
 
-<div class="card">
+<div id="vanta-bg" style="position:fixed;inset:0;z-index:0;pointer-events:none;"></div>
+
+<div class="card" style="position:relative;z-index:1;">
   <!-- Logo -->
   <div class="logo">
     <div class="logo-text">LazyPO</div>
@@ -450,5 +452,22 @@ async function handleOAuth(provider) {
 }
 </script>
 <script src="focusfm.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.net.min.js"></script>
+<script>
+VANTA.NET({
+  el: '#vanta-bg',
+  mouseControls: true,
+  touchControls: true,
+  gyroControls: false,
+  minHeight: 200.00,
+  minWidth: 200.00,
+  scale: 1.00,
+  scaleMobile: 1.00,
+  color: 0xf5ecef,
+  backgroundColor: 0xa0418,
+  points: 13.00
+});
+</script>
 </body>
 </html>
