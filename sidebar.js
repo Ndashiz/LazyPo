@@ -61,6 +61,7 @@
       icon: '🎵',
       label: 'Focus FM',
       url: null,
+      onClick: "window.FocusFM?.open()",
       desc: 'Spotify integration — play your playlists without leaving the app.'
     },
     { divider: true },
@@ -322,7 +323,7 @@
     const tag        = item.url ? 'a' : 'button';
     const hrefAttr   = item.url ? `href="${item.url}"` : 'type="button"';
     const clickAttr  = !item.url
-      ? `onclick="window.showUnavailablePopup && window.showUnavailablePopup('${item.label}')"`
+      ? `onclick="${item.onClick || `window.showUnavailablePopup && window.showUnavailablePopup('${item.label}')`}"`
       : '';
 
     return `

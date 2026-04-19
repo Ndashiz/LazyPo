@@ -739,5 +739,12 @@ html.fm-focus-mode #_fm_mini { border-color:#fbbf24; box-shadow:0 0 20px rgba(25
   else boot();
 
   /* ── Public API ── */
-  window.FocusFM = { saveTokens, CLIENT_ID, REDIRECT_URI, isPlaying: () => !isPaused };
+  window.FocusFM = {
+    saveTokens,
+    CLIENT_ID,
+    REDIRECT_URI,
+    isPlaying: () => !isPaused,
+    toggle: () => toggleExpand(),
+    open:   () => { if (!isExpanded) toggleExpand(); },
+  };
 })();
