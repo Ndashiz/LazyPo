@@ -514,6 +514,7 @@
     if (!link) return;
     const href = link.getAttribute('href');
     if (!href || /^https?:\/\//.test(href) || href.startsWith('#')) return;
+    if (link.target === '_blank') return; // let browser handle new-tab links
     e.preventDefault();
     _spaNavigate(href);
   }, true);
