@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LazyPO — Documentation Technique</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ─── Reset & Base ─── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0c0c0c;
+    --surface:  #141414;
+    --surface2: #1a1a1a;
+    --border:   rgba(255,255,255,.07);
+    --border2:  rgba(255,255,255,.12);
+    --text:     #e8e8e8;
+    --muted:    #666;
+    --accent:   #3b82f6;
+    --accent2:  #60a5fa;
+    --green:    #34d399;
+    --amber:    #fbbf24;
+    --purple:   #a78bfa;
+    --pink:     #f472b6;
+    --red:      #f87171;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    display: flex;
+  }
+
+  /* ─── Sidebar TOC ─── */
+  .toc {
+    position: fixed;
+    top: 0; left: 0;
+    width: 260px;
+    height: 100vh;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 32px 0;
+    z-index: 100;
+    flex-shrink: 0;
+  }
+  .toc-logo {
+    padding: 0 24px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .toc-logo .logo-mark {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -.5px;
+  }
+  .toc-logo .logo-mark span { color: var(--accent); }
+  .toc-logo .doc-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+    font-family: 'DM Mono', monospace;
+  }
+  .toc-section {
+    padding: 4px 24px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-top: 16px;
+    margin-bottom: 4px;
+  }
+  .toc a {
+    display: block;
+    padding: 7px 24px;
+    color: #888;
+    text-decoration: none;
+    font-size: 13.5px;
+    transition: all .15s;
+    border-left: 2px solid transparent;
+  }
+  .toc a:hover { color: var(--text); background: rgba(255,255,255,.03); }
+  .toc a.active { color: var(--accent2); border-left-color: var(--accent); background: rgba(59,130,246,.05); }
+
+  /* ─── Main Content ─── */
+  .main {
+    margin-left: 260px;
+    flex: 1;
+    min-width: 0;
+    padding: 64px 72px 120px;
+    max-width: 1100px;
+  }
+
+  /* ─── Hero ─── */
+  .hero {
+    margin-bottom: 72px;
+  }
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+    color: #fff;
+    margin-bottom: 20px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero-desc {
+    font-size: 17px;
+    color: #888;
+    max-width: 580px;
+    line-height: 1.7;
+  }
+  .hero-meta {
+    display: flex;
+    gap: 32px;
+    margin-top: 32px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+  }
+  .hero-meta-item { }
+  .hero-meta-item .label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'DM Mono', monospace;
+  }
+  .hero-meta-item .value {
+    font-size: 15px;
+    color: var(--text);
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  /* ─── Sections ─── */
+  .section {
+    margin-bottom: 80px;
+    scroll-margin-top: 32px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .section-num {
+    width: 32px; height: 32px;
+    background: rgba(59,130,246,.12);
+    border: 1px solid rgba(96,165,250,.2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    color: var(--accent2);
+    flex-shrink: 0;
+  }
+  .section h2 {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -.5px;
+    color: #fff;
+  }
+  .section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 28px 0 12px;
+  }
+  .section p { color: #999; margin-bottom: 14px; }
+  .section p strong { color: var(--text); }
+
+  /* ─── Cards ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .card-sm {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .card-sm .card-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 6px;
+  }
+  .card-sm .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .card-sm .card-desc {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .card-icon {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  /* ─── Diagram wrapper ─── */
+  .diagram-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 24px;
+    margin: 20px 0 32px;
+    overflow-x: auto;
+  }
+  .diagram-caption {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    text-align: center;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ─── Table ─── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 16px 0 28px;
+  }
+  .data-table th {
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table th:first-child { border-radius: 8px 0 0 0; }
+  .data-table th:last-child  { border-radius: 0 8px 0 0; }
+  .data-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: #aaa;
+    vertical-align: top;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,.02); }
+  .data-table td:first-child { color: var(--text); font-family: 'DM Mono', monospace; font-size: 12.5px; }
+
+  /* ─── Badges ─── */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+  }
+  .badge-blue   { background: rgba(59,130,246,.1);  border: 1px solid rgba(96,165,250,.25);  color: var(--accent2); }
+  .badge-green  { background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.2);   color: var(--green); }
+  .badge-amber  { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.2);   color: var(--amber); }
+  .badge-purple { background: rgba(167,139,250,.08);border: 1px solid rgba(167,139,250,.2);  color: var(--purple); }
+  .badge-red    { background: rgba(248,113,113,.08);border: 1px solid rgba(248,113,113,.2);  color: var(--red); }
+  .badge-muted  { background: rgba(255,255,255,.05);border: 1px solid var(--border);         color: var(--muted); }
+
+  /* ─── Code ─── */
+  code {
+    font-family: 'DM Mono', monospace;
+    font-size: 12.5px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--accent2);
+  }
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 13px;
+    color: #ccc;
+  }
+
+  /* ─── Flow Legend ─── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    color: #888;
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ─── Divider ─── */
+  hr.sep {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 48px 0;
+  }
+
+  /* ─── Mermaid overrides ─── */
+  .mermaid { display: flex; justify-content: center; }
+
+  /* ─── Stack chips ─── */
+  .stack-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 24px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 12.5px;
+    font-weight: 500;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--text);
+  }
+  .chip .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+  }
+
+  /* ─── Info box ─── */
+  .info-box {
+    background: rgba(59,130,246,.06);
+    border: 1px solid rgba(96,165,250,.18);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: #88b4f0;
+  }
+  .info-box strong { color: var(--accent2); }
+
+  .warn-box {
+    background: rgba(251,191,36,.06);
+    border: 1px solid rgba(251,191,36,.18);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: #c9a43a;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #444; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR / TABLE OF CONTENTS
+══════════════════════════════════════════ -->
+<nav class="toc">
+  <div class="toc-logo">
+    <div class="logo-mark">Lazy<span>PO</span></div>
+    <div class="doc-label">Documentation Technique</div>
+  </div>
+
+  <div class="toc-section">Vue d'ensemble</div>
+  <a href="#overview">Architecture globale</a>
+  <a href="#stack">Stack technique</a>
+  <a href="#modules">Modules partagés</a>
+
+  <div class="toc-section">Base de données</div>
+  <a href="#schema">Schéma ER</a>
+  <a href="#tables">Détail des tables</a>
+  <a href="#rls">Sécurité RLS</a>
+
+  <div class="toc-section">Fonctionnalités</div>
+  <a href="#spa">Navigation SPA</a>
+  <a href="#auth">Authentification</a>
+  <a href="#focusfm">Focus FM · Spotify</a>
+  <a href="#quiz">Knowledge Quiz</a>
+  <a href="#livenote">LiveNote · Realtime</a>
+  <a href="#sow">SoW Generator</a>
+
+  <div class="toc-section">Flux & Protocoles</div>
+  <a href="#session">Gestion de session</a>
+  <a href="#sm2">Algorithme SM-2</a>
+  <a href="#storage">Stockage des données</a>
+
+  <div class="toc-section">Référence</div>
+  <a href="#apis">APIs externes</a>
+  <a href="#localstorage">localStorage Map</a>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- ─── HERO ─── -->
+  <div class="hero" id="top">
+    <div class="hero-eyebrow">v2.0 · Avril 2026</div>
+    <h1>Architecture<br>Technique <span>LazyPO</span></h1>
+    <p class="hero-desc">Documentation complète de l'architecture applicative — base de données, flux de communication, modules partagés, et intégrations externes.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <div class="label">Type</div>
+        <div class="value">Web App SPA</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Backend</div>
+        <div class="value">Supabase (PostgreSQL)</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Frontend</div>
+        <div class="value">Vanilla JS · No framework</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Déploiement</div>
+        <div class="value">Apache · ndashiz.be</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       1. ARCHITECTURE GLOBALE
+  ══════════════════════════════════════════ -->
+  <section class="section" id="overview">
+    <div class="section-header">
+      <div class="section-num">01</div>
+      <h2>Architecture globale</h2>
+    </div>
+
+    <p>LazyPO est une <strong>Single Page Application</strong> sans framework JavaScript. La navigation est gérée par un routeur maison (<code>sidebar.js</code>) qui swape le contenu de la page sans rechargement complet, préservant l'état des modules persistants (Focus FM, session, realtime).</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+graph TB
+    subgraph CLIENT["🖥️  Navigateur (Client)"]
+        direction TB
+        SB["sidebar.js\nRouter SPA"]
+        AUTH["auth.js\nAuthentification"]
+        SESS["session.js\nGestion session"]
+        FM["focusfm.js\nSpotify Player"]
+        DEMO["demo.js\nDonnées fictives"]
+
+        subgraph PAGES["Pages / Outils"]
+            P1["🏠 index.html"]
+            P2["✉️ lazypo_generator.html"]
+            P3["📋 sprintplanner.html"]
+            P4["🔍 jirarepo.html"]
+            P5["📝 livenote.html"]
+            P6["🧠 quiz.html"]
+            P7["👤 account.html"]
+        end
+    end
+
+    subgraph BACKEND["☁️  Supabase (Backend as a Service)"]
+        direction LR
+        SBAUTH["Auth\n(PKCE/email)"]
+        SBDB["PostgreSQL\n5 tables"]
+        SBREALTIME["Realtime\n(WebSocket)"]
+        SBSTORAGE["Storage\n(avatars, livenote-temp)"]
+    end
+
+    subgraph EXTERNAL["🌐  Services Externes"]
+        SPOTIFY["Spotify API\nWeb Playback SDK"]
+        GFONTS["Google Fonts\nDM Sans / DM Mono"]
+        CDN["CDN (jsDelivr)\nXLSX · PptxGenJS · CodeMirror"]
+    end
+
+    SB -->|"swap HTML\n+ re-run scripts"| PAGES
+    AUTH --> SBAUTH
+    SESS --> SBDB
+    FM --> SPOTIFY
+    P5 --> SBREALTIME
+    P6 --> SBDB
+    P7 --> SBSTORAGE
+    CLIENT --> GFONTS
+    CLIENT --> CDN
+      </div>
+      <div class="diagram-caption">Fig. 1 — Vue d'ensemble de l'architecture LazyPO</div>
+    </div>
+
+    <div class="info-box">
+      <strong>Principe clé :</strong> Aucun build step, aucun framework (React, Vue…). Chaque outil est un fichier HTML autonome qui inclut ses scripts inline. Le routeur SPA évite les rechargements de page tout en maintenant la cohérence de l'état.
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       2. STACK TECHNIQUE
+  ══════════════════════════════════════════ -->
+  <section class="section" id="stack">
+    <div class="section-header">
+      <div class="section-num">02</div>
+      <h2>Stack technique</h2>
+    </div>
+
+    <div class="stack-chips">
+      <div class="chip"><div class="dot" style="background:#3b82f6"></div>HTML5 / CSS3 / Vanilla JS</div>
+      <div class="chip"><div class="dot" style="background:#34d399"></div>Supabase (PostgreSQL + Auth + Realtime + Storage)</div>
+      <div class="chip"><div class="dot" style="background:#1db954"></div>Spotify Web Playback SDK</div>
+      <div class="chip"><div class="dot" style="background:#fbbf24"></div>XLSX.js</div>
+      <div class="chip"><div class="dot" style="background:#a78bfa"></div>PptxGenJS</div>
+      <div class="chip"><div class="dot" style="background:#f472b6"></div>CodeMirror</div>
+      <div class="chip"><div class="dot" style="background:#60a5fa"></div>Three.js + Vanta.NET</div>
+      <div class="chip"><div class="dot" style="background:#666"></div>Apache (.htaccess)</div>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Couche</th>
+          <th>Technologie</th>
+          <th>Usage</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Routing</td>
+          <td>sidebar.js (maison)</td>
+          <td>Navigation SPA, history API, script re-injection</td>
+          <td><span class="badge badge-green">Production</span></td>
+        </tr>
+        <tr>
+          <td>Auth</td>
+          <td>Supabase Auth PKCE</td>
+          <td>Email/password + approbation manuelle</td>
+          <td><span class="badge badge-green">Production</span></td>
+        </tr>
+        <tr>
+          <td>Database</td>
+          <td>PostgreSQL via Supabase</td>
+          <td>5 tables, RLS par utilisateur</td>
+          <td><span class="badge badge-green">Production</span></td>
+        </tr>
+        <tr>
+          <td>Realtime</td>
+          <td>Supabase Realtime (WebSocket)</td>
+          <td>Collaboration LiveNote, présence, broadcast</td>
+          <td><span class="badge badge-green">Production</span></td>
+        </tr>
+        <tr>
+          <td>Storage</td>
+          <td>Supabase Storage (S3-compatible)</td>
+          <td>Avatars utilisateur, images LiveNote</td>
+          <td><span class="badge badge-green">Production</span></td>
+        </tr>
+        <tr>
+          <td>Streaming</td>
+          <td>Spotify Web Playback SDK</td>
+          <td>Player audio in-browser</td>
+          <td><span class="badge badge-amber">Premium requis</span></td>
+        </tr>
+        <tr>
+          <td>Serveur</td>
+          <td>Apache 2 (.htaccess)</td>
+          <td>HTTPS redirect, URL lowercase, CSP headers</td>
+          <td><span class="badge badge-green">Production</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       3. MODULES PARTAGÉS
+  ══════════════════════════════════════════ -->
+  <section class="section" id="modules">
+    <div class="section-header">
+      <div class="section-num">03</div>
+      <h2>Modules partagés</h2>
+    </div>
+
+    <p>Cinq scripts sont chargés sur toutes les pages et maintiennent leur état pendant toute la session (ils ne sont <strong>jamais</strong> rechargés lors des navigations SPA).</p>
+
+    <div class="card-grid">
+      <div class="card-sm">
+        <div class="card-icon">🔐</div>
+        <div class="card-label">auth.js</div>
+        <div class="card-title">Authentification</div>
+        <div class="card-desc">Widget utilisateur, Supabase session, upload avatar, vérification d'approbation</div>
+      </div>
+      <div class="card-sm">
+        <div class="card-icon">⏱️</div>
+        <div class="card-label">session.js</div>
+        <div class="card-title">Gestion de session</div>
+        <div class="card-desc">Inactivité 2h, max 8h, heartbeat 2 min, détection musique active</div>
+      </div>
+      <div class="card-sm">
+        <div class="card-icon">🎵</div>
+        <div class="card-label">focusfm.js</div>
+        <div class="card-title">Focus FM</div>
+        <div class="card-desc">Spotify SDK, PKCE OAuth, mini player persistant, playlists, contrôles clavier</div>
+      </div>
+      <div class="card-sm">
+        <div class="card-icon">📌</div>
+        <div class="card-label">sidebar.js</div>
+        <div class="card-title">Routeur SPA</div>
+        <div class="card-desc">Interception des clics, fetch HTML, merge styles, re-run scripts, history API</div>
+      </div>
+      <div class="card-sm">
+        <div class="card-icon">🧪</div>
+        <div class="card-label">demo.js</div>
+        <div class="card-title">Mode démo</div>
+        <div class="card-desc">Injecte un bouton FAB 🧪 si la page expose window.loadDemoData()</div>
+      </div>
+      <div class="card-sm">
+        <div class="card-icon">⏳</div>
+        <div class="card-label">countdown.js</div>
+        <div class="card-title">Compte à rebours</div>
+        <div class="card-desc">Anneau de progression REACH / PI Planning sur la page d'accueil</div>
+      </div>
+    </div>
+
+    <h3>Ordre de chargement & priorités</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant Browser
+    participant sidebar.js
+    participant auth.js
+    participant session.js
+    participant focusfm.js
+
+    Browser->>sidebar.js: DOMContentLoaded
+    sidebar.js->>Browser: intercept all &lt;a&gt; clicks
+
+    Browser->>auth.js: DOMContentLoaded
+    auth.js->>auth.js: checkUser()
+    auth.js-->>Browser: render user widget
+
+    Note over auth.js,session.js: session.js lazy-loaded après auth réussie
+    auth.js->>session.js: import (lazy)
+    session.js->>session.js: registerSession()
+    session.js->>session.js: startInactivityTimer()
+
+    Browser->>focusfm.js: DOMContentLoaded
+    focusfm.js->>focusfm.js: loadTokens() from localStorage
+    focusfm.js-->>Browser: render mini player (if token)
+
+    Note over Browser,focusfm.js: Navigation SPA (aucun rechargement modules)
+    Browser->>sidebar.js: click nav link
+    sidebar.js->>Browser: fetch new page HTML
+    sidebar.js->>Browser: swap #page-content
+    sidebar.js->>Browser: re-run page scripts only
+      </div>
+      <div class="diagram-caption">Fig. 2 — Séquence d'initialisation des modules partagés</div>
+    </div>
+  </section>
+
+  <hr class="sep">
+
+  <!-- ══════════════════════════════════════════
+       4. SCHÉMA ER
+  ══════════════════════════════════════════ -->
+  <section class="section" id="schema">
+    <div class="section-header">
+      <div class="section-num">04</div>
+      <h2>Schéma Entité-Relation</h2>
+    </div>
+
+    <p>La base de données comporte <strong>5 tables</strong> dans le schéma public, toutes liées à <code>auth.users</code> (géré par Supabase) avec cascade delete.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+erDiagram
+    AUTH_USERS {
+        uuid id PK
+        text email
+        timestamptz created_at
+    }
+
+    PROFILES {
+        uuid id PK
+        text username
+        text avatar_url
+        boolean is_admin
+        boolean is_approved
+        timestamptz created_at
+    }
+
+    USER_SESSIONS {
+        uuid id PK
+        uuid user_id FK
+        text device_info
+        timestamptz last_seen
+        boolean is_active
+        timestamptz created_at
+    }
+
+    VOCABULARY {
+        uuid id PK
+        uuid user_id FK
+        text source_word
+        text target_translation
+        text language_pair
+        text example_sentence
+        boolean is_system
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    QUIZ_PROGRESS {
+        uuid id PK
+        uuid user_id FK
+        uuid word_id FK
+        int correct
+        int attempts
+        timestamptz last_tested
+        float ease_factor
+        int interval_days
+    }
+
+    LIVENOTE_DOCS {
+        uuid id PK
+        text short_id
+        text title
+        text content
+        text mode
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz auto_delete_at
+    }
+
+    AUTH_USERS ||--|| PROFILES : "1-1"
+    AUTH_USERS ||--o{ USER_SESSIONS : "1-N"
+    AUTH_USERS ||--o{ VOCABULARY : "1-N"
+    AUTH_USERS ||--o{ QUIZ_PROGRESS : "1-N"
+    VOCABULARY ||--o{ QUIZ_PROGRESS : "1-N"
+      </div>
+      <div class="diagram-caption">Fig. 3 — Diagramme Entité-Relation complet</div>
+    </div>
+
+    <div class="info-box">
+      <strong>Note :</strong> <code>livenote_docs</code> n'a pas de <code>user_id</code> — les documents sont partagés anonymement via un <code>short_id</code> unique (6 caractères). L'accès est contrôlé uniquement par la connaissance du short_id.
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       5. DÉTAIL DES TABLES
+  ══════════════════════════════════════════ -->
+  <section class="section" id="tables">
+    <div class="section-header">
+      <div class="section-num">05</div>
+      <h2>Détail des tables</h2>
+    </div>
+
+    <h3>profiles</h3>
+    <table class="data-table">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>uuid</td><td>PK · FK → auth.users</td><td>Même ID que l'utilisateur Supabase Auth</td></tr>
+        <tr><td>username</td><td>text</td><td></td><td>Nom d'affichage</td></tr>
+        <tr><td>avatar_url</td><td>text</td><td></td><td>URL Storage bucket <code>avatars</code></td></tr>
+        <tr><td>is_admin</td><td>boolean</td><td>default false</td><td>Accès administration</td></tr>
+        <tr><td>is_approved</td><td>boolean</td><td>default false</td><td>Approbation manuelle requise pour accéder à l'app</td></tr>
+        <tr><td>created_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h3>user_sessions</h3>
+    <table class="data-table">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>uuid</td><td>PK · gen_random_uuid()</td><td></td></tr>
+        <tr><td>user_id</td><td>uuid</td><td>FK → auth.users (cascade)</td><td></td></tr>
+        <tr><td>device_info</td><td>text</td><td></td><td>User-agent + infos navigateur</td></tr>
+        <tr><td>last_seen</td><td>timestamptz</td><td>default now()</td><td>Mis à jour toutes les 2 min (heartbeat)</td></tr>
+        <tr><td>is_active</td><td>boolean</td><td>default true</td><td>False quand session révoquée ou expirée</td></tr>
+        <tr><td>created_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h3>vocabulary</h3>
+    <table class="data-table">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>uuid</td><td>PK</td><td></td></tr>
+        <tr><td>user_id</td><td>uuid</td><td>FK → auth.users (cascade)</td><td></td></tr>
+        <tr><td>source_word</td><td>text</td><td>not null</td><td>Mot dans la langue source (ex: "de auto")</td></tr>
+        <tr><td>target_translation</td><td>text</td><td>not null</td><td>Traduction (ex: "voiture")</td></tr>
+        <tr><td>language_pair</td><td>text</td><td>default 'EN→FR'</td><td><code>EN→FR</code>, <code>NL→FR</code>, <code>nl-fr</code></td></tr>
+        <tr><td>example_sentence</td><td>text</td><td></td><td>Phrase d'exemple dans la langue source</td></tr>
+        <tr><td>is_system</td><td>boolean</td><td>default false</td><td>Mots importés (protégés) vs mots utilisateur</td></tr>
+        <tr><td>created_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
+        <tr><td>updated_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h3>quiz_progress</h3>
+    <table class="data-table">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>uuid</td><td>PK</td><td></td></tr>
+        <tr><td>user_id</td><td>uuid</td><td>FK → auth.users</td><td></td></tr>
+        <tr><td>word_id</td><td>uuid</td><td>FK → vocabulary (cascade)</td><td></td></tr>
+        <tr><td>correct</td><td>int</td><td>default 0</td><td>Nombre de bonnes réponses</td></tr>
+        <tr><td>attempts</td><td>int</td><td>default 0</td><td>Nombre total de tentatives</td></tr>
+        <tr><td>last_tested</td><td>timestamptz</td><td></td><td>Dernière révision</td></tr>
+        <tr><td>ease_factor</td><td>float</td><td>default 2.5</td><td>Facteur SM-2 (2.5 = neutre, min 1.3)</td></tr>
+        <tr><td>interval_days</td><td>int</td><td>default 1</td><td>Intervalle avant prochaine révision (jours)</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Contrainte unique :</strong> <code>(user_id, word_id)</code> — un seul enregistrement de progression par mot par utilisateur.</p>
+
+    <h3>livenote_docs</h3>
+    <table class="data-table">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>uuid</td><td>PK</td><td></td></tr>
+        <tr><td>short_id</td><td>text</td><td>unique</td><td>Identifiant court (6 chars) pour le partage</td></tr>
+        <tr><td>title</td><td>text</td><td>default 'Untitled'</td><td></td></tr>
+        <tr><td>content</td><td>text</td><td></td><td>Contenu du document (plaintext ou HTML)</td></tr>
+        <tr><td>mode</td><td>text</td><td></td><td><code>'plaintext'</code> ou <code>'html'</code></td></tr>
+        <tr><td>created_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
+        <tr><td>updated_at</td><td>timestamptz</td><td>default now()</td><td>Mis à jour à chaque sauvegarde</td></tr>
+        <tr><td>auto_delete_at</td><td>timestamptz</td><td>nullable</td><td>Expiration en 24h si activée</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       6. SÉCURITÉ RLS
+  ══════════════════════════════════════════ -->
+  <section class="section" id="rls">
+    <div class="section-header">
+      <div class="section-num">06</div>
+      <h2>Sécurité — Row Level Security</h2>
+    </div>
+
+    <p>Toutes les tables sont protégées par des <strong>Policies RLS PostgreSQL</strong> côté Supabase. Un utilisateur ne peut accéder qu'à ses propres données.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    REQ["Requête client\nsupabase.from('vocabulary').select()"] --> JWT["JWT token\n(Supabase Auth)"]
+    JWT --> RLS{{"RLS Policy\nauth.uid() = user_id"}}
+    RLS -->|"✅ Correspond"| DATA["Retourne les données\nde l'utilisateur"]
+    RLS -->|"❌ Ne correspond pas"| EMPTY["Retourne 0 résultats\n(pas d'erreur)"]
+    DATA --> CLIENT["Application cliente"]
+    EMPTY --> CLIENT
+      </div>
+      <div class="diagram-caption">Fig. 4 — Flux de validation RLS pour chaque requête</div>
+    </div>
+
+    <table class="data-table">
+      <thead><tr><th>Table</th><th>Policy</th><th>Règle</th></tr></thead>
+      <tbody>
+        <tr><td>profiles</td><td>own_profile</td><td><code>auth.uid() = id</code></td></tr>
+        <tr><td>user_sessions</td><td>own_sessions</td><td><code>auth.uid() = user_id</code></td></tr>
+        <tr><td>vocabulary</td><td>own_vocabulary</td><td><code>auth.uid() = user_id</code></td></tr>
+        <tr><td>quiz_progress</td><td>own_progress</td><td><code>auth.uid() = user_id</code></td></tr>
+        <tr><td>livenote_docs</td><td>public_read</td><td>Lecture publique, écriture authentifiée</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr class="sep">
+
+  <!-- ══════════════════════════════════════════
+       7. NAVIGATION SPA
+  ══════════════════════════════════════════ -->
+  <section class="section" id="spa">
+    <div class="section-header">
+      <div class="section-num">07</div>
+      <h2>Navigation SPA — sidebar.js</h2>
+    </div>
+
+    <p>Le routeur SPA évite les rechargements de page entière. Il fetch le HTML de la nouvelle page, extrait le contenu, et réinjecte uniquement ce qui a changé — tout en préservant les modules persistants.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    CLICK["👆 Clic sur lien\nde navigation"] --> INTERCEPT["sidebar.js\nintercept click()"]
+    INTERCEPT --> SKIPCHECK{"Script dans\nliste d'exclusion?"}
+    SKIPCHECK -->|"Oui\n(sidebar, auth, focusfm,\nsession, countdown...)"| SKIP["⏭️ Ne pas recharger\nce script"]
+    SKIPCHECK -->|Non| FETCH["fetch(newUrl)\nGET HTML complet"]
+    FETCH --> PARSE["Parser le HTML\nDOMParser"]
+    PARSE --> STYLES["Merger les &lt;style&gt;\net &lt;link&gt; CSS"]
+    STYLES --> SWAP["Remplacer\n#page-content"]
+    SWAP --> SCRIPTS["Re-exécuter\nles &lt;script&gt; inline\nde la nouvelle page"]
+    SCRIPTS --> HISTORY["history.pushState()\nMise à jour URL"]
+    HISTORY --> DONE["✅ Navigation terminée\nFocus FM continue ♪\nSession active ✓"]
+
+    style DONE fill:#0f2a1a,stroke:#34d399,color:#34d399
+    style SKIP fill:#1a1a0f,stroke:#fbbf24,color:#fbbf24
+      </div>
+      <div class="diagram-caption">Fig. 5 — Flux de navigation SPA (sidebar.js)</div>
+    </div>
+
+    <h3>Scripts exclus du rechargement</h3>
+    <div class="stack-chips">
+      <div class="chip">sidebar.js</div>
+      <div class="chip">auth.js</div>
+      <div class="chip">focusfm.js</div>
+      <div class="chip">session.js</div>
+      <div class="chip">countdown.js</div>
+      <div class="chip">popup.js</div>
+      <div class="chip">demo.js</div>
+      <div class="chip">apis.js</div>
+      <div class="chip">supabase-js (CDN)</div>
+      <div class="chip">vanta.min.js</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       8. AUTHENTIFICATION
+  ══════════════════════════════════════════ -->
+  <section class="section" id="auth">
+    <div class="section-header">
+      <div class="section-num">08</div>
+      <h2>Authentification — auth.js</h2>
+    </div>
+
+    <p>L'authentification utilise <strong>Supabase Auth</strong> avec email/password + un système d'<strong>approbation manuelle</strong> par un admin. Sans approbation, l'utilisateur voit une page d'attente.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    actor User as 👤 Utilisateur
+    participant App as Application
+    participant Auth as Supabase Auth
+    participant DB as PostgreSQL
+
+    User->>App: Saisit email + mot de passe
+    App->>Auth: signInWithPassword()
+    Auth-->>App: session JWT
+
+    App->>DB: SELECT * FROM profiles WHERE id = user_id
+    DB-->>App: { is_approved: bool, is_admin: bool }
+
+    alt is_approved = false
+        App-->>User: 🔒 Page "En attente d'approbation"
+    else is_approved = true
+        App-->>User: ✅ Accès accordé
+        App->>App: loadUserWidget()
+        App->>Auth: import session.js (lazy)
+    end
+
+    Note over App,DB: Inscription (signUp)
+    User->>App: Formulaire inscription
+    App->>Auth: signUp()
+    Auth->>DB: INSERT INTO profiles (id, username, is_approved=false)
+    DB-->>App: profil créé
+    App-->>User: 📧 Email de confirmation + attente approbation
+      </div>
+      <div class="diagram-caption">Fig. 6 — Flux d'authentification et d'approbation</div>
+    </div>
+
+    <h3>Gestion de l'avatar</h3>
+    <p>Les avatars sont uploadés dans le bucket Supabase Storage <code>avatars</code> avec le chemin <code>{user_id}/avatar.{ext}</code>. Le bucket est en lecture publique, écriture authentifiée.</p>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       9. FOCUS FM — SPOTIFY
+  ══════════════════════════════════════════ -->
+  <section class="section" id="focusfm">
+    <div class="section-header">
+      <div class="section-num">09</div>
+      <h2>Focus FM — Intégration Spotify</h2>
+    </div>
+
+    <p>Focus FM est un player Spotify intégré directement dans le navigateur via le <strong>Web Playback SDK</strong>. Il utilise OAuth 2.0 PKCE pour l'authentification et persiste à travers toutes les navigations SPA.</p>
+
+    <h3>Flux OAuth PKCE</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    actor User as 👤 Utilisateur
+    participant App as LazyPO (focusfm.js)
+    participant LS as localStorage
+    participant Spotify as Spotify OAuth
+    participant CB as spotify-callback.html
+
+    User->>App: Clic "Connecter Spotify"
+    App->>App: generatePKCE()\n(code_verifier + code_challenge)
+    App->>LS: fm_pkce_verifier\nfm_pkce_state\nfm_return_url
+    App->>Spotify: Redirect → accounts.spotify.com/authorize\n?code_challenge=...&scope=streaming...
+
+    Spotify->>User: Page d'autorisation Spotify
+    User->>Spotify: ✅ Autorise l'accès
+
+    Spotify->>CB: Redirect → /spotify-callback.html\n?code=AUTH_CODE&state=...
+
+    CB->>LS: Lire fm_pkce_verifier
+    CB->>Spotify: POST /api/token\n{code, code_verifier}
+    Spotify-->>CB: { access_token, refresh_token, expires_in }
+    CB->>LS: fm_access_token\nfm_refresh_token\nfm_token_expiry
+    CB->>App: window.location = fm_return_url
+
+    App->>App: initSpotifyPlayer(access_token)
+    App-->>User: 🎵 Player prêt
+      </div>
+      <div class="diagram-caption">Fig. 7 — Flux OAuth 2.0 PKCE Spotify</div>
+    </div>
+
+    <h3>Persistance de session Spotify</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    START["Page chargée\nou navigation SPA"] --> LOAD["loadTokens()\nfrom localStorage"]
+    LOAD --> CHECK{"isExpired()?"}
+    CHECK -->|"Non (token valide)"| SDK["Initialiser SDK\nSpotify"]
+    CHECK -->|"Oui (expiré)"| REFRESH["refreshToken()\nPOST /api/token\n{refresh_token, grant_type}"]
+    REFRESH -->|"✅ Succès"| SAVE["Sauver nouveaux tokens\nen localStorage"]
+    SAVE --> SDK
+    REFRESH -->|"❌ Échec"| RENDER["render()\nAfficher bouton\n'Connecter Spotify'"]
+    SDK --> PLAYER["Spotify.Player()\ngetOAuthToken callback"]
+    PLAYER --> AUTH_ERR{"authentication_error?"}
+    AUTH_ERR -->|Oui| REFRESH
+    AUTH_ERR -->|Non| READY["✅ Player actif\n🎵 Lecture possible"]
+
+    style READY fill:#0f2a1a,stroke:#34d399,color:#34d399
+    style RENDER fill:#2a0f0f,stroke:#f87171,color:#f87171
+      </div>
+      <div class="diagram-caption">Fig. 8 — Logique de persistance de session Spotify (focusfm.js)</div>
+    </div>
+
+    <h3>Scopes Spotify requis</h3>
+    <div class="stack-chips">
+      <div class="chip">streaming</div>
+      <div class="chip">user-read-email</div>
+      <div class="chip">user-read-private</div>
+      <div class="chip">user-read-playback-state</div>
+      <div class="chip">user-modify-playback-state</div>
+      <div class="chip">user-read-currently-playing</div>
+      <div class="chip">playlist-read-private</div>
+      <div class="chip">user-library-read</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       10. KNOWLEDGE QUIZ
+  ══════════════════════════════════════════ -->
+  <section class="section" id="quiz">
+    <div class="section-header">
+      <div class="section-num">10</div>
+      <h2>Knowledge Quiz — quiz.html</h2>
+    </div>
+
+    <p>Le module Quiz gère du vocabulaire multilingue avec <strong>répétition espacée SM-2</strong>, quiz bidirectionnel, et distinction mots système / utilisateur.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph SETUP["⚙️ Configuration Quiz"]
+        LP["Filtre langue\nEN→FR / NL→FR / all"]
+        MODE["Mode\nauto / forward / reverse"]
+        SYSF["Mots système\ninclure / exclure / uniquement"]
+        COUNT["Nombre de mots"]
+    end
+
+    subgraph BUILD["🏗️ Construction queue"]
+        FILTER["filterVocabForQuiz()\nappliquer filtres"]
+        SHUFFLE["Mélanger aléatoirement"]
+        ASSIGN["Assigner direction\npar item (mode auto)"]
+    end
+
+    subgraph QUIZ["❓ Session Quiz"]
+        SHOW["showQuestion()\nAfficher mot source"]
+        BADGE["Badge direction\nNL→FR / FR→NL"]
+        INPUT["Saisie réponse\nutilisateur"]
+        CHECK{"checkAnswer()\nLevenshtein ≤ 1?"}
+        CORRECT["✅ Correct\n+1 correct +1 attempts"]
+        WRONG["❌ Incorrect\n+1 attempts\nafficher bonne réponse"]
+    end
+
+    subgraph SM2["📊 SM-2 Update"]
+        CALC["Calculer quality\n(0-5 selon résultat)"]
+        EF["Mettre à jour\nease_factor"]
+        INT["Calculer\ninterval_days"]
+        SAVE["Upsert quiz_progress\n(Supabase)"]
+    end
+
+    SETUP --> BUILD
+    BUILD --> FILTER --> SHUFFLE --> ASSIGN
+    ASSIGN --> QUIZ
+    SHOW --> BADGE --> INPUT --> CHECK
+    CHECK -->|Oui| CORRECT --> SM2
+    CHECK -->|Non| WRONG --> SM2
+    SM2 --> CALC --> EF --> INT --> SAVE
+    SAVE -->|"Mot suivant"| SHOW
+      </div>
+      <div class="diagram-caption">Fig. 9 — Architecture du module Knowledge Quiz</div>
+    </div>
+
+    <h3>Protection des mots système</h3>
+    <table class="data-table">
+      <thead><tr><th>Action</th><th>Mots système (is_system=true)</th><th>Mots utilisateur (is_system=false)</th></tr></thead>
+      <tbody>
+        <tr><td>Affichage</td><td><span class="badge badge-purple">🤖 système</span></td><td><span class="badge badge-green">👤 moi</span></td></tr>
+        <tr><td>Suppression</td><td>❌ Bouton absent</td><td>✅ Bouton 🗑️ présent</td></tr>
+        <tr><td>Édition</td><td>❌ Bloqué (toast)</td><td>✅ Autorisé</td></tr>
+        <tr><td>Import</td><td>Automatiquement <code>is_system: true</code></td><td>Ajout manuel via formulaire</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       11. SM-2 ALGORITHM
+  ══════════════════════════════════════════ -->
+  <section class="section" id="sm2">
+    <div class="section-header">
+      <div class="section-num">11</div>
+      <h2>Algorithme SM-2 — Répétition espacée</h2>
+    </div>
+
+    <p>L'algorithme <strong>SuperMemo 2</strong> calcule l'intervalle optimal entre deux révisions d'un mot, selon la qualité de la réponse de l'utilisateur.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    ANS["Réponse utilisateur"] --> Q{"Qualité de réponse\nq = ?"}
+
+    Q -->|"Correct du premier coup\nq = 5"| Q5["q = 5"]
+    Q -->|"Correct après hésitation\nq = 3"| Q3["q = 3"]
+    Q -->|"Incorrect\nq = 1"| Q1["q = 1"]
+
+    Q5 --> EF_CALC["Nouveau EF =\nEF + (0.1 - (5-q) × (0.08 + (5-q) × 0.02))"]
+    Q3 --> EF_CALC
+    Q1 --> EF_RESET["EF inchangé\nInterval = 1 (reset)"]
+
+    EF_CALC --> EF_CLAMP["EF = max(1.3, EF)"]
+    EF_CLAMP --> INT_CALC{"n (répétition) = ?"}
+
+    INT_CALC -->|"n = 1"| I1["interval = 1 jour"]
+    INT_CALC -->|"n = 2"| I2["interval = 6 jours"]
+    INT_CALC -->|"n > 2"| IN["interval = prev_interval × EF"]
+
+    I1 --> NEXT["📅 Prochaine révision =\nnow + interval_days"]
+    I2 --> NEXT
+    IN --> NEXT
+    EF_RESET --> NEXT
+
+    NEXT --> DB["Upsert quiz_progress\n{ ease_factor, interval_days, last_tested }"]
+
+    style NEXT fill:#0c1e2a,stroke:#3b82f6,color:#60a5fa
+    style DB fill:#0f2a1a,stroke:#34d399,color:#34d399
+      </div>
+      <div class="diagram-caption">Fig. 10 — Algorithme SM-2 (SuperMemo 2) de répétition espacée</div>
+    </div>
+
+    <h3>Tolérance aux fautes de frappe</h3>
+    <p>Les réponses avec <strong>1 caractère de différence</strong> (distance de Levenshtein ≤ 1) sont acceptées comme correctes, mais avec un score de qualité légèrement réduit. Cela évite les faux négatifs sur des erreurs de saisie mineures.</p>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       12. LIVENOTE REALTIME
+  ══════════════════════════════════════════ -->
+  <section class="section" id="livenote">
+    <div class="section-header">
+      <div class="section-num">12</div>
+      <h2>LiveNote — Collaboration temps réel</h2>
+    </div>
+
+    <p>LiveNote permet l'édition collaborative de documents via <strong>Supabase Realtime</strong> (WebSocket). Chaque document possède un <code>short_id</code> unique de 6 caractères qui sert d'identifiant de canal de diffusion.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant A as 👤 Utilisateur A
+    participant AppA as App A (Browser)
+    participant SB as Supabase Realtime
+    participant AppB as App B (Browser)
+    participant B as 👤 Utilisateur B
+
+    A->>AppA: Ouvre /livenote_editor?id=abc123
+    AppA->>SB: subscribe channel 'livenote:abc123'
+    SB-->>AppA: ✅ connected
+
+    B->>AppB: Ouvre /livenote_editor?id=abc123
+    AppB->>SB: subscribe channel 'livenote:abc123'
+    SB-->>AppA: broadcast: { type: 'presence', user: B }
+    AppA-->>A: "2 connectés"
+
+    A->>AppA: Tape du texte
+    AppA->>AppA: debounce(500ms)
+    AppA->>SB: broadcast { type: 'content-change', content: '...', cursor: 42 }
+    SB-->>AppB: broadcast reçu
+    AppB-->>B: Mise à jour temps réel
+
+    AppA->>SB: UPDATE livenote_docs SET content=... WHERE short_id='abc123'
+    Note over AppA,SB: Sauvegarde DB toutes les 2s
+
+    AppA-->>AppA: Détection hors-ligne
+    AppA-->>A: 🔴 Banner "Connexion perdue"
+      </div>
+      <div class="diagram-caption">Fig. 11 — Flux de collaboration temps réel LiveNote</div>
+    </div>
+
+    <h3>Stockage des images</h3>
+    <p>Les images collées ou uploadées dans l'éditeur HTML sont automatiquement envoyées dans le bucket <code>livenote-temp</code> avec un TTL de <strong>30 minutes</strong>. Un <code>setTimeout</code> côté client supprime le fichier après expiration.</p>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       13. SOW GENERATOR
+  ══════════════════════════════════════════ -->
+  <section class="section" id="sow">
+    <div class="section-header">
+      <div class="section-num">13</div>
+      <h2>Scope of Work Generator</h2>
+    </div>
+
+    <p>L'outil SoW génère des emails de Scope of Work au format HTML, prêts à coller dans Outlook. Il fonctionne <strong>entièrement côté client</strong>, sans aucune requête serveur.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph INPUT["📥 Sources de données"]
+        EXCEL["Import Excel\n(.xlsx / .csv)\nXLSX.js"]
+        FORM["Formulaire\n(titre, thème, signature)"]
+        LS2["localStorage\n(état persisté)"]
+    end
+
+    subgraph PROCESS["⚙️ Traitement"]
+        PARSE2["Parser Excel\nExtract epics"]
+        TEMPLATE["Template HTML\nEmail Outlook"]
+        PREVIEW["Prévisualisation\nlive dans iframe"]
+    end
+
+    subgraph OUTPUT["📤 Export"]
+        COPY["Copier HTML\nclipboard"]
+        DOWNLOAD["Télécharger .eml\n(Outlook ready)"]
+    end
+
+    EXCEL --> PARSE2
+    FORM --> TEMPLATE
+    LS2 --> FORM
+    PARSE2 --> TEMPLATE
+    TEMPLATE --> PREVIEW
+    TEMPLATE --> COPY
+    TEMPLATE --> DOWNLOAD
+      </div>
+      <div class="diagram-caption">Fig. 12 — Flux du générateur Scope of Work</div>
+    </div>
+  </section>
+
+  <hr class="sep">
+
+  <!-- ══════════════════════════════════════════
+       14. GESTION DE SESSION
+  ══════════════════════════════════════════ -->
+  <section class="section" id="session">
+    <div class="section-header">
+      <div class="section-num">14</div>
+      <h2>Gestion de session — session.js</h2>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    LOAD2["Auth réussie\n(lazy import session.js)"] --> REGISTER["INSERT user_sessions\n{ device_info, is_active: true }"]
+    REGISTER --> TIMER["Démarrer timers\n• Heartbeat: 2 min\n• Inactivité: vérif. 1 min"]
+
+    TIMER --> HEARTBEAT["Heartbeat\nUPDATE last_seen = now()"]
+    TIMER --> INACT_CHECK{"Durée inactivité\n> 2h ?"}
+
+    INACT_CHECK -->|Non| MUSIC_CHECK{"Musique\nen cours ?"}
+    MUSIC_CHECK -->|Oui| EXEMPT["⏸️ Exempté\n(Focus FM actif)"]
+    MUSIC_CHECK -->|Non| INACT_CHECK
+
+    INACT_CHECK -->|Oui| MAX_CHECK{"Durée totale\n> 8h ?"}
+    MAX_CHECK -->|Non| WARN["⚠️ Avertissement\n5 min avant déconnexion"]
+    WARN --> LAST_CHANCE{"Activité\ndétectée ?"}
+    LAST_CHANCE -->|Oui| TIMER
+    LAST_CHANCE -->|Non| LOGOUT
+
+    MAX_CHECK -->|Oui| LOGOUT["🔒 Déconnexion\nsupabase.auth.signOut()\nupdate is_active = false"]
+
+    style LOGOUT fill:#2a0f0f,stroke:#f87171,color:#f87171
+    style EXEMPT fill:#1a1a0f,stroke:#fbbf24,color:#fbbf24
+      </div>
+      <div class="diagram-caption">Fig. 13 — Flux de gestion des sessions et d'inactivité</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       15. STOCKAGE DES DONNÉES
+  ══════════════════════════════════════════ -->
+  <section class="section" id="storage">
+    <div class="section-header">
+      <div class="section-num">15</div>
+      <h2>Stockage des données — Vue complète</h2>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+graph TB
+    subgraph BROWSER["🖥️ Navigateur"]
+        subgraph LS["localStorage"]
+            FM_KEYS["Focus FM\nfm_access_token\nfm_refresh_token\nfm_token_expiry\nfm_volume · fm_last_playlist\nfm_focus_mode · fm_pkce_*"]
+            JIRA_KEYS["Jira Repo\njiraQueries (JSON array)"]
+            SOW_KEYS["SoW Generator\n(état formulaire)"]
+        end
+    end
+
+    subgraph SUPABASE["☁️ Supabase"]
+        subgraph PG["PostgreSQL"]
+            T1["profiles"]
+            T2["user_sessions"]
+            T3["vocabulary"]
+            T4["quiz_progress"]
+            T5["livenote_docs"]
+        end
+        subgraph STORE["Storage Buckets"]
+            B1["avatars/\n(public read)"]
+            B2["livenote-temp/\n(30min TTL)"]
+        end
+        subgraph RT["Realtime"]
+            CH["channels\nlivenote:{short_id}"]
+        end
+    end
+
+    auth.js --> T1
+    session.js --> T2
+    quiz.html --> T3
+    quiz.html --> T4
+    livenote_editor.html --> T5
+    livenote_editor.html --> B2
+    livenote_editor.html --> CH
+    account.html --> B1
+    focusfm.js --> FM_KEYS
+    jirarepo.html --> JIRA_KEYS
+    lazypo_generator.html --> SOW_KEYS
+      </div>
+      <div class="diagram-caption">Fig. 14 — Carte complète du stockage des données par module</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       16. APIS EXTERNES
+  ══════════════════════════════════════════ -->
+  <section class="section" id="apis">
+    <div class="section-header">
+      <div class="section-num">16</div>
+      <h2>APIs et services externes</h2>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr><th>Service</th><th>Endpoint / Package</th><th>Usage</th><th>Auth</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Supabase</td>
+          <td><code>hrvxhnmtvzvrsmmmmtsv.supabase.co</code></td>
+          <td>Auth, DB, Realtime, Storage</td>
+          <td><span class="badge badge-blue">Anon key + JWT</span></td>
+        </tr>
+        <tr>
+          <td>Spotify Web API</td>
+          <td><code>api.spotify.com/v1</code></td>
+          <td>Playlists, token refresh</td>
+          <td><span class="badge badge-green">OAuth PKCE</span></td>
+        </tr>
+        <tr>
+          <td>Spotify Playback SDK</td>
+          <td><code>sdk.scdn.co/spotify-player.js</code></td>
+          <td>Player in-browser</td>
+          <td><span class="badge badge-green">access_token</span></td>
+        </tr>
+        <tr>
+          <td>Spotify Accounts</td>
+          <td><code>accounts.spotify.com/authorize</code></td>
+          <td>OAuth flow</td>
+          <td><span class="badge badge-amber">PKCE</span></td>
+        </tr>
+        <tr>
+          <td>Google Fonts</td>
+          <td><code>fonts.googleapis.com</code></td>
+          <td>DM Sans, DM Mono</td>
+          <td><span class="badge badge-muted">Public</span></td>
+        </tr>
+        <tr>
+          <td>jsDelivr CDN</td>
+          <td><code>cdn.jsdelivr.net</code></td>
+          <td>Mermaid, PptxGenJS, CodeMirror</td>
+          <td><span class="badge badge-muted">Public</span></td>
+        </tr>
+        <tr>
+          <td>Cloudflare CDN</td>
+          <td><code>cdnjs.cloudflare.com</code></td>
+          <td>XLSX.js</td>
+          <td><span class="badge badge-muted">Public</span></td>
+        </tr>
+        <tr>
+          <td>Three.js / Vanta</td>
+          <td><code>cdn.jsdelivr.net/npm/vanta</code></td>
+          <td>Fond animé page d'accueil</td>
+          <td><span class="badge badge-muted">Public</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       17. LOCALSTORAGE MAP
+  ══════════════════════════════════════════ -->
+  <section class="section" id="localstorage">
+    <div class="section-header">
+      <div class="section-num">17</div>
+      <h2>localStorage Map</h2>
+    </div>
+
+    <table class="data-table">
+      <thead><tr><th>Clé</th><th>Module</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>fm_access_token</td><td>focusfm.js</td><td>string</td><td>Token Spotify (expire en ~1h)</td></tr>
+        <tr><td>fm_refresh_token</td><td>focusfm.js</td><td>string</td><td>Refresh token Spotify (long-lived)</td></tr>
+        <tr><td>fm_token_expiry</td><td>focusfm.js</td><td>number (ms)</td><td>Timestamp d'expiration du access token</td></tr>
+        <tr><td>fm_volume</td><td>focusfm.js</td><td>number (0-1)</td><td>Volume du player</td></tr>
+        <tr><td>fm_expanded</td><td>focusfm.js</td><td>boolean</td><td>Panneau playlist ouvert/fermé</td></tr>
+        <tr><td>fm_last_playlist</td><td>focusfm.js</td><td>string (URI)</td><td>Dernière playlist jouée</td></tr>
+        <tr><td>fm_focus_mode</td><td>focusfm.js</td><td>boolean</td><td>Mode focus (overlay sombre)</td></tr>
+        <tr><td>fm_playlist_tab</td><td>focusfm.js</td><td>string</td><td>Tab active (curated / user)</td></tr>
+        <tr><td>fm_was_playing</td><td>focusfm.js</td><td>boolean</td><td>Reprendre lecture après navigation SPA</td></tr>
+        <tr><td>fm_pkce_verifier</td><td>focusfm.js</td><td>string</td><td>PKCE code_verifier (OAuth flow)</td></tr>
+        <tr><td>fm_pkce_state</td><td>focusfm.js</td><td>string</td><td>State CSRF protection (OAuth flow)</td></tr>
+        <tr><td>fm_return_url</td><td>focusfm.js</td><td>string (URL)</td><td>URL de retour post-OAuth</td></tr>
+        <tr><td>jiraQueries</td><td>jirarepo.html</td><td>JSON array</td><td>Requêtes JQL sauvegardées</td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      ⚠️ Les tokens Spotify (<code>fm_access_token</code>, <code>fm_refresh_token</code>) sont stockés en clair dans localStorage. Acceptable pour une app personnelle, mais à noter dans un contexte de sécurité étendu.
+    </div>
+  </section>
+
+  <hr class="sep">
+
+  <!-- ─── Footer ─── -->
+  <div style="text-align:center; color: var(--muted); font-size: 13px; font-family: 'DM Mono', monospace; padding-top: 16px;">
+    LazyPO · Documentation Technique · Avril 2026
+  </div>
+
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background:        '#141414',
+      primaryColor:      '#1e3a5f',
+      primaryTextColor:  '#e8e8e8',
+      primaryBorderColor:'#3b82f6',
+      lineColor:         '#4b5563',
+      secondaryColor:    '#1a2a1a',
+      tertiaryColor:     '#2a1a2a',
+      edgeLabelBackground: '#0c0c0c',
+      clusterBkg:        '#141414',
+      clusterBorder:     'rgba(255,255,255,.08)',
+      titleColor:        '#e8e8e8',
+      nodeBorder:        '#374151',
+      mainBkg:           '#1a1a1a',
+      actorBkg:          '#1e3a5f',
+      actorBorder:       '#3b82f6',
+      actorTextColor:    '#e8e8e8',
+      activationBkgColor:'#1e3a5f',
+      activationBorderColor: '#3b82f6',
+      loopTextColor:     '#a0aec0',
+      noteBkgColor:      '#1a2a1a',
+      noteTextColor:     '#e8e8e8',
+      noteBorderColor:   '#34d399',
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence:  { actorMargin: 50, messageMargin: 35, mirrorActors: false },
+    er:        { layoutDirection: 'LR' },
+  });
+
+  /* ─── Active TOC link on scroll ─── */
+  const sections = document.querySelectorAll('.section[id], .hero[id]');
+  const links    = document.querySelectorAll('.toc a');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.toc a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
