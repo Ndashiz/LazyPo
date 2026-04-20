@@ -539,8 +539,38 @@ body { padding-left: 64px; }
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   font-family: 'DM Mono', monospace;
+}
+/* Direction badge shown per question */
+.qz-direction-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 18px;
+  border: 1px solid;
+}
+.qz-direction-badge.dir-forward {
+  background: rgba(59,130,246,.1);
+  border-color: rgba(96,165,250,.3);
+  color: var(--accent2);
+}
+.qz-direction-badge.dir-reverse {
+  background: rgba(245,158,11,.1);
+  border-color: rgba(245,158,11,.3);
+  color: #fbbf24;
+}
+/* Timestamp cell */
+.ts-cell {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  white-space: nowrap;
 }
 .qz-question-word {
   font-size: 42px;
@@ -847,6 +877,21 @@ body { padding-left: 64px; }
       </div>
     </div>
 
+    <!-- Import banner -->
+    <div id="import-banner" style="
+      background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.2);
+      border-radius:12px; padding:12px 16px; margin-bottom:16px;
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <span style="font-size:20px;">🇳🇱</span>
+      <span style="flex:1; font-size:13px; color:#f0f0f0;">
+        Import <strong>1 000 mots néerlandais de base</strong> pour démarrer rapidement.
+      </span>
+      <button class="btn-primary" id="btn-import-nl" style="background:#d97706;font-size:13px;padding:8px 16px;">
+        Importer les mots NL
+      </button>
+      <button class="icon-btn" id="btn-dismiss-banner" title="Dismiss" style="color:var(--muted);font-size:18px;padding:4px 8px;">✕</button>
+    </div>
+
     <!-- Filter bar -->
     <div class="qz-filter-bar">
       <input type="search" id="vocab-search" class="qz-search" placeholder="🔍  Search words…" autocomplete="off">
@@ -854,9 +899,11 @@ body { padding-left: 64px; }
         <button class="qz-pill active" data-lang-filter="all">All</button>
         <button class="qz-pill"        data-lang-filter="EN→FR">EN→FR</button>
         <button class="qz-pill"        data-lang-filter="NL→FR">NL→FR</button>
+        <button class="qz-pill"        data-lang-filter="nl-fr">🇳🇱 nl-fr</button>
       </div>
       <select id="vocab-sort" class="qz-sort-select" aria-label="Sort vocabulary">
-        <option value="newest">Newest</option>
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
         <option value="az">A → Z</option>
         <option value="hardest">Hardest first</option>
       </select>
@@ -873,6 +920,7 @@ body { padding-left: 64px; }
             <th>Language</th>
             <th>Example</th>
             <th>Success Rate</th>
+            <th>Added</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -898,7 +946,8 @@ body { padding-left: 64px; }
         <div class="qz-option-group">
           <div class="qz-option-label">Direction</div>
           <div class="qz-pill-group" id="mode-pills" role="group" aria-label="Quiz direction">
-            <button class="qz-pill active" data-mode="forward">Word → Translation</button>
+            <button class="qz-pill active" data-mode="auto">🔀 Auto (mixed)</button>
+            <button class="qz-pill"        data-mode="forward">Word → Translation</button>
             <button class="qz-pill"        data-mode="reverse">Translation → Word</button>
           </div>
         </div>
@@ -908,8 +957,9 @@ body { padding-left: 64px; }
           <div class="qz-option-label">Words to include</div>
           <div class="qz-pill-group" id="filter-pills" role="group" aria-label="Word filter">
             <button class="qz-pill active" data-filter="all">All words</button>
-            <button class="qz-pill"        data-filter="EN→FR">EN→FR only</button>
-            <button class="qz-pill"        data-filter="NL→FR">NL→FR only</button>
+            <button class="qz-pill"        data-filter="EN→FR">EN→FR</button>
+            <button class="qz-pill"        data-filter="NL→FR">NL→FR</button>
+            <button class="qz-pill"        data-filter="nl-fr">🇳🇱 Néerlandais</button>
             <button class="qz-pill"        data-filter="practice">Needs practice</button>
           </div>
         </div>
@@ -1033,6 +1083,8 @@ body { padding-left: 64px; }
         <option value="rate-asc">Rate ↑</option>
         <option value="rate-desc">Rate ↓</option>
         <option value="last-tested">Last Tested</option>
+        <option value="added-desc">Added (newest)</option>
+        <option value="added-asc">Added (oldest)</option>
       </select>
     </div>
 
@@ -1049,6 +1101,7 @@ body { padding-left: 64px; }
             <th class="sortable" id="sort-rate">Rate<span class="sort-icon desc"></span></th>
             <th>Status</th>
             <th class="sortable" id="sort-last">Last Tested<span class="sort-icon"></span></th>
+            <th>Added</th>
           </tr>
         </thead>
         <tbody id="progress-tbody">
@@ -1076,8 +1129,8 @@ let currentUser  = null;
 
 let quizQueue    = [];
 let quizIndex    = 0;
-let quizMode     = 'forward';   // 'forward' | 'reverse'
-let sessionAnswers = [];        // { word, correct, skipped, givenAnswer }
+let quizMode     = 'auto';      // 'auto' | 'forward' | 'reverse'
+let sessionAnswers = [];        // { word, correct, skipped, givenAnswer, direction }
 let sessionOptions = { filter: 'all', count: 10 };
 
 /* ── Init ── */
@@ -1092,6 +1145,7 @@ let sessionOptions = { filter: 'all', count: 10 };
   renderVocab();
   renderProgress();
   updateAvailNote();
+  updateImportBanner();
 })();
 
 /* ═══════════════════════════════════════════════════════════
@@ -1256,12 +1310,14 @@ function submitAddWord() {
 
 function getFilteredVocab() {
   let list = [...vocab];
-  if (filterLang !== 'all') list = list.filter(w => w.language_pair === filterLang);
+  if (filterLang !== 'all') list = list.filter(w => w.language_pair === filterLang || (filterLang === 'nl-fr' && w.language_pair === 'nl-fr'));
   if (searchQuery) list = list.filter(w =>
     w.source_word.toLowerCase().includes(searchQuery) ||
     w.target_translation.toLowerCase().includes(searchQuery)
   );
-  if (sortMode === 'az') {
+  if (sortMode === 'oldest') {
+    list.sort((a, b) => new Date(a.created_at||0) - new Date(b.created_at||0));
+  } else if (sortMode === 'az') {
     list.sort((a, b) => a.source_word.localeCompare(b.source_word));
   } else if (sortMode === 'hardest') {
     list.sort((a, b) => {
@@ -1285,7 +1341,7 @@ function renderVocab() {
   document.getElementById('word-count').textContent = `${list.length} word${list.length !== 1 ? 's' : ''}`;
 
   if (!vocab.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="7"><div class="qz-empty">
       <div class="qz-empty-icon">📚</div>
       <h3>No words yet</h3>
       <p>Add your first vocabulary word using the form above.<br>Start with something simple!</p>
@@ -1294,7 +1350,7 @@ function renderVocab() {
   }
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="7"><div class="qz-empty">
       <div class="qz-empty-icon">🔍</div>
       <h3>No matches</h3>
       <p>Try adjusting your search or language filter.</p>
@@ -1309,8 +1365,9 @@ function renderVocab() {
 function renderVocabRow(word) {
   const p   = progress[word.id];
   const rate = rateCell(p);
-  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl';
+  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl'; // NL→FR and nl-fr both get amber
   const ex  = word.example_sentence ? escHtml(word.example_sentence) : '—';
+  const added = word.created_at ? timeAgo(word.created_at) : '—';
 
   return `<tr data-id="${word.id}">
     <td class="source-word">${escHtml(word.source_word)}</td>
@@ -1318,6 +1375,7 @@ function renderVocabRow(word) {
     <td><span class="lang-badge ${langClass}">${word.language_pair}</span></td>
     <td class="example" title="${escHtml(word.example_sentence || '')}">${ex}</td>
     <td>${rate}</td>
+    <td class="ts-cell" title="${word.created_at ? new Date(word.created_at).toLocaleString() : ''}">${added}</td>
     <td>
       <button class="icon-btn btn-edit" data-id="${word.id}" title="Edit" aria-label="Edit word">✏️</button>
       <button class="icon-btn danger btn-delete" data-id="${word.id}" title="Delete" aria-label="Delete word">🗑️</button>
@@ -1326,7 +1384,7 @@ function renderVocabRow(word) {
 }
 
 function renderEditRow(word) {
-  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl';
+  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl'; // NL→FR and nl-fr both get amber
   return `<tr data-id="${word.id}" class="editing-row">
     <td><input class="edit-input" id="ei-source" value="${escHtml(word.source_word)}"></td>
     <td><input class="edit-input" id="ei-target" value="${escHtml(word.target_translation)}"></td>
@@ -1338,6 +1396,7 @@ function renderEditRow(word) {
     </td>
     <td><input class="edit-input" id="ei-example" value="${escHtml(word.example_sentence||'')}"></td>
     <td>—</td>
+    <td class="ts-cell">${word.created_at ? timeAgo(word.created_at) : '—'}</td>
     <td>
       <button class="btn-primary btn-save-edit" data-id="${word.id}" style="padding:6px 12px;font-size:13px;">Save</button>
       <button class="btn-secondary btn-cancel-edit" style="padding:6px 10px;font-size:13px;margin-left:4px;">✕</button>
@@ -1458,6 +1517,7 @@ function updateAvailNote() {
 function filterVocabForQuiz(filter) {
   if (filter === 'EN→FR') return vocab.filter(w => w.language_pair === 'EN→FR');
   if (filter === 'NL→FR') return vocab.filter(w => w.language_pair === 'NL→FR');
+  if (filter === 'nl-fr')  return vocab.filter(w => w.language_pair === 'nl-fr');
   if (filter === 'practice') {
     return vocab.filter(w => {
       const p = progress[w.id];
@@ -1488,9 +1548,13 @@ function buildQuizQueue(filter, count, mode) {
   shuffle(list);
 
   return list.map(word => {
-    const question = mode === 'forward' ? word.source_word : word.target_translation;
-    const answer   = mode === 'forward' ? word.target_translation : word.source_word;
-    return { word, question, answer };
+    // In auto mode, randomly pick direction per word
+    const dir = (mode === 'auto')
+      ? (Math.random() < 0.5 ? 'forward' : 'reverse')
+      : mode;
+    const question = dir === 'forward' ? word.source_word        : word.target_translation;
+    const answer   = dir === 'forward' ? word.target_translation : word.source_word;
+    return { word, question, answer, direction: dir };
   });
 }
 
@@ -1520,15 +1584,26 @@ function showQuestion() {
   document.getElementById('quiz-progress-fill').style.width = pct + '%';
   document.getElementById('quiz-progress-text').textContent = `${quizIndex + 1} / ${total}`;
 
-  const modeLabel = quizMode === 'forward' ? 'Translate to French' : 'What is the source word?';
-  document.getElementById('quiz-mode-label').textContent = modeLabel;
+  const dir = item.direction;  // 'forward' | 'reverse' (resolved per-item)
+  const pair = item.word.language_pair; // e.g. 'NL→FR'
+  const [srcLang, tgtLang] = pair.split('→');  // ['NL','FR']
 
-  const langClass = item.word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl';
-  document.getElementById('quiz-lang-badge').innerHTML = `<span class="lang-badge ${langClass}">${item.word.language_pair}</span>`;
+  // Direction label: shows which way the question goes
+  const fromLang = dir === 'forward' ? srcLang : tgtLang;
+  const toLang   = dir === 'forward' ? tgtLang : srcLang;
+  document.getElementById('quiz-mode-label').textContent =
+    quizMode === 'auto' ? '🔀 Mixed mode' : (dir === 'forward' ? 'Word → Translation' : 'Translation → Word');
+
+  // Visual direction badge replacing lang-badge
+  document.getElementById('quiz-lang-badge').innerHTML =
+    `<span class="qz-direction-badge dir-${dir}">
+       ${fromLang} <span style="opacity:.6;font-weight:400;">→</span> ${toLang}
+     </span>`;
 
   document.getElementById('quiz-question').textContent = item.question;
+  // Show example sentence only when asking for translation (forward), not when asking for source word
   document.getElementById('quiz-example').textContent  =
-    item.word.example_sentence && quizMode === 'forward'
+    item.word.example_sentence && dir === 'forward'
       ? item.word.example_sentence
       : '';
 
@@ -1557,7 +1632,7 @@ document.getElementById('quiz-answer-input').addEventListener('keydown', e => {
 
 document.getElementById('btn-skip').addEventListener('click', () => {
   const item = quizQueue[quizIndex];
-  sessionAnswers.push({ word: item.word, correct: false, skipped: true, givenAnswer: '' });
+  sessionAnswers.push({ word: item.word, correct: false, skipped: true, givenAnswer: '', direction: item.direction });
   recordAnswer(item.word.id, false);
   advanceQuiz();
 });
@@ -1586,13 +1661,13 @@ function checkAnswer() {
       fb.innerHTML = '✓ Correct!';
     }
     recordAnswer(item.word.id, true);
-    sessionAnswers.push({ word: item.word, correct: true, skipped: false, givenAnswer: given });
+    sessionAnswers.push({ word: item.word, correct: true, skipped: false, givenAnswer: given, direction: item.direction });
   } else {
     input.classList.add('wrong-flash');
     fb.className = 'qz-feedback wrong';
     fb.innerHTML = `✗ Incorrect <div class="qz-correct-answer">Correct answer: "${correct}"</div>`;
     recordAnswer(item.word.id, false);
-    sessionAnswers.push({ word: item.word, correct: false, skipped: false, givenAnswer: given });
+    sessionAnswers.push({ word: item.word, correct: false, skipped: false, givenAnswer: given, direction: item.direction });
   }
 
   input.disabled = true;
@@ -1635,12 +1710,21 @@ function showSummary() {
   const missedList = document.getElementById('missed-list');
   if (missed.length > 0) {
     missedSec.style.display = 'block';
-    missedList.innerHTML = missed.map(a => `
-      <div class="qz-missed-item">
-        <span class="qz-missed-word">${escHtml(a.word.source_word)}</span>
-        <span class="qz-missed-answer">→ ${escHtml(a.word.target_translation)}</span>
-      </div>
-    `).join('');
+    missedList.innerHTML = missed.map(a => {
+      const asked  = a.direction === 'forward' ? a.word.source_word        : a.word.target_translation;
+      const answer = a.direction === 'forward' ? a.word.target_translation : a.word.source_word;
+      const [src, tgt] = a.word.language_pair.split('→');
+      const fromL = a.direction === 'forward' ? src : tgt;
+      const toL   = a.direction === 'forward' ? tgt : src;
+      return `
+        <div class="qz-missed-item">
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">${fromL}→${toL}</span>
+            <span class="qz-missed-word">${escHtml(asked)}</span>
+          </span>
+          <span class="qz-missed-answer">→ ${escHtml(answer)}</span>
+        </div>`;
+    }).join('');
   } else {
     missedSec.style.display = 'none';
   }
@@ -1726,6 +1810,10 @@ function renderProgress() {
       const ta = pa?.last_tested || '';
       const tb = pb?.last_tested || '';
       return tb.localeCompare(ta);
+    } else if (progSort === 'added-desc') {
+      return new Date(b.created_at||0) - new Date(a.created_at||0);
+    } else if (progSort === 'added-asc') {
+      return new Date(a.created_at||0) - new Date(b.created_at||0);
     }
     return 0;
   });
@@ -1733,7 +1821,7 @@ function renderProgress() {
   const tbody = document.getElementById('progress-tbody');
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="9"><div class="qz-empty">
       <div class="qz-empty-icon">📊</div>
       <h3>No data yet</h3>
       <p>Start a quiz session to see progress tracked here.</p>
@@ -1747,8 +1835,10 @@ function renderProgress() {
     const cor    = p?.correct  || 0;
     const pct    = att > 0 ? Math.round((cor / att) * 100) : null;
     const status = getWordStatus(word.id);
-    const last   = p?.last_tested ? new Date(p.last_tested).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) : '—';
-    const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl';
+    const last   = p?.last_tested ? new Date(p.last_tested).toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) : '—';
+    const addedTs = word.created_at ? timeAgo(word.created_at) : '—';
+    const addedFull = word.created_at ? new Date(word.created_at).toLocaleString() : '';
+    const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl'; // NL→FR and nl-fr both get amber
 
     const statusHtml = {
       mastered: `<span class="status-badge status-mastered">🟢 Mastered</span>`,
@@ -1770,6 +1860,7 @@ function renderProgress() {
       <td>${rateHtml}</td>
       <td>${statusHtml}</td>
       <td style="font-size:13px;color:var(--muted);">${last}</td>
+      <td class="ts-cell" title="${addedFull}">${addedTs}</td>
     </tr>`;
   }).join('');
 }
@@ -1810,6 +1901,96 @@ function switchTab(tabId) {
 /* ═══════════════════════════════════════════════════════════
    UTILS
 ═══════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════
+   DUTCH VOCABULARY IMPORT
+═══════════════════════════════════════════════════════════ */
+
+// Show/hide banner based on whether user already has NL words
+function updateImportBanner() {
+  const banner = document.getElementById('import-banner');
+  if (!banner) return;
+  const hasNL = vocab.some(w => w.language_pair === 'nl-fr');
+  banner.style.display = hasNL ? 'none' : 'flex';
+}
+
+document.getElementById('btn-dismiss-banner')?.addEventListener('click', () => {
+  document.getElementById('import-banner').style.display = 'none';
+});
+
+document.getElementById('btn-import-nl')?.addEventListener('click', async () => {
+  const btn = document.getElementById('btn-import-nl');
+  btn.disabled = true;
+  btn.textContent = '⏳ Import en cours…';
+
+  // Fetch the SQL file and parse VALUE tuples
+  let words = [];
+  try {
+    const res  = await fetch('dutch_vocabulary.sql');
+    const text = await res.text();
+    // Extract all ('...','...','nl-fr','...') tuples
+    const re = /\('([^']*(?:''[^']*)*)',\s*'([^']*(?:''[^']*)*)',\s*'nl-fr',\s*'([^']*(?:''[^']*)*)'\)/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      words.push({
+        user_id:            currentUser.id,
+        source_word:        m[1].replace(/''/g, "'"),
+        target_translation: m[2].replace(/''/g, "'"),
+        language_pair:      'nl-fr',
+        example_sentence:   m[3].replace(/''/g, "'") || null,
+      });
+    }
+  } catch(e) {
+    showToast('Erreur lors du chargement du fichier SQL');
+    btn.disabled = false; btn.textContent = 'Importer les mots NL';
+    return;
+  }
+
+  if (!words.length) {
+    showToast('Aucun mot trouvé dans le fichier');
+    btn.disabled = false; btn.textContent = 'Importer les mots NL';
+    return;
+  }
+
+  // Batch insert in chunks of 100
+  let inserted = 0;
+  const CHUNK = 100;
+  for (let i = 0; i < words.length; i += CHUNK) {
+    const chunk = words.slice(i, i + CHUNK);
+    const { error } = await window.sb.from('vocabulary').insert(chunk);
+    if (error) {
+      // Skip duplicates silently, report other errors
+      if (!error.message.includes('duplicate') && !error.code === '23505') {
+        console.warn('[Import NL]', error.message);
+      }
+    } else {
+      inserted += chunk.length;
+    }
+    btn.textContent = `⏳ ${Math.min(i + CHUNK, words.length)} / ${words.length}`;
+  }
+
+  await loadVocab();
+  renderVocab();
+  updateAvailNote();
+  updateImportBanner();
+  showToast(`✅ ${inserted} mots néerlandais importés !`);
+  btn.disabled = false;
+  btn.textContent = 'Importer les mots NL';
+});
+
+/* ── timeAgo: relative timestamp display ── */
+function timeAgo(isoStr) {
+  if (!isoStr) return '—';
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins  <  1) return 'just now';
+  if (mins  < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days  <  7) return `${days}d ago`;
+  return new Date(isoStr).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year: days > 365 ? 'numeric' : undefined });
+}
 
 function escHtml(str) {
   if (!str) return '';
