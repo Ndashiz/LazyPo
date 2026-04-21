@@ -7,6 +7,7 @@
 <title>Knowledge Quiz — LazyPO</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /*
 -- Run once in Supabase SQL Editor
@@ -18,6 +19,7 @@ create table public.vocabulary (
   target_translation text not null,
   language_pair      text not null default 'EN→FR',
   example_sentence   text,
+  tips               text,
   is_system          boolean default false,
   created_at         timestamptz default now(),
   updated_at         timestamptz default now()
@@ -28,6 +30,7 @@ create policy "own_vocabulary" on public.vocabulary
 
 -- Migration (run once if table already exists):
 -- alter table public.vocabulary add column if not exists is_system boolean default false;
+-- alter table public.vocabulary add column if not exists tips text;
 
 -- Table 2: quiz_progress
 create table public.quiz_progress (
@@ -850,6 +853,110 @@ body { padding-left: 64px; }
 }
 #qz-toast.show { transform: translateX(-50%) translateY(0); }
 
+/* ── Bulk action bar ── */
+.bulk-bar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(59,130,246,.08);
+  border: 1px solid rgba(96,165,250,.2);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  animation: fadeUp .2s ease;
+}
+.bulk-bar.visible { display: flex; }
+.bulk-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent2);
+  font-family: 'DM Mono', monospace;
+  margin-right: 4px;
+}
+.bulk-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 7px; border: 1px solid;
+  font-size: 12.5px; font-weight: 500; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all .15s;
+}
+.bulk-btn.danger {
+  background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: #f87171;
+}
+.bulk-btn.danger:hover { background: rgba(239,68,68,.18); }
+.bulk-btn.system {
+  background: rgba(139,92,246,.08); border-color: rgba(167,139,250,.25); color: #a78bfa;
+}
+.bulk-btn.system:hover { background: rgba(139,92,246,.18); }
+.bulk-btn.user {
+  background: rgba(34,197,94,.06); border-color: rgba(34,197,94,.2); color: #4ade80;
+}
+.bulk-btn.user:hover { background: rgba(34,197,94,.16); }
+.bulk-deselect {
+  margin-left: auto; font-size: 12px; color: var(--muted);
+  background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+}
+.bulk-deselect:hover { color: var(--text); background: rgba(255,255,255,.05); }
+
+/* ── Row checkboxes ── */
+.qz-cb-cell {
+  width: 36px; padding: 10px 8px 10px 16px !important;
+}
+.qz-cb {
+  width: 15px; height: 15px; cursor: pointer;
+  accent-color: var(--accent);
+  border-radius: 4px;
+}
+tr.row-selected { background: rgba(59,130,246,.05); }
+
+/* ── Tip (indice) in quiz ── */
+.btn-tip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 100px;
+  background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.22);
+  color: #fbbf24; font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all .15s; margin-top: 14px;
+}
+.btn-tip:hover { background: rgba(251,191,36,.18); }
+.btn-tip.revealed { opacity: .5; cursor: default; pointer-events: none; }
+.qz-tip-text {
+  margin-top: 10px; padding: 10px 16px;
+  background: rgba(251,191,36,.06); border: 1px solid rgba(251,191,36,.18);
+  border-radius: 10px; font-size: 13.5px; color: #d4a017; line-height: 1.6;
+  animation: fadeUp .2s ease;
+}
+
+/* ── Tip column in vocab table ── */
+.tip-cell {
+  font-size: 12.5px; color: var(--muted); font-style: italic;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── Excel import/export ── */
+.qz-excel-row {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.btn-excel {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px; border: 1px solid;
+  font-size: 12.5px; font-weight: 500; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; transition: all .15s;
+}
+.btn-excel.export {
+  background: rgba(34,197,94,.07); border-color: rgba(34,197,94,.22); color: #4ade80;
+}
+.btn-excel.export:hover { background: rgba(34,197,94,.16); }
+.btn-excel.import {
+  background: rgba(59,130,246,.07); border-color: rgba(96,165,250,.22); color: #60a5fa;
+}
+.btn-excel.import:hover { background: rgba(59,130,246,.16); }
+#xlsx-file-input { display: none; }
+.excel-hint {
+  font-size: 11.5px; color: var(--muted); font-family: 'DM Mono', monospace;
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   body { padding-left: 0; }
@@ -901,6 +1008,9 @@ body { padding-left: 64px; }
         <input type="text" id="add-example" class="qz-input qz-input-example" placeholder="Example sentence (optional)" autocomplete="off">
         <button class="btn-primary" id="btn-add-word">Add Word</button>
       </div>
+      <div class="qz-add-row" style="margin-top:8px;">
+        <input type="text" id="add-tips" class="qz-input" placeholder="💡 Tips / mnémotechnique (optional)" autocomplete="off" style="flex:1;">
+      </div>
     </div>
 
     <!-- Import banner -->
@@ -941,15 +1051,34 @@ body { padding-left: 64px; }
       <span class="qz-word-count" id="word-count">0 words</span>
     </div>
 
+    <!-- Excel export / import -->
+    <div class="qz-excel-row">
+      <button class="btn-excel export" id="btn-export-xl">📥 Exporter Excel</button>
+      <button class="btn-excel import" id="btn-import-xl">📤 Importer Excel</button>
+      <input type="file" id="xlsx-file-input" accept=".xlsx,.xls,.csv">
+      <span class="excel-hint">L'export inclut le scoring SM-2 · L'import met à jour mots &amp; scores</span>
+    </div>
+
+    <!-- Bulk action bar -->
+    <div class="bulk-bar" id="bulk-bar">
+      <span class="bulk-count" id="bulk-count">0 sélectionné(s)</span>
+      <button class="bulk-btn system" id="bulk-system" title="Marquer comme système">🤖 Système</button>
+      <button class="bulk-btn user" id="bulk-user" title="Marquer comme mes mots">👤 Mes mots</button>
+      <button class="bulk-btn danger" id="bulk-delete" title="Supprimer la sélection">🗑️ Supprimer</button>
+      <button class="bulk-deselect" id="bulk-deselect">✕ Désélectionner</button>
+    </div>
+
     <!-- Vocab table -->
     <div class="qz-table-wrap">
       <table class="qz-table" id="vocab-table" aria-label="Vocabulary list">
         <thead>
           <tr>
+            <th class="qz-cb-cell"><input type="checkbox" class="qz-cb" id="cb-select-all" title="Tout sélectionner"></th>
             <th>Source Word</th>
             <th>Translation</th>
             <th>Language</th>
             <th>Example</th>
+            <th>💡 Tips</th>
             <th>Success Rate</th>
             <th>Source</th>
             <th>Added</th>
@@ -1038,6 +1167,10 @@ body { padding-left: 64px; }
         <div id="quiz-lang-badge" style="margin-bottom:14px;"></div>
         <div class="qz-question-word" id="quiz-question">—</div>
         <div class="qz-question-example" id="quiz-example"></div>
+        <div id="quiz-tip-wrap" style="display:none;">
+          <button class="btn-tip" id="btn-tip">💡 Indice</button>
+          <div class="qz-tip-text" id="quiz-tip-text" style="display:none;"></div>
+        </div>
       </div>
 
       <div class="qz-feedback" id="quiz-feedback"></div>
@@ -1048,6 +1181,10 @@ body { padding-left: 64px; }
         <button class="btn-secondary" id="btn-skip">Skip</button>
       </div>
 
+      <div class="qz-action-row quiz-nav-row">
+        <button class="btn-secondary" id="btn-prev" style="display:none;">← Précédent</button>
+        <div style="flex:1"></div>
+      </div>
       <div class="qz-action-row" id="quiz-next-row" style="display:none;">
         <button class="btn-primary" id="btn-next">Next →</button>
       </div>
@@ -1242,6 +1379,198 @@ async function deleteWord(id) {
   showToast('Word deleted');
 }
 
+/* ══════════════════════════════════════════════════════
+   EXCEL EXPORT
+══════════════════════════════════════════════════════ */
+function exportToExcel() {
+  const list = getFilteredVocab();
+  if (!list.length) { showToast('Aucun mot à exporter'); return; }
+
+  const rows = list.map(w => {
+    const p = progress[w.id] || {};
+    return {
+      id:                 w.id,
+      source_word:        w.source_word,
+      target_translation: w.target_translation,
+      language_pair:      w.language_pair,
+      example_sentence:   w.example_sentence || '',
+      tips:               w.tips || '',
+      is_system:          w.is_system ? 1 : 0,
+      created_at:         w.created_at || '',
+      correct:            p.correct     ?? 0,
+      attempts:           p.attempts    ?? 0,
+      ease_factor:        p.ease_factor ?? 2.5,
+      interval_days:      p.interval_days ?? 1,
+      last_tested:        p.last_tested || '',
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  // Column widths
+  ws['!cols'] = [
+    {wch:38},{wch:22},{wch:22},{wch:10},{wch:40},
+    {wch:10},{wch:22},{wch:8},{wch:8},{wch:12},{wch:13},{wch:22}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Vocabulary');
+  const date = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `lazypo-vocab-${date}.xlsx`);
+  showToast(`📥 ${rows.length} mots exportés`);
+}
+
+/* ══════════════════════════════════════════════════════
+   EXCEL IMPORT
+══════════════════════════════════════════════════════ */
+async function importFromExcel(file) {
+  if (!file) return;
+  const btn = document.getElementById('btn-import-xl');
+  btn.disabled = true;
+  btn.textContent = '⏳ Import…';
+
+  try {
+    const data  = await file.arrayBuffer();
+    const wb    = XLSX.read(data, { type: 'array' });
+    const ws    = wb.Sheets[wb.SheetNames[0]];
+    const rows  = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+    if (!rows.length) { showToast('Fichier vide'); return; }
+
+    // ── Upsert vocabulary rows ──────────────────────────────────
+    const vocabPayload = rows
+      .filter(r => r.source_word && r.target_translation)
+      .map(r => ({
+        ...(r.id ? { id: r.id } : {}),
+        user_id:            currentUser.id,
+        source_word:        String(r.source_word).trim(),
+        target_translation: String(r.target_translation).trim(),
+        language_pair:      String(r.language_pair || 'EN→FR').trim(),
+        example_sentence:   r.example_sentence ? String(r.example_sentence).trim() : null,
+        tips:               r.tips ? String(r.tips).trim() : null,
+        is_system:          r.is_system == 1 || r.is_system === true || r.is_system === 'true',
+      }));
+
+    const CHUNK = 100;
+    let vocabInserted = 0;
+    for (let i = 0; i < vocabPayload.length; i += CHUNK) {
+      const { error } = await window.sb.from('vocabulary')
+        .upsert(vocabPayload.slice(i, i + CHUNK), { onConflict: 'id' });
+      if (error) throw error;
+      vocabInserted += Math.min(CHUNK, vocabPayload.length - i);
+    }
+
+    // ── Upsert progress if scoring columns present ──────────────
+    const hasSM2 = rows.some(r => r.ease_factor !== '' && r.ease_factor !== undefined);
+    let progressInserted = 0;
+    if (hasSM2) {
+      // We need the word IDs after upsert — reload vocab first
+      await loadVocab();
+      // Build a lookup: source_word+language_pair → id
+      const lookup = {};
+      vocab.forEach(w => { lookup[w.source_word + '|' + w.language_pair] = w.id; });
+
+      const progPayload = rows
+        .filter(r => r.source_word && (r.attempts !== '' && r.attempts !== undefined))
+        .map(r => {
+          const wid = r.id || lookup[String(r.source_word).trim() + '|' + String(r.language_pair || 'EN→FR').trim()];
+          if (!wid) return null;
+          return {
+            user_id:       currentUser.id,
+            word_id:       wid,
+            correct:       parseInt(r.correct)      || 0,
+            attempts:      parseInt(r.attempts)     || 0,
+            ease_factor:   parseFloat(r.ease_factor) || 2.5,
+            interval_days: parseInt(r.interval_days) || 1,
+            last_tested:   r.last_tested || null,
+          };
+        })
+        .filter(Boolean);
+
+      for (let i = 0; i < progPayload.length; i += CHUNK) {
+        const { error } = await window.sb.from('quiz_progress')
+          .upsert(progPayload.slice(i, i + CHUNK), { onConflict: 'user_id,word_id' });
+        if (error) console.warn('Progress upsert error:', error);
+        else progressInserted += Math.min(CHUNK, progPayload.length - i);
+      }
+    }
+
+    await Promise.all([loadVocab(), loadProgress()]);
+    renderVocab();
+    renderProgress();
+    updateAvailNote();
+    updateImportBanner();
+    const msg = hasSM2
+      ? `✅ ${vocabInserted} mots + ${progressInserted} scores mis à jour`
+      : `✅ ${vocabInserted} mots importés`;
+    showToast(msg);
+
+  } catch (e) {
+    console.error('[Import Excel]', e);
+    showToast('Erreur import : ' + (e.message || e));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 Importer Excel';
+    document.getElementById('xlsx-file-input').value = '';
+  }
+}
+
+function updateBulkBar() {
+  const bar   = document.getElementById('bulk-bar');
+  const count = document.getElementById('bulk-count');
+  const n = selectedIds.size;
+  if (n === 0) {
+    bar.classList.remove('visible');
+  } else {
+    bar.classList.add('visible');
+    count.textContent = `${n} sélectionné${n > 1 ? 's' : ''}`;
+  }
+  // Sync select-all checkbox
+  const cbAll = document.getElementById('cb-select-all');
+  if (cbAll) {
+    const visible = getFilteredVocab();
+    cbAll.checked = visible.length > 0 && visible.every(w => selectedIds.has(w.id));
+    cbAll.indeterminate = !cbAll.checked && visible.some(w => selectedIds.has(w.id));
+  }
+}
+
+async function bulkDelete() {
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+  // Only delete non-system words
+  const toDelete = vocab.filter(w => ids.includes(w.id) && !w.is_system);
+  const systemCount = ids.length - toDelete.length;
+  if (!toDelete.length) { showToast('Les mots système ne peuvent pas être supprimés'); return; }
+  const msg = systemCount > 0
+    ? `Supprimer ${toDelete.length} mot(s) ? (${systemCount} mot(s) système ignoré(s))`
+    : `Supprimer ${toDelete.length} mot(s) sélectionné(s) ?`;
+  if (!confirm(msg)) return;
+  const { error } = await window.sb.from('vocabulary')
+    .delete()
+    .in('id', toDelete.map(w => w.id))
+    .eq('user_id', currentUser.id);
+  if (error) { showToast('Erreur lors de la suppression'); return; }
+  selectedIds.clear();
+  await Promise.all([loadVocab(), loadProgress()]);
+  renderVocab();
+  renderProgress();
+  updateAvailNote();
+  showToast(`${toDelete.length} mot(s) supprimé(s)`);
+}
+
+async function bulkSetSource(isSystem) {
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+  const label = isSystem ? 'système' : 'mes mots';
+  const { error } = await window.sb.from('vocabulary')
+    .update({ is_system: isSystem })
+    .in('id', ids)
+    .eq('user_id', currentUser.id);
+  if (error) { showToast('Erreur lors de la mise à jour'); return; }
+  selectedIds.clear();
+  await loadVocab();
+  renderVocab();
+  showToast(`${ids.length} mot(s) marqué(s) comme ${label}`);
+}
+
 async function loadProgress() {
   const { data, error } = await window.sb
     .from('quiz_progress')
@@ -1341,10 +1670,44 @@ document.getElementById('vocab-sort').addEventListener('change', e => {
   renderVocab();
 });
 
+// Select-all checkbox
+document.getElementById('cb-select-all').addEventListener('change', e => {
+  const visible = getFilteredVocab();
+  if (e.target.checked) {
+    visible.forEach(w => selectedIds.add(w.id));
+  } else {
+    visible.forEach(w => selectedIds.delete(w.id));
+  }
+  renderVocab();
+  updateBulkBar();
+});
+
+// Row checkboxes (delegated)
+document.getElementById('vocab-tbody').addEventListener('change', e => {
+  const cb = e.target.closest('.row-cb');
+  if (!cb) return;
+  const id = cb.dataset.id;
+  if (cb.checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+  const row = cb.closest('tr');
+  if (row) row.classList.toggle('row-selected', cb.checked);
+  updateBulkBar();
+});
+
+// Bulk action buttons
+document.getElementById('bulk-delete').addEventListener('click', bulkDelete);
+document.getElementById('bulk-system').addEventListener('click', () => bulkSetSource(true));
+document.getElementById('bulk-user').addEventListener('click', () => bulkSetSource(false));
+document.getElementById('bulk-deselect').addEventListener('click', () => {
+  selectedIds.clear();
+  renderVocab();
+  updateBulkBar();
+});
+
 /* Add word form */
 document.getElementById('btn-add-word').addEventListener('click', submitAddWord);
 
-['add-source','add-target','add-example'].forEach(id => {
+['add-source','add-target','add-example','add-tips'].forEach(id => {
   document.getElementById(id).addEventListener('keydown', e => {
     if (e.key === 'Enter') submitAddWord();
   });
@@ -1354,11 +1717,13 @@ function submitAddWord() {
   const source  = document.getElementById('add-source').value.trim();
   const target  = document.getElementById('add-target').value.trim();
   const example = document.getElementById('add-example').value.trim();
+  const tips    = document.getElementById('add-tips').value.trim();
   if (!source || !target) { showToast('Please fill in source word and translation'); return; }
-  addWord({ source_word: source, target_translation: target, language_pair: selectedLang, example_sentence: example || null });
+  addWord({ source_word: source, target_translation: target, language_pair: selectedLang, example_sentence: example || null, tips: tips || null });
   document.getElementById('add-source').value  = '';
   document.getElementById('add-target').value  = '';
   document.getElementById('add-example').value = '';
+  document.getElementById('add-tips').value    = '';
   document.getElementById('add-source').focus();
 }
 
@@ -1397,7 +1762,7 @@ function renderVocab() {
   document.getElementById('word-count').textContent = `${list.length} word${list.length !== 1 ? 's' : ''}`;
 
   if (!vocab.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="10"><div class="qz-empty">
       <div class="qz-empty-icon">📚</div>
       <h3>No words yet</h3>
       <p>Add your first vocabulary word using the form above.<br>Start with something simple!</p>
@@ -1406,7 +1771,7 @@ function renderVocab() {
   }
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="10"><div class="qz-empty">
       <div class="qz-empty-icon">🔍</div>
       <h3>No matches</h3>
       <p>Try adjusting your search or language filter.</p>
@@ -1415,25 +1780,32 @@ function renderVocab() {
   }
 
   tbody.innerHTML = list.map(word => renderVocabRow(word)).join('');
+  updateBulkBar();
   attachRowListeners();
 }
 
 function renderVocabRow(word) {
   const p   = progress[word.id];
   const rate = rateCell(p);
-  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl'; // NL→FR and nl-fr both get amber
+  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl';
   const ex  = word.example_sentence ? escHtml(word.example_sentence) : '—';
   const added = word.created_at ? timeAgo(word.created_at) : '—';
+  const checked = selectedIds.has(word.id) ? 'checked' : '';
+  const selClass = selectedIds.has(word.id) ? ' row-selected' : '';
 
   const srcBadge = word.is_system
     ? `<span class="source-badge source-system">🤖 système</span>`
     : `<span class="source-badge source-user">👤 moi</span>`;
 
-  return `<tr data-id="${word.id}">
+  const tipDisplay = word.tips ? `<span title="${escHtml(word.tips)}">${escHtml(word.tips.length > 30 ? word.tips.slice(0,30) + '…' : word.tips)}</span>` : '<span style="opacity:.3">—</span>';
+
+  return `<tr data-id="${word.id}"${selClass ? ` class="${selClass.trim()}"` : ''}>
+    <td class="qz-cb-cell"><input type="checkbox" class="qz-cb row-cb" data-id="${word.id}" ${checked} aria-label="Sélectionner"></td>
     <td class="source-word">${escHtml(word.source_word)}</td>
     <td>${escHtml(word.target_translation)}</td>
     <td><span class="lang-badge ${langClass}">${word.language_pair}</span></td>
     <td class="example" title="${escHtml(word.example_sentence || '')}">${ex}</td>
+    <td class="tip-cell">${tipDisplay}</td>
     <td>${rate}</td>
     <td>${srcBadge}</td>
     <td class="ts-cell" title="${word.created_at ? new Date(word.created_at).toLocaleString() : ''}">${added}</td>
@@ -1445,8 +1817,9 @@ function renderVocabRow(word) {
 }
 
 function renderEditRow(word) {
-  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl'; // NL→FR and nl-fr both get amber
+  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl';
   return `<tr data-id="${word.id}" class="editing-row">
+    <td></td>
     <td><input class="edit-input" id="ei-source" value="${escHtml(word.source_word)}"></td>
     <td><input class="edit-input" id="ei-target" value="${escHtml(word.target_translation)}"></td>
     <td>
@@ -1456,7 +1829,8 @@ function renderEditRow(word) {
       </div>
     </td>
     <td><input class="edit-input" id="ei-example" value="${escHtml(word.example_sentence||'')}"></td>
-    <td>—</td>
+    <td><input class="edit-input" id="ei-tips" value="${escHtml(word.tips||'')}" placeholder="💡 Tips…"></td>
+    <td>—</td><td>—</td>
     <td class="ts-cell">${word.created_at ? timeAgo(word.created_at) : '—'}</td>
     <td>
       <button class="btn-primary btn-save-edit" data-id="${word.id}" style="padding:6px 12px;font-size:13px;">Save</button>
@@ -1511,9 +1885,10 @@ function attachEditListeners() {
     const source = document.getElementById('ei-source')?.value.trim();
     const target = document.getElementById('ei-target')?.value.trim();
     const example= document.getElementById('ei-example')?.value.trim();
+    const tips   = document.getElementById('ei-tips')?.value.trim();
     const lang   = document.querySelector('.editing-row .qz-lang-btn.active')?.dataset.lang || 'EN→FR';
     if (!source || !target) { showToast('Source and translation are required'); return; }
-    await updateWord(id, { source_word: source, target_translation: target, language_pair: lang, example_sentence: example || null });
+    await updateWord(id, { source_word: source, target_translation: target, language_pair: lang, example_sentence: example || null, tips: tips || null });
     editingId = null;
   });
 
@@ -1534,6 +1909,8 @@ function attachEditListeners() {
 /* ═══════════════════════════════════════════════════════════
    QUIZ VIEW
 ═══════════════════════════════════════════════════════════ */
+
+let selectedIds = new Set();
 
 let quizFilter  = 'all';
 let quizCount   = 10;
@@ -1687,6 +2064,20 @@ function showQuestion() {
       ? item.word.example_sentence
       : '';
 
+  // Tip / indice
+  const tipWrap = document.getElementById('quiz-tip-wrap');
+  const tipText = document.getElementById('quiz-tip-text');
+  const tipBtn  = document.getElementById('btn-tip');
+  if (item.word.tips) {
+    tipWrap.style.display = 'block';
+    tipText.style.display = 'none';
+    tipText.textContent   = item.word.tips;
+    tipBtn.className      = 'btn-tip';
+    tipBtn.textContent    = '💡 Indice';
+  } else {
+    tipWrap.style.display = 'none';
+  }
+
   const ansInput = document.getElementById('quiz-answer-input');
   ansInput.value = '';
   ansInput.className = 'qz-answer-input';
@@ -1697,6 +2088,10 @@ function showQuestion() {
   document.getElementById('btn-check').style.display  = 'inline-flex';
   document.getElementById('btn-skip').style.display   = 'inline-flex';
   ansInput.focus();
+
+  // Show/hide back button
+  const prevBtn = document.getElementById('btn-prev');
+  if (prevBtn) prevBtn.style.display = quizIndex > 0 ? 'inline-flex' : 'none';
 }
 
 document.getElementById('btn-check').addEventListener('click', checkAnswer);
@@ -1719,26 +2114,53 @@ document.getElementById('btn-skip').addEventListener('click', () => {
 
 document.getElementById('btn-next').addEventListener('click', advanceQuiz);
 
+document.getElementById('btn-tip').addEventListener('click', () => {
+  const tipText = document.getElementById('quiz-tip-text');
+  const tipBtn  = document.getElementById('btn-tip');
+  tipText.style.display = 'block';
+  tipBtn.classList.add('revealed');
+  tipBtn.textContent = '💡 Indice révélé';
+});
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (quizIndex <= 0) return;
+  // If the current question was answered, remove it from sessionAnswers
+  if (document.getElementById('quiz-next-row').style.display !== 'none') {
+    // Already answered — pop last sessionAnswers entry if it matches current
+    if (sessionAnswers.length > 0) sessionAnswers.pop();
+  }
+  quizIndex--;
+  showQuestion();
+});
+
 function checkAnswer() {
   const item  = quizQueue[quizIndex];
   const input = document.getElementById('quiz-answer-input');
   const given = input.value.trim();
   if (!given) return;
 
-  const correct  = item.answer.trim();
-  const exact    = given.toLowerCase() === correct.toLowerCase();
-  const close    = !exact && levenshtein(given.toLowerCase(), correct.toLowerCase()) === 1;
-  const isCorrect = exact || close;
+  const correct      = item.answer.trim();
+  // Support multiple alternatives separated by " / "  (e.g. "conduire / rouler")
+  const alternatives = correct.split(/\s*\/\s*/).map(s => s.trim()).filter(Boolean);
+  const givenLower   = given.toLowerCase();
+  const exact        = alternatives.some(alt => givenLower === alt.toLowerCase());
+  const closedAlt    = !exact && alternatives.find(alt => levenshtein(givenLower, alt.toLowerCase()) === 1);
+  const close        = !!closedAlt;
+  const isCorrect    = exact || close;
 
   const fb = document.getElementById('quiz-feedback');
   if (isCorrect) {
     input.classList.add('correct-flash');
     if (close) {
       fb.className = 'qz-feedback close';
-      fb.innerHTML = `✓ Close enough! <span class="qz-correct-answer">Accepted: "${correct}"</span>`;
+      fb.innerHTML = `✓ Proche ! <span class="qz-correct-answer">Accepté : "${closedAlt}"</span>`;
     } else {
       fb.className = 'qz-feedback correct';
-      fb.innerHTML = '✓ Correct!';
+      // If multiple alternatives exist, show the others as hint
+      const others = alternatives.filter(a => a.toLowerCase() !== givenLower);
+      fb.innerHTML = others.length
+        ? `✓ Correct ! <span class="qz-correct-answer" style="opacity:.65;font-size:12px;">Aussi valide : ${others.join(' / ')}</span>`
+        : '✓ Correct !';
     }
     recordAnswer(item.word.id, true);
     sessionAnswers.push({ word: item.word, correct: true, skipped: false, givenAnswer: given, direction: item.direction });
@@ -1901,7 +2323,7 @@ function renderProgress() {
   const tbody = document.getElementById('progress-tbody');
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="10"><div class="qz-empty">
       <div class="qz-empty-icon">📊</div>
       <h3>No data yet</h3>
       <p>Start a quiz session to see progress tracked here.</p>
@@ -1996,6 +2418,18 @@ function updateImportBanner() {
 
 document.getElementById('btn-dismiss-banner')?.addEventListener('click', () => {
   document.getElementById('import-banner').style.display = 'none';
+});
+
+/* ── Excel export / import buttons ── */
+document.getElementById('btn-export-xl').addEventListener('click', exportToExcel);
+
+document.getElementById('btn-import-xl').addEventListener('click', () => {
+  document.getElementById('xlsx-file-input').click();
+});
+
+document.getElementById('xlsx-file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) importFromExcel(file);
 });
 
 document.getElementById('btn-import-nl')?.addEventListener('click', async () => {
