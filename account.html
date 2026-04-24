@@ -283,6 +283,50 @@ body {
   .page-body { padding: 0 16px 40px; }
   .acc-section { padding: 20px 16px; }
 }
+
+/* ── Countdown settings ── */
+.cd-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.cd-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+}
+.cd-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.cd-dot.ring-amber { background: #f59e0b; }
+.cd-dot.ring-blue  { background: #60a5fa; }
+.cd-dot.ring-green { background: #34d399; }
+.cd-dot.ring-white { background: #e0e0e0; }
+.cd-info { flex: 1; min-width: 0; }
+.cd-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.cd-date { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+.cd-days {
+  font-size: 12px; font-family: 'DM Mono', monospace;
+  padding: 2px 8px; border-radius: 100px;
+  background: rgba(255,255,255,.05); color: var(--muted);
+}
+.cd-del {
+  background: none; border: none; color: #555; cursor: pointer;
+  font-size: 16px; padding: 2px 4px; border-radius: 5px;
+  transition: color .15s;
+}
+.cd-del:hover { color: #f87171; }
+.cd-add-form {
+  display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end;
+}
+.cd-add-form .field { margin: 0; }
+@media (max-width: 600px) { .cd-add-form { grid-template-columns: 1fr; } }
+.cd-color-row { display: flex; gap: 8px; margin-top: 4px; }
+.cd-color-btn {
+  width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; transition: border-color .15s;
+}
+.cd-color-btn.active { border-color: #fff; }
+.cd-color-btn.ring-amber { background: #f59e0b; }
+.cd-color-btn.ring-blue  { background: #60a5fa; }
+.cd-color-btn.ring-green { background: #34d399; }
+.cd-color-btn.ring-white { background: #e0e0e0; }
 </style>
 </head>
 <body>
@@ -409,6 +453,44 @@ body {
       <div class="inline-msg" id="pwdMsg"></div>
       <div class="btn-row">
         <button class="btn-save" id="btnSavePwd" onclick="savePassword()">Update password</button>
+      </div>
+    </div>
+
+    <!-- ── Project Countdowns ── -->
+    <div class="acc-section" id="countdownSection">
+      <div class="acc-section-title">📅 Project Countdowns</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        Affichés sur la page d'accueil · 1 à 4 projets
+      </p>
+
+      <!-- Liste -->
+      <div class="cd-list" id="cdList"></div>
+
+      <!-- Formulaire d'ajout -->
+      <div id="cdAddWrap">
+        <div class="cd-add-form">
+          <div class="field">
+            <label for="cdName">Nom du projet</label>
+            <input id="cdName" type="text" placeholder="ex: Sprint 42" maxlength="30">
+          </div>
+          <div class="field">
+            <label for="cdDate">Date clé</label>
+            <input id="cdDate" type="date">
+          </div>
+          <button class="btn-save" id="cdAddBtn" onclick="cdAdd()" style="align-self:end;height:42px;">
+            + Ajouter
+          </button>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Couleur</div>
+          <div class="cd-color-row" id="cdColorRow">
+            <button class="cd-color-btn ring-amber active" data-color="ring-amber" onclick="cdSelectColor(this)"></button>
+            <button class="cd-color-btn ring-blue"  data-color="ring-blue"  onclick="cdSelectColor(this)"></button>
+            <button class="cd-color-btn ring-green" data-color="ring-green" onclick="cdSelectColor(this)"></button>
+            <button class="cd-color-btn ring-white" data-color="ring-white" onclick="cdSelectColor(this)"></button>
+          </div>
+        </div>
+        <div class="inline-msg" id="cdMsg"></div>
       </div>
     </div>
 
@@ -708,6 +790,122 @@ async function revokeSession(id) {
 
 // Give session.js time to register before loading session list
 setTimeout(() => loadSessions(), 800);
+
+/* ═══════════════════════════════════════════════════
+   PROJECT COUNTDOWNS
+════════════════════════════════════════════════════ */
+let cdProjects = [];
+let cdSelectedColor = 'ring-amber';
+
+const CD_COLOR_MAP = {
+  'ring-amber': '#f59e0b',
+  'ring-blue':  '#3b82f6',
+  'ring-green': '#22c55e',
+  'ring-white': '#e2e8f0',
+};
+
+function cdSelectColor(btn) {
+  document.querySelectorAll('.cd-color-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  cdSelectedColor = btn.dataset.color;
+}
+
+function cdDaysLeft(dateStr) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const target = new Date(dateStr + 'T00:00:00');
+  return Math.ceil((target - now) / 86400000);
+}
+
+function cdFormatDate(dateStr) {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const d = new Date(dateStr + 'T00:00:00');
+  return MONTHS[d.getMonth()] + ' ' + String(d.getDate()).padStart(2,'0') + ', ' + d.getFullYear();
+}
+
+function cdRenderList() {
+  const list = document.getElementById('cdList');
+  if (!list) return;
+  if (!cdProjects.length) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:4px 0 12px;">Aucun projet ajouté.</p>';
+    return;
+  }
+  list.innerHTML = cdProjects.map((p, i) => {
+    const days = cdDaysLeft(p.date);
+    const overdue = days < 0;
+    const dotColor = CD_COLOR_MAP[p.color] || '#f59e0b';
+    const daysLabel = overdue
+      ? `<span style="color:#f87171;">${Math.abs(days)} j dépassé</span>`
+      : `<span style="color:var(--muted);">${days} j restants</span>`;
+    return `
+      <div class="cd-item">
+        <span class="cd-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor};"></span>
+        <div class="cd-info">
+          <div class="cd-name">${escapeHtml(p.name)}</div>
+          <div class="cd-date">${cdFormatDate(p.date)} · ${daysLabel}</div>
+        </div>
+        <button class="cd-del" onclick="cdRemove(${i})" title="Supprimer">✕</button>
+      </div>`;
+  }).join('');
+
+  // Hide add form if 4 projects reached
+  const addWrap = document.getElementById('cdAddWrap');
+  if (addWrap) addWrap.style.display = cdProjects.length >= 4 ? 'none' : 'block';
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function cdSave() {
+  if (!window.sb) return;
+  const { data: { user } } = await window.sb.auth.getUser();
+  if (!user) return;
+  await window.sb.from('profiles').update({ countdowns: cdProjects }).eq('id', user.id);
+  if (window.CountdownManager) window.CountdownManager.reload();
+}
+
+async function cdRemove(index) {
+  cdProjects.splice(index, 1);
+  cdRenderList();
+  await cdSave();
+}
+
+async function cdAdd() {
+  const nameEl = document.getElementById('cdName');
+  const dateEl = document.getElementById('cdDate');
+  const msgEl  = document.getElementById('cdMsg');
+  const name = nameEl.value.trim();
+  const date = dateEl.value;
+
+  if (!name) { msgEl.textContent = 'Entrez un nom de projet.'; msgEl.className = 'inline-msg error'; return; }
+  if (!date)  { msgEl.textContent = 'Choisissez une date clé.'; msgEl.className = 'inline-msg error'; return; }
+  if (cdProjects.length >= 4) { msgEl.textContent = 'Maximum 4 projets.'; msgEl.className = 'inline-msg error'; return; }
+
+  msgEl.textContent = '';
+  const btn = document.getElementById('cdAddBtn');
+  btn.disabled = true; btn.textContent = '…';
+
+  cdProjects.push({ name, date, color: cdSelectedColor });
+  cdRenderList();
+  await cdSave();
+
+  nameEl.value = ''; dateEl.value = '';
+  btn.disabled = false; btn.textContent = '+ Ajouter';
+  msgEl.textContent = '✓ Projet ajouté.'; msgEl.className = 'inline-msg success';
+  setTimeout(() => { msgEl.textContent = ''; }, 3000);
+}
+
+async function cdLoadList() {
+  if (!window.sb) return;
+  const { data: { user } } = await window.sb.auth.getUser();
+  if (!user) return;
+  const { data } = await window.sb.from('profiles').select('countdowns').eq('id', user.id).single();
+  cdProjects = Array.isArray(data?.countdowns) ? data.countdowns : [];
+  cdRenderList();
+}
+
+// Load when auth is ready
+document.addEventListener('lazypo:profile', () => cdLoadList());
 </script>
 <script src="focusfm.js"></script>
 </body>
