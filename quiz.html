@@ -385,6 +385,18 @@ body { padding-left: 64px; }
 .rate-none  { color: var(--muted);   font-family: 'DM Mono', monospace; font-size: 13px; }
 
 /* Action icons */
+/* Sticky Actions column — always visible even when table overflows */
+.qz-table th:last-child,
+.qz-table td:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--surface2);
+  z-index: 1;
+  box-shadow: -4px 0 8px rgba(0,0,0,.25);
+}
+.qz-table tr:hover td:last-child { background: #1e1e1e; }
+.qz-table tr.editing-row td:last-child { background: var(--surface); }
+
 .icon-btn {
   background: none;
   border: none;
@@ -1931,7 +1943,7 @@ function attachEditListeners() {
     const tips   = document.getElementById('ei-tips')?.value.trim();
     const lang   = document.querySelector('.editing-row .qz-lang-btn.active')?.dataset.lang || 'EN→FR';
     if (!source || !target) { showToast('Source and translation are required'); return; }
-    await updateWord(id, { source_word: source, target_translation: target, language_pair: lang, example_sentence: example || null, ...(tips ? { tips } : { tips: null }) });
+    await updateWord(id, { source_word: source, target_translation: target, language_pair: lang, example_sentence: example || null, ...(tips ? { tips } : {}) });
     editingId = null;
   });
 

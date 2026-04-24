@@ -38,101 +38,12 @@ body {
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   color: var(--text);
-  display: flex; overflow: hidden;
-}
-
-/* ══════════════════════════════
-   SIDEBAR (same as index.html)
-══════════════════════════════ */
-.sidebar {
-  width: 260px; min-width: 260px; height: 100vh;
-  background: var(--sidebar); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column;
-  padding: 28px 16px 24px;
-  position: relative; z-index: 100;
-  transition: transform 0.3s ease;
-}
-.sidebar::after {
-  content: ''; position: absolute; top: 15%; right: -1px; bottom: 15%;
-  width: 1px;
-  background: linear-gradient(to bottom, transparent, rgba(59,130,246,0.4), transparent);
-}
-
-.logo-wrap { padding: 0 8px; margin-bottom: 36px; display: flex; align-items: center; }
-.logo-graffiti {
-  font-family: 'Permanent Marker', cursive;
-  font-size: 28px; color: #fff; letter-spacing: 1px; line-height: 1;
-  text-shadow: 2px 2px 0 rgba(59,130,246,0.5), -1px -1px 0 rgba(255,255,255,0.06);
-  transform: rotate(-1.5deg); display: inline-block; text-decoration: none;
-}
-.logo-graffiti span { color: #60a5fa; }
-
-.nav-section-label {
-  font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--muted);
-  padding: 0 12px; margin-bottom: 8px; margin-top: 4px;
-}
-.nav-items { display: flex; flex-direction: column; gap: 3px; }
-
-.nav-item {
-  display: flex; align-items: center; gap: 11px; padding: 10px 12px;
-  border-radius: var(--r); cursor: pointer; text-decoration: none;
-  color: var(--muted); font-size: 14px; font-weight: 500;
-  transition: all 0.15s; position: relative; border: 1px solid transparent;
-}
-.nav-item:hover { color: var(--text); background: var(--surface); }
-.nav-item.active { color: var(--text); background: var(--surface2); border-color: var(--border2); }
-.nav-item.active::before {
-  content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
-  width: 2px; background: var(--accent2); border-radius: 2px;
-  box-shadow: 0 0 8px var(--accent2);
-}
-.nav-icon {
-  width: 32px; height: 32px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px; background: var(--faint); flex-shrink: 0;
-  transition: background 0.15s;
-}
-.nav-item.active .nav-icon { background: rgba(59,130,246,0.15); }
-.nav-item:hover .nav-icon  { background: var(--border2); }
-.nav-label { flex: 1; }
-
-.nav-badge {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
-  padding: 2px 7px; border-radius: 20px; text-transform: uppercase;
-}
-.badge-live { background: rgba(59,130,246,0.15); color: var(--accent2); border: 1px solid rgba(96,165,250,0.25); }
-.badge-soon { background: rgba(80,80,80,0.3); color: #888; border: 1px solid #333; }
-.badge-wip  { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
-.nav-divider { height: 1px; background: var(--border); margin: 14px 4px; }
-.sidebar-spacer { flex: 1; }
-.sidebar-footer { padding: 0 4px; }
-
-/* Mobile */
-.burger {
-  display: none; position: fixed; top: 18px; left: 16px; z-index: 200;
-  width: 40px; height: 40px; border-radius: 10px;
-  background: var(--surface2); border: 1px solid var(--border2);
-  cursor: pointer; align-items: center; justify-content: center;
-  flex-direction: column; gap: 5px;
-}
-.burger span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; transition: all 0.25s; }
-.burger.open span:nth-child(1) { transform: rotate(45deg) translate(2.5px,2.5px); }
-.burger.open span:nth-child(2) { opacity: 0; }
-.burger.open span:nth-child(3) { transform: rotate(-45deg) translate(2.5px,-2.5px); }
-.sidebar-overlay { display: none; position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
-.sidebar-close {
-  display: none; position: absolute; top: 16px; right: 16px;
-  width: 32px; height: 32px; border-radius: 8px;
-  background: var(--surface2); border: 1px solid var(--border2);
-  cursor: pointer; align-items: center; justify-content: center;
-  color: var(--muted); font-size: 18px;
 }
 
 /* ══════════════════════════════
    MAIN
 ══════════════════════════════ */
-.main { flex: 1; height: 100vh; overflow-y: auto; overflow-x: hidden; }
+.main { height: 100vh; overflow-y: auto; overflow-x: hidden; }
 
 .page-header {
   padding: 40px 48px 0;
@@ -266,12 +177,6 @@ body {
    RESPONSIVE
 ══════════════════════════════ */
 @media (max-width: 768px) {
-  body { flex-direction: column; overflow: auto; }
-  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
-  .sidebar.open { transform: translateX(0); }
-  .sidebar-overlay.open { display: block; }
-  .sidebar-close { display: flex; }
-  .burger { display: flex; }
   .main { height: auto; min-height: 100vh; }
   .page-header { padding: 72px 24px 20px; margin-bottom: 28px; }
   .page-body { padding: 0 24px 48px; }
@@ -330,55 +235,6 @@ body {
 </style>
 </head>
 <body>
-
-<!-- Mobile burger -->
-<button class="burger" id="burger" aria-label="Menu">
-  <span></span><span></span><span></span>
-</button>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-<!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="logo-wrap">
-    <a href="index.html" class="logo-graffiti">LazyPO <span>✦</span></a>
-  </div>
-  <button class="sidebar-close" id="sidebarClose" aria-label="Close">✕</button>
-
-  <div class="nav-section-label">Tools</div>
-  <nav class="nav-items">
-    <a href="lazypo_generator.html" class="nav-item">
-      <div class="nav-icon">✉️</div>
-      <span class="nav-label">SoW Email</span>
-      <span class="nav-badge badge-live">Live</span>
-    </a>
-    <a href="sprintplanner.html" class="nav-item">
-      <div class="nav-icon">📋</div>
-      <span class="nav-label">Sprint Planning</span>
-      <span class="nav-badge badge-soon">In progress</span>
-    </a>
-    <a href="jirarepo.html" class="nav-item">
-      <div class="nav-icon">🎫</div>
-      <span class="nav-label">Jira Request</span>
-      <span class="nav-badge badge-wip">En cours</span>
-    </a>
-  </nav>
-
-  <div class="nav-divider"></div>
-  <div class="nav-section-label">General</div>
-  <nav class="nav-items">
-    <a href="account.html" class="nav-item active">
-      <div class="nav-icon">👤</div>
-      <span class="nav-label">My Account</span>
-    </a>
-    <a href="#" class="nav-item" onclick="return false;">
-      <div class="nav-icon">⚙️</div>
-      <span class="nav-label">Settings</span>
-    </a>
-  </nav>
-
-  <div class="sidebar-spacer"></div>
-  <div class="sidebar-footer" id="authFooter"></div>
-</aside>
 
 <!-- Main -->
 <main class="main">
@@ -527,21 +383,11 @@ body {
   </div>
 </main>
 
-<!-- Supabase -->
+<!-- Supabase + shared modules -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sidebar.js"></script>
 <script src="auth.js"></script>
 <script>
-/* ── Mobile sidebar ── */
-const burger  = document.getElementById('burger');
-const sidebar = document.getElementById('sidebar');
-const overlay = document.getElementById('sidebarOverlay');
-const closeBtn = document.getElementById('sidebarClose');
-function openSidebar()  { sidebar.classList.add('open'); overlay.classList.add('open'); burger.classList.add('open'); }
-function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); burger.classList.remove('open'); }
-burger.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
-overlay.addEventListener('click', closeSidebar);
-closeBtn.addEventListener('click', closeSidebar);
-
 /* ── Page init ── */
 let currentSession  = null;
 let currentProfile  = null;
