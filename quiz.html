@@ -2352,13 +2352,11 @@ document.getElementById('btn-print-vocab').addEventListener('click', () => {
     const pct = r < 0 ? '—' : Math.round(r * 100) + '%';
     const rateCls = r < 0 ? 'pr-rate-none' : r < 0.5 ? 'pr-rate-fail' : r < 0.75 ? 'pr-rate-weak' : 'pr-rate-ok';
     const rowCls  = r >= 0 && r < 0.5 ? 'pr-failed' : r >= 0.5 && r < 0.75 ? 'pr-weak' : '';
-    const att = p?.attempts ?? '—';
     return `<tr class="${rowCls}">
       <td>${escHtml(w.source_word)}</td>
       <td>${escHtml(w.target_translation)}</td>
       <td>${escHtml(w.language_pair)}</td>
       <td>${escHtml(w.example_sentence || '—')}</td>
-      <td class="${rateCls}">${pct}${att !== '—' ? ` (${att} tentatives)` : ''}</td>
     </tr>`;
   }).join('');
 
@@ -2370,7 +2368,7 @@ document.getElementById('btn-print-vocab').addEventListener('click', () => {
     <h2>📚 Vocabulaire LazyPO${filterLabel}${langLabel}</h2>
     <div class="print-subtitle">${list.length} mot${list.length !== 1 ? 's' : ''} · Imprimé le ${now}</div>
     <table>
-      <thead><tr><th>Mot</th><th>Traduction</th><th>Langue</th><th>Exemple</th><th>Taux de réussite</th></tr></thead>
+      <thead><tr><th>Mot</th><th>Traduction</th><th>Langue</th><th>Exemple</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   document.body.appendChild(area);
