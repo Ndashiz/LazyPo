@@ -1360,6 +1360,23 @@ tr.row-selected { background: rgba(59,130,246,.05); }
 
 /* Leaderboard — me row */
 .lb-me td { background: rgba(59,130,246,.08); font-weight: 600; }
+.lb-xp { font-family:'DM Mono',monospace; font-weight:700; color:var(--accent2); }
+
+/* XP Breakdown panel */
+.xp-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 20px; margin-top: 16px;
+}
+.xp-panel-title { font-size:15px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.xp-panel-close { margin-left:auto; background:transparent; border:none; color:var(--muted); font-size:18px; cursor:pointer; }
+.xp-panel-close:hover { color:var(--text); }
+.xp-day { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.xp-day:last-child { border-bottom:none; }
+.xp-day-date { color:var(--muted); min-width:90px; }
+.xp-day-total { font-family:'DM Mono',monospace; font-weight:700; color:var(--accent2); min-width:50px; text-align:right; }
+.xp-day-pills { display:flex; gap:4px; flex-wrap:wrap; flex:1; }
+.xp-pill { font-size:11px; padding:2px 7px; border-radius:10px; background:var(--surface2); color:var(--muted); white-space:nowrap; }
+.xp-pill.has-xp { background:rgba(59,130,246,.12); color:var(--accent); }
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
@@ -2108,6 +2125,7 @@ async function addWord(obj) {
     .from('vocabulary')
     .insert({ ...obj, user_id: currentUser.id });
   if (error) { showToast('Error adding word: ' + error.message); return; }
+  xpTrackWordCreated(); // XP tracking — creations only
   await loadVocab();
   renderVocab();
   updateAvailNote();
@@ -3161,7 +3179,7 @@ function endSession() {
   const total   = sessionAnswers.length;
   const correct = sessionAnswers.filter(a => a.correct).length;
   saveQuizSession(total, correct, durationSec);
-  postMultiSession(correct, total, durationSec, 'vocab', quizFilter || 'all');
+  postMultiSession(correct, total, durationSec, 'vocab', quizFilter || 'all', quizMode || 'auto');
 
   const wrong = sessionAnswers.filter(a => !a.correct && !a.skipped);
   if (wrong.length > 0) {
@@ -3862,7 +3880,7 @@ function vbShowSummary() {
   const total   = vbAnswers.length;
   const correct = vbAnswers.filter(a => a.correct).length;
   const pct     = total > 0 ? Math.round((correct / total) * 100) : 0;
-  postMultiSession(correct, total, 0, 'verbes', vbFormFilter || 'all');
+  postMultiSession(correct, total, 0, 'verbes', vbFormFilter || 'all', 'auto');
 
   document.getElementById('vb-score-big').textContent  = `${correct} / ${total}`;
   document.getElementById('vb-score-sub').textContent  = pct + '%';
@@ -4016,6 +4034,351 @@ vbLoadProgress();
 vbUpdateNote();
 
 /* ═══════════════════════════════════════════════════════════
+   XP & RANKING SYSTEM
+   Reconciliation: client-side, runs once per UTC day
+   Cutoff: 00:00 UTC
+═══════════════════════════════════════════════════════════ */
+
+const XP_RULES = {
+  STREAK_BASE:             30,   // × (milestone/5)
+  STREAK_INTERVAL:          5,   // every 5 days
+  FIVE_WORD_DAILY:         25,
+  FIVE_WORD_THRESHOLD:      5,
+  QUIZ_PERFECT:            20,
+  QUIZ_LONG:               15,
+  QUIZ_LONG_MIN:           20,   // questions
+  MASTERY_PER_WORD:        10,
+  MASTERY_DAILY_CAP:       50,
+  RECOVERY_PER_WORD:       15,
+  RECOVERY_THRESHOLD:    0.75,
+  DIVERSITY_MODES:         10,
+  DIVERSITY_DIRECTIONS:    10,
+  SOCIAL_FIRST_COMMENT:     5,
+};
+
+let userXpState       = null;
+let xpReconciling     = false;
+let xpTodayNewWords   = 0;   // in-memory counter, reset per UTC day
+
+/* ── Word creation tracking ── */
+function xpTrackWordCreated() {
+  xpTodayNewWords++;
+  // persist to DB async (best-effort)
+  if (!currentUser || !window.sb) return;
+  window.sb.from('user_xp')
+    .upsert({ user_id: currentUser.id, today_new_words: xpTodayNewWords, today_date: _today(), updated_at: new Date().toISOString() },
+            { onConflict: 'user_id' })
+    .then(() => {})
+    .catch(() => {});
+}
+
+/* ── Load XP state ── */
+async function xpLoad() {
+  if (!currentUser || !window.sb) return null;
+  if (userXpState) return userXpState;
+  const { data, error } = await window.sb.from('user_xp').select('*').eq('user_id', currentUser.id).single();
+  if (error && error.code === 'PGRST116') {
+    // First time: create row
+    const { data: row } = await window.sb.from('user_xp')
+      .insert({ user_id: currentUser.id })
+      .select().single();
+    userXpState = row;
+  } else if (!error) {
+    userXpState = data;
+    // Restore today_new_words if same day
+    if (data?.today_date === _today()) xpTodayNewWords = data.today_new_words || 0;
+  }
+  return userXpState;
+}
+
+/* ── Schedule reconciliation (debounced) ── */
+let _xpReconcileTimer = null;
+function xpScheduleReconciliation() {
+  clearTimeout(_xpReconcileTimer);
+  _xpReconcileTimer = setTimeout(() => runXpReconciliation(), 1500);
+}
+
+/* ── Streak update logic (pure) ── */
+function xpComputeStreak(state, today, wasActive) {
+  if (!wasActive) return { days: state?.current_streak_days || 0, lastActive: state?.last_active_date || null };
+  const last = state?.last_active_date;
+  if (last === today) return { days: state.current_streak_days || 1, lastActive: today };
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const days = last === yesterday ? (state?.current_streak_days || 0) + 1 : 1;
+  return { days, lastActive: today };
+}
+
+/* ── Main reconciliation ── */
+async function runXpReconciliation() {
+  if (!currentUser || !window.sb || xpReconciling) return;
+  xpReconciling = true;
+  try {
+    const today = _today();
+    await xpLoad();
+    if (!userXpState) { xpReconciling = false; return; }
+    if (userXpState.last_reconciled_date === today) { xpReconciling = false; return; }
+
+    /* ── Fetch today's data ── */
+    const todayStart = today + 'T00:00:00.000Z';
+    const todayEnd   = today + 'T23:59:59.999Z';
+
+    const [{ data: sessions }, { count: commentsCount }, { data: progressRows }] = await Promise.all([
+      window.sb.from('quiz_sessions')
+        .select('score, total, mode, direction')
+        .eq('user_id', currentUser.id)
+        .gte('created_at', todayStart).lte('created_at', todayEnd),
+      window.sb.from('quiz_session_comments')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', currentUser.id)
+        .gte('created_at', todayStart),
+      window.sb.from('quiz_progress')
+        .select('word_id, attempts, correct')
+        .eq('user_id', currentUser.id),
+    ]);
+
+    /* ── Detect new masteries ── */
+    const alreadyMastered = new Set(userXpState.mastered_word_ids || []);
+    const newMasteries   = [];
+    const recoveries     = [];
+    for (const p of (progressRows || [])) {
+      const rate = p.attempts > 0 ? p.correct / p.attempts : 0;
+      const mastered = rate >= 0.80 && p.attempts >= 3;
+      if (mastered && !alreadyMastered.has(p.word_id)) newMasteries.push(p.word_id);
+      // Recovery: word was in rework (tracked by low historical rate) — simplified:
+      // fire when rate > RECOVERY_THRESHOLD for any word that wasn't already mastered
+      if (!mastered && rate > XP_RULES.RECOVERY_THRESHOLD && p.attempts >= 3 && !alreadyMastered.has(p.word_id)) {
+        recoveries.push(p.word_id);
+      }
+    }
+
+    /* ── Streak ── */
+    const wasActive = (sessions || []).length > 0;
+    const streak    = xpComputeStreak(userXpState, today, wasActive);
+
+    /* ── XP calculation ── */
+    let xp = 0;
+    const breakdown = {};
+
+    // Rule 1: Streak milestones
+    const awardedMilestones = [...(userXpState.awarded_streak_milestones || [])];
+    let milestoneXp = 0;
+    for (let m = XP_RULES.STREAK_INTERVAL; m <= streak.days; m += XP_RULES.STREAK_INTERVAL) {
+      if (!awardedMilestones.includes(m)) {
+        const bonus = XP_RULES.STREAK_BASE * (m / XP_RULES.STREAK_INTERVAL);
+        milestoneXp += bonus;
+        awardedMilestones.push(m);
+      }
+    }
+    if (milestoneXp) { xp += milestoneXp; breakdown.streak_milestone = milestoneXp; }
+
+    // Rule 2: 5-word daily bonus
+    const newWords = userXpState.today_date === today ? (userXpState.today_new_words || 0) : xpTodayNewWords;
+    if (newWords >= XP_RULES.FIVE_WORD_THRESHOLD) {
+      xp += XP_RULES.FIVE_WORD_DAILY;
+      breakdown.five_word = XP_RULES.FIVE_WORD_DAILY;
+    }
+
+    // Rule 3: Quiz performance
+    let perfectXp = 0, longXp = 0;
+    for (const s of (sessions || [])) {
+      if (s.total > 0 && s.score === s.total) { perfectXp += XP_RULES.QUIZ_PERFECT; }
+      if (s.total >= XP_RULES.QUIZ_LONG_MIN)  { longXp    += XP_RULES.QUIZ_LONG;    }
+    }
+    if (perfectXp) { xp += perfectXp; breakdown.quiz_perfect = perfectXp; }
+    if (longXp)    { xp += longXp;    breakdown.quiz_long    = longXp;    }
+
+    // Rule 3b: Mastery (daily cap 50 XP)
+    let masteryXp = 0;
+    const awardedMasteriesNow = [];
+    for (const wid of newMasteries) {
+      if (masteryXp + XP_RULES.MASTERY_PER_WORD <= XP_RULES.MASTERY_DAILY_CAP) {
+        masteryXp += XP_RULES.MASTERY_PER_WORD;
+        awardedMasteriesNow.push(wid);
+      }
+    }
+    if (masteryXp) { xp += masteryXp; breakdown.mastery = masteryXp; }
+
+    // Rule 4: Recovery
+    let recoveryXp = 0;
+    for (const _ of recoveries) { recoveryXp += XP_RULES.RECOVERY_PER_WORD; }
+    if (recoveryXp) { xp += recoveryXp; breakdown.recovery = recoveryXp; }
+
+    // Rule 5: Diversity — modes
+    const modes = [...new Set((sessions || []).map(s => s.mode))];
+    if (modes.includes('vocab') && modes.includes('verbes')) {
+      xp += XP_RULES.DIVERSITY_MODES;
+      breakdown.diversity_modes = XP_RULES.DIVERSITY_MODES;
+    }
+    // Diversity — directions (vocab only)
+    const dirs = [...new Set((sessions || []).filter(s => s.mode === 'vocab' && s.direction !== 'auto').map(s => s.direction))];
+    if (dirs.length >= 2) {
+      xp += XP_RULES.DIVERSITY_DIRECTIONS;
+      breakdown.diversity_directions = XP_RULES.DIVERSITY_DIRECTIONS;
+    }
+
+    // Rule 6: Social — first comment of the day
+    if ((commentsCount || 0) >= 1) {
+      xp += XP_RULES.SOCIAL_FIRST_COMMENT;
+      breakdown.social_comment = XP_RULES.SOCIAL_FIRST_COMMENT;
+    }
+
+    /* ── Commit ── */
+    const updatedMastered  = [...alreadyMastered, ...awardedMasteriesNow];
+    const newTotalXp       = (userXpState.total_xp || 0) + xp;
+
+    await window.sb.from('user_xp').upsert({
+      user_id:                    currentUser.id,
+      total_xp:                   newTotalXp,
+      current_streak_days:        streak.days,
+      last_active_date:           streak.lastActive || userXpState.last_active_date,
+      last_reconciled_date:       today,
+      awarded_streak_milestones:  awardedMilestones,
+      mastered_word_ids:          updatedMastered,
+      today_new_words:            0,
+      today_date:                 today,
+      updated_at:                 new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+
+    if (xp > 0) {
+      await window.sb.from('xp_daily_log').upsert({
+        user_id: currentUser.id, date: today, xp_earned: xp, breakdown,
+      }, { onConflict: 'user_id,date' });
+      showToast(`+${xp} XP aujourd'hui 🎯`);
+    }
+
+    userXpState = { ...userXpState, total_xp: newTotalXp, current_streak_days: streak.days,
+      last_active_date: streak.lastActive, last_reconciled_date: today,
+      awarded_streak_milestones: awardedMilestones, mastered_word_ids: updatedMastered };
+    xpTodayNewWords = 0;
+  } catch(e) { console.warn('[XP] reconciliation error', e); }
+  xpReconciling = false;
+}
+
+/* ── XP breakdown panel (own row click) ── */
+async function showXpBreakdown() {
+  const existing = document.getElementById('xp-breakdown-panel');
+  if (existing) { existing.remove(); return; }
+
+  const { data: logs } = await window.sb.from('xp_daily_log')
+    .select('*').eq('user_id', currentUser.id)
+    .order('date', { ascending: false }).limit(14);
+
+  const ruleLabels = {
+    streak_milestone:    '🔥 Streak milestone',
+    five_word:           '📝 5 mots ajoutés',
+    quiz_perfect:        '💯 Quiz parfait',
+    quiz_long:           '📏 Quiz 20+ questions',
+    mastery:             '🏆 Mots maîtrisés',
+    recovery:            '💪 Récupération',
+    diversity_modes:     '🔀 Diversité modes',
+    diversity_directions:'↔️ Diversité directions',
+    social_comment:      '💬 Commentaire social',
+  };
+
+  const rows = (logs || []).map(l => {
+    const pills = Object.entries(l.breakdown || {})
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => `<span class="xp-pill has-xp">${ruleLabels[k] || k} +${v}</span>`)
+      .join('');
+    return `<div class="xp-day">
+      <span class="xp-day-date">${new Date(l.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span>
+      <div class="xp-day-pills">${pills || '<span class="xp-pill">0 XP</span>'}</div>
+      <span class="xp-day-total">+${l.xp_earned} XP</span>
+    </div>`;
+  }).join('') || '<div style="color:var(--muted);font-size:13px;padding:8px 0">Aucun historique encore.</div>';
+
+  const panel = document.createElement('div');
+  panel.id = 'xp-breakdown-panel';
+  panel.className = 'xp-panel';
+  panel.innerHTML = `
+    <div class="xp-panel-title">
+      📊 Mon historique XP (14 derniers jours)
+      <button class="xp-panel-close" onclick="document.getElementById('xp-breakdown-panel').remove()">✕</button>
+    </div>
+    ${rows}`;
+  document.getElementById('multi-sub-classement').appendChild(panel);
+}
+
+/* ── Override renderLeaderboard to use total_xp ── */
+async function multiLoadLeaderboard() {
+  // Fetch XP state for all users
+  const [{ data: xpRows }, { data: sessions, error }] = await Promise.all([
+    window.sb.from('user_xp').select('user_id, total_xp, current_streak_days'),
+    window.sb.from('quiz_sessions').select('user_id, display_name, score, total')
+      .order('created_at', { ascending: false }).limit(500),
+  ]);
+  if (error) return;
+
+  // Build name map from sessions
+  const nameMap = {};
+  for (const s of (sessions || [])) { if (!nameMap[s.user_id]) nameMap[s.user_id] = s.display_name; }
+
+  // Build aggregated stats
+  const aggMap = {};
+  for (const s of (sessions || [])) {
+    if (!aggMap[s.user_id]) aggMap[s.user_id] = { games: 0, totalScore: 0, totalPossible: 0, best: 0 };
+    const m = aggMap[s.user_id];
+    m.games++;
+    m.totalScore    += s.score;
+    m.totalPossible += s.total;
+    if (s.total > 0) m.best = Math.max(m.best, Math.round((s.score / s.total) * 100));
+  }
+
+  // Merge XP with stats
+  lbData = (xpRows || []).map(x => {
+    const agg = aggMap[x.user_id] || { games: 0, totalScore: 0, totalPossible: 0, best: 0 };
+    const avg = agg.totalPossible > 0 ? Math.round((agg.totalScore / agg.totalPossible) * 100) : 0;
+    return {
+      user_id:   x.user_id,
+      display_name: nameMap[x.user_id] || 'Joueur',
+      total_xp:  x.total_xp || 0,
+      streak:    x.current_streak_days || 0,
+      avg, games: agg.games, best: agg.best,
+    };
+  }).sort((a, b) => b.total_xp - a.total_xp || b.streak - a.streak || b.games - a.games);
+
+  renderLeaderboard(lbData);
+}
+
+function renderLeaderboard(rows) {
+  const tbody = document.getElementById('lb-body');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="feed-empty">Aucune partie enregistrée.<br><small>Joue un quiz pour apparaître ici !</small></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((r, i) => {
+    const isMe   = currentUser && r.user_id === currentUser.id;
+    const medal  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1;
+    const avgCls = r.avg >= 75 ? 'rate-good' : r.avg >= 50 ? 'rate-mid' : 'rate-bad';
+    const streakBadge = r.streak > 0 ? ` 🔥${r.streak}` : '';
+    return `<tr${isMe ? ' class="lb-me"' : ''}${isMe ? ' style="cursor:pointer" title="Voir mon historique XP"' : ''}>
+      <td style="font-size:16px;text-align:center">${medal}</td>
+      <td style="font-weight:600">${escHtml(r.display_name)}${isMe ? ' <span style="font-size:11px;color:var(--accent)">(moi)</span>' : ''}${streakBadge}</td>
+      <td class="lb-xp">${r.total_xp.toLocaleString()} XP</td>
+      <td class="${avgCls}">${r.avg}%</td>
+      <td style="color:var(--muted)">${r.games}</td>
+    </tr>`;
+  }).join('');
+
+  // Click on own row → XP breakdown
+  tbody.querySelectorAll('tr.lb-me').forEach(row => {
+    row.addEventListener('click', showXpBreakdown);
+  });
+}
+
+// Update leaderboard header
+const lbTable = document.getElementById('lb-table');
+if (lbTable) {
+  lbTable.querySelector('thead tr').innerHTML =
+    '<th>#</th><th>Joueur</th><th>Total XP</th><th>Moy. %</th><th>Parties</th>';
+}
+
+// Run reconciliation on load (after auth ready)
+document.addEventListener('lazypo:profile', () => {
+  setTimeout(() => runXpReconciliation(), 2000);
+});
+
+/* ═══════════════════════════════════════════════════════════
    MODULE MULTI — score sharing, leaderboard, feed, comments
 ═══════════════════════════════════════════════════════════ */
 
@@ -4043,7 +4406,7 @@ async function getMultiDisplayName() {
 }
 
 /* ── Auto-post session after each quiz ── */
-async function postMultiSession(score, total, durationSec, mode, lang) {
+async function postMultiSession(score, total, durationSec, mode, lang, direction) {
   if (!currentUser || !window.sb) return;
   const name = await getMultiDisplayName();
   try {
@@ -4051,9 +4414,11 @@ async function postMultiSession(score, total, durationSec, mode, lang) {
       user_id: currentUser.id,
       display_name: name,
       avatar_url: multiAvatarUrl || null,
-      score, total, duration_sec: durationSec, mode, lang
+      score, total, duration_sec: durationSec, mode, lang,
+      direction: direction || 'auto'
     });
-    multiLoaded = false; // invalidate cache so next visit refreshes
+    multiLoaded = false;
+    xpScheduleReconciliation(); // trigger XP after session posted
   } catch(e) { console.warn('postMultiSession:', e.message); }
 }
 
