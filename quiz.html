@@ -1406,15 +1406,25 @@ tr.row-selected { background: rgba(59,130,246,.05); }
   transition: all .15s;
 }
 .feed-comment-toggle:hover { border-color: var(--accent); color: var(--accent); }
-.feed-comments { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.feed-chevron { font-size: 10px; margin-left: 2px; opacity: .7; }
+.feed-comments { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
 .feed-comment-item {
-  display: flex; gap: 8px; margin-bottom: 8px; font-size: 13px;
+  display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-start;
 }
-.feed-comment-author { font-weight: 600; color: var(--accent); white-space: nowrap; }
-.feed-comment-text   { color: var(--text); }
-.feed-comment-time   { font-size: 11px; color: var(--muted); margin-left: auto; white-space: nowrap; }
-.feed-comment-form   { display: flex; gap: 8px; margin-top: 8px; }
-.feed-comment-form .qz-input { flex: 1; padding: 6px 10px; font-size: 13px; }
+.feed-comment-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff; overflow: hidden;
+}
+.feed-comment-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.feed-comment-body { flex: 1; min-width: 0; }
+.feed-comment-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+.feed-comment-author { font-weight: 600; color: var(--text); font-size: 13px; }
+.feed-comment-time   { font-size: 11px; color: var(--muted); }
+.feed-comment-text   { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.feed-comment-form   { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+.feed-comment-form .qz-input { flex: 1; padding: 8px 14px; font-size: 13px; border-radius: 20px; }
+.feed-comment-form .btn-primary { padding: 8px 18px; border-radius: 20px; font-size: 13px; white-space: nowrap; }
 .feed-empty { text-align:center; color: var(--muted); padding: 40px 0; font-size: 14px; }
 
 /* Reactions */
@@ -4904,6 +4914,23 @@ function renderFeed(sessions, append) {
       btn.addEventListener('click', () => submitComment(btn.dataset.sid, btn.closest('.feed-comments')));
     }
   });
+  // Batch-load comments for all visible sessions
+  const sids = sessions.map(s => s.id);
+  if (sids.length > 0) {
+    window.sb.from('quiz_session_comments')
+      .select('*').in('session_id', sids).order('created_at')
+      .then(({ data: comments }) => {
+        const bySession = {};
+        for (const c of (comments || [])) {
+          if (!bySession[c.session_id]) bySession[c.session_id] = [];
+          bySession[c.session_id].push(c);
+        }
+        sids.forEach(sid => {
+          const itemEl = list.querySelector(`.feed-item[data-sid="${sid}"]`);
+          if (itemEl) renderComments(sid, bySession[sid] || [], itemEl);
+        });
+      });
+  }
   // Attach challenge back listeners
   list.querySelectorAll('.feed-challenge-btn').forEach(btn => {
     if (btn.dataset.bound) return;
@@ -4959,18 +4986,20 @@ function buildFeedItem(s) {
       <span style="font-size:12px;color:var(--muted)">${modeLabel}</span>
       <span class="feed-meta">${dateStr}</span>
       ${challengeBtn}
-      <button class="feed-comment-toggle" data-sid="${s.id}" data-bound="">💬 ${count > 0 ? count : ''}</button>
+      <button class="feed-comment-toggle" data-sid="${s.id}" data-bound="" title="Masquer les commentaires">
+        💬 ${count > 0 ? count : ''} <span class="feed-chevron">︿</span>
+      </button>
     </div>
     <div class="feed-reactions" data-sid="${s.id}">
       <button class="feed-react-btn" data-sid="${s.id}" data-type="fire">🔥 <span class="react-count" data-sid="${s.id}" data-type="fire">0</span></button>
       <button class="feed-react-btn" data-sid="${s.id}" data-type="muscle">💪 <span class="react-count" data-sid="${s.id}" data-type="muscle">0</span></button>
       <button class="feed-react-btn" data-sid="${s.id}" data-type="clap">👏 <span class="react-count" data-sid="${s.id}" data-type="clap">0</span></button>
     </div>
-    <div class="feed-comments" style="display:none;" data-sid="${s.id}" data-loaded="">
-      <div class="feed-comment-list"></div>
+    <div class="feed-comments" data-sid="${s.id}" data-loaded="">
+      <div class="feed-comment-list"><div class="feed-comments-loading" style="font-size:12px;color:var(--muted);padding:4px 0">Chargement…</div></div>
       <div class="feed-comment-form">
         <input type="text" class="qz-input feed-comment-input" placeholder="Ajouter un commentaire…" maxlength="200">
-        <button class="btn-primary feed-comment-submit" data-sid="${s.id}" style="padding:6px 14px;font-size:13px;" data-bound="">Envoyer</button>
+        <button class="btn-primary feed-comment-submit" data-sid="${s.id}" data-bound="">Publier</button>
       </div>
     </div>
   </div>`;
@@ -4978,25 +5007,43 @@ function buildFeedItem(s) {
 
 async function toggleComments(sid, itemEl) {
   const commentsEl = itemEl.querySelector('.feed-comments');
+  const chevron    = itemEl.querySelector('.feed-chevron');
   const isOpen     = commentsEl.style.display !== 'none';
   commentsEl.style.display = isOpen ? 'none' : 'block';
-  if (!isOpen && !commentsEl.dataset.loaded) {
-    commentsEl.dataset.loaded = '1';
-    const { data } = await window.sb
-      .from('quiz_session_comments')
-      .select('*').eq('session_id', sid).order('created_at');
-    renderComments(sid, data || [], itemEl);
-  }
+  if (chevron) chevron.textContent = isOpen ? '﹀' : '︿';
+}
+
+/* Palette for avatar initials — cycles based on first char */
+const COMMENT_AVATAR_COLORS = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16'];
+function commentAvatarColor(name) {
+  return COMMENT_AVATAR_COLORS[(name || '?').charCodeAt(0) % COMMENT_AVATAR_COLORS.length];
 }
 
 function renderComments(sid, comments, itemEl) {
   const list = itemEl.querySelector('.feed-comment-list');
-  list.innerHTML = comments.map(c => `
+  if (!list) return;
+  if (!comments.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0">Aucun commentaire — sois le premier !</div>';
+    return;
+  }
+  list.innerHTML = comments.map(c => {
+    const initial   = (c.display_name || '?')[0].toUpperCase();
+    const bgColor   = commentAvatarColor(c.display_name);
+    const avatarHtml = c.avatar_url
+      ? `<div class="feed-comment-avatar"><img src="${escHtml(c.avatar_url)}" alt="${escHtml(initial)}"></div>`
+      : `<div class="feed-comment-avatar" style="background:${bgColor}">${escHtml(initial)}</div>`;
+    return `
     <div class="feed-comment-item">
-      <span class="feed-comment-author">${escHtml(c.display_name)}</span>
-      <span class="feed-comment-text">${escHtml(c.content)}</span>
-      <span class="feed-comment-time">${timeAgo(c.created_at)}</span>
-    </div>`).join('') || '<div style="font-size:12px;color:var(--muted);padding:4px 0">Aucun commentaire.</div>';
+      ${avatarHtml}
+      <div class="feed-comment-body">
+        <div class="feed-comment-meta">
+          <span class="feed-comment-author">${escHtml(c.display_name)}</span>
+          <span class="feed-comment-time">${feedFormatDate(c.created_at)}</span>
+        </div>
+        <div class="feed-comment-text">${escHtml(c.content)}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function submitComment(sid, commentsEl) {
@@ -5011,9 +5058,24 @@ async function submitComment(sid, commentsEl) {
   input.value = '';
   // Append comment without refetch
   const list = commentsEl.querySelector('.feed-comment-list');
+  // Remove "no comments" placeholder if present
+  const empty = list.querySelector('div[style]');
+  if (empty && empty.textContent.includes('premier')) empty.remove();
+  const bgColor = commentAvatarColor(name);
+  const initial = (name || '?')[0].toUpperCase();
+  const avatarHtml = multiAvatarUrl
+    ? `<div class="feed-comment-avatar"><img src="${escHtml(multiAvatarUrl)}" alt="${escHtml(initial)}"></div>`
+    : `<div class="feed-comment-avatar" style="background:${bgColor}">${escHtml(initial)}</div>`;
   const frag = document.createElement('div');
   frag.className = 'feed-comment-item';
-  frag.innerHTML = `<span class="feed-comment-author">${escHtml(name)}</span><span class="feed-comment-text">${escHtml(content)}</span><span class="feed-comment-time">À l'instant</span>`;
+  frag.innerHTML = `${avatarHtml}
+    <div class="feed-comment-body">
+      <div class="feed-comment-meta">
+        <span class="feed-comment-author">${escHtml(name)}</span>
+        <span class="feed-comment-time">À l'instant</span>
+      </div>
+      <div class="feed-comment-text">${escHtml(content)}</div>
+    </div>`;
   list.appendChild(frag);
   // Update badge count
   const toggle = document.querySelector(`.feed-comment-toggle[data-sid="${sid}"]`);
