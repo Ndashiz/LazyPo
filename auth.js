@@ -45,6 +45,40 @@
   const LOGIN_PAGE    = 'login.html';
   const ACCOUNT_PAGE  = 'account.html';
 
+  /* ── Local dev bypass ────────────────────────────────────────
+     On localhost / 127.0.0.1, if the user has no real Supabase
+     session we serve a stub "dev" session so the UI renders
+     without login. Database calls still fail (invalid token) —
+     this is for visual / flow testing only.
+     Set window.__DISABLE_LOCAL_BYPASS = true (or sessionStorage
+     key 'lazypo:disableLocalBypass') to opt out and use the
+     normal auth flow even on localhost.
+  ────────────────────────────────────────────────────────────── */
+  const IS_LOCAL = ['localhost','127.0.0.1','0.0.0.0'].includes(location.hostname)
+                && !window.__DISABLE_LOCAL_BYPASS
+                && sessionStorage.getItem('lazypo:disableLocalBypass') !== '1';
+  const DEV_SESSION = IS_LOCAL ? {
+    __dev: true,
+    access_token: 'dev-bypass',
+    token_type: 'bearer',
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now()/1000) + 3600,
+    user: {
+      id: '00000000-0000-0000-0000-000000000099',
+      email: 'dev@local',
+      role: 'authenticated',
+      aud: 'authenticated',
+      app_metadata: {},
+      user_metadata: {},
+      created_at: new Date().toISOString()
+    }
+  } : null;
+  if (IS_LOCAL) {
+    console.warn('[LazyAuth] 🔧 Local dev bypass active — UI will render without login.\n' +
+                 '            Supabase queries will fail until you sign in for real.\n' +
+                 '            To disable: sessionStorage.setItem("lazypo:disableLocalBypass","1") + reload.');
+  }
+
   const { createClient } = supabase;
   window.sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -153,7 +187,7 @@
   async function boot() {
     await renderNavUser();
     window.sb.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') window.location.href = LOGIN_PAGE;
+      if (event === 'SIGNED_OUT' && !IS_LOCAL) window.location.href = LOGIN_PAGE;
       if (event === 'SIGNED_IN')  renderNavUser();
     });
 
@@ -171,7 +205,8 @@
     const footer = document.querySelector('.sb-footer');
     if (!footer) return;
 
-    const { data: { session } } = await window.sb.auth.getSession();
+    let { data: { session } } = await window.sb.auth.getSession();
+    if (!session && IS_LOCAL) session = DEV_SESSION;
 
     if (!session) {
       footer.innerHTML = `
@@ -187,11 +222,15 @@
 
     /* fetch profile — graceful if table doesn't exist yet */
     let profile = null;
-    try {
-      const { data } = await window.sb
-        .from('profiles').select('*').eq('id', session.user.id).single();
-      profile = data;
-    } catch (_) {}
+    if (session.__dev) {
+      profile = { id: session.user.id, username: 'dev', avatar_url: null, is_admin: true };
+    } else {
+      try {
+        const { data } = await window.sb
+          .from('profiles').select('*').eq('id', session.user.id).single();
+        profile = data;
+      } catch (_) {}
+    }
 
     /* ── approval check ── */
     if (profile && profile.is_approved === false) {
@@ -285,11 +324,15 @@
     /** Redirect to login if no session, else return session */
     requireAuth: async () => {
       const { data: { session } } = await window.sb.auth.getSession();
-      if (!session) { window.location.href = LOGIN_PAGE; return null; }
-      return session;
+      if (session) return session;
+      if (IS_LOCAL) return DEV_SESSION;
+      window.location.href = LOGIN_PAGE; return null;
     },
     /** Fetch a user's profile row */
     getProfile: async (userId) => {
+      if (IS_LOCAL && DEV_SESSION && userId === DEV_SESSION.user.id) {
+        return { id: userId, username: 'dev', avatar_url: null, is_admin: true };
+      }
       const { data } = await window.sb.from('profiles').select('*').eq('id', userId).single();
       return data;
     },
@@ -403,9 +446,13 @@
 
   window.LazyAuth.requireAuthOrPopup = async () => {
     const { data: { session } } = await window.sb.auth.getSession();
-    if (!session) { window.location.href = LOGIN_PAGE; return null; }
-    return session;
+    if (session) return session;
+    if (IS_LOCAL) return DEV_SESSION;
+    window.location.href = LOGIN_PAGE; return null;
   };
+  /** Expose flags for other modules / debugging */
+  window.LazyAuth.isLocal    = IS_LOCAL;
+  window.LazyAuth.devSession = DEV_SESSION;
 
   /* ── Util ────────────────────────────────────────────────────── */
   function esc(s) {

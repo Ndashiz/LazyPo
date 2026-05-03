@@ -73,6 +73,22 @@
     },
     { divider: true },
     {
+      id: 'feedback',
+      icon: '💡',
+      label: 'Feedback',
+      url: 'feedback.html',
+      desc: 'Suggest improvements, vote on ideas, follow what\'s coming next.'
+    },
+    {
+      id: 'feedback-new',
+      icon: '✏️',
+      label: 'New request',
+      url: null,
+      onClick: "window.LazyFeedback ? window.LazyFeedback.openSubmissionModal() : (window.location.href='feedback.html')",
+      desc: 'Submit a new improvement request without leaving this page.'
+    },
+    { divider: true },
+    {
       id: 'account',
       icon: '👤',
       label: 'My Account',
@@ -400,6 +416,16 @@
   ═══════════════════════════════════════════════════ */
   document.body.insertAdjacentHTML('afterbegin', html);
 
+  /* Lazy-load the global feedback submission modal so the
+     "New request" sidebar entry works from any page. */
+  if (!document.querySelector('script[data-lazy-feedback]') && !window.LazyFeedback) {
+    const fbScript = document.createElement('script');
+    fbScript.src = 'feedback_modal.js';
+    fbScript.dataset.lazyFeedback = '1';
+    fbScript.async = false;
+    document.head.appendChild(fbScript);
+  }
+
   /* ═══════════════════════════════════════════════════
      MOBILE LOGIC
   ═══════════════════════════════════════════════════ */
@@ -422,7 +448,7 @@
   // Scripts that must NOT be re-executed on navigation (already live in memory)
   const SPA_SKIP = [
     'sidebar.js','auth.js','focusfm.js','session.js',
-    'countdown.js','popup.js','demo.js','apis.js',
+    'countdown.js','popup.js','demo.js','apis.js','feedback_modal.js',
     'supabase-js','three.r134','vanta.net',
   ];
 
