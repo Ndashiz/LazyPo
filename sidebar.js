@@ -79,14 +79,6 @@
       url: 'feedback.html',
       desc: 'Suggest improvements, vote on ideas, follow what\'s coming next.'
     },
-    {
-      id: 'feedback-new',
-      icon: '✏️',
-      label: 'New request',
-      url: null,
-      onClick: "window.LazyFeedback ? window.LazyFeedback.openSubmissionModal() : (window.location.href='feedback.html')",
-      desc: 'Submit a new improvement request without leaving this page.'
-    },
     { divider: true },
     {
       id: 'account',
