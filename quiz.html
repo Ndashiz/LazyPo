@@ -1360,53 +1360,137 @@ tr.row-selected { background: rgba(59,130,246,.05); }
 }
 
 /* ── Multi tab ── */
-.multi-subnav {
-  display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap;
+/* ═══════════════════════════════════════
+   MULTI — two-column layout
+═══════════════════════════════════════ */
+.multi-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
 }
-.multi-subnav-btn {
-  padding: 7px 16px; border-radius: 20px; border: 1px solid var(--border);
-  background: transparent; color: var(--muted); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif;
+@media (max-width: 900px) {
+  .multi-layout { grid-template-columns: 1fr; }
+  .multi-side-col { display: contents; }
 }
-.multi-subnav-btn:hover { color: var(--text); border-color: var(--accent); }
-.multi-subnav-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-.multi-sub { display: none; }
-.multi-sub.active { display: block; }
+
+/* Feed column header */
+.multi-feed-hdr {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.multi-feed-hdr-left { display: flex; align-items: center; gap: 14px; }
+.multi-feed-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+}
+.multi-feed-title { font-size: 20px; font-weight: 700; color: var(--text); }
+.multi-feed-sub   { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.multi-sort-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border2);
+  color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: border-color .15s; white-space: nowrap; font-family: 'DM Sans', sans-serif;
+}
+.multi-sort-btn:hover { border-color: var(--accent); }
 
 /* Feed items */
 .feed-item {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-  padding: 14px 16px; margin-bottom: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 18px; margin-bottom: 12px;
 }
-.feed-item-header {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+
+/* Feed item top row */
+.feed-item-top {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
 }
-.feed-name { font-weight: 700; font-size: 14px; }
-.feed-score-badge {
-  background: var(--surface2); border-radius: 6px; padding: 2px 10px;
-  font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text);
-}
-.feed-score-badge.good { background: rgba(34,197,94,.12); color: #4ade80; }
-.feed-score-badge.mid  { background: rgba(234,179,8,.12);  color: #fbbf24; }
-.feed-score-badge.bad  { background: rgba(239,68,68,.12);  color: #f87171; }
-.feed-meta { font-size: 12px; color: var(--muted); margin-left: auto; }
-/* Feed avatar */
+.feed-avatar-wrap { position: relative; flex-shrink: 0; }
 .feed-avatar {
-  width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
-  flex-shrink: 0; border: 2px solid var(--border);
+  width: 46px; height: 46px; border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--border2);
 }
 .feed-avatar-initial {
-  width: 36px; height: 36px; border-radius: 50%; background: var(--accent);
+  width: 46px; height: 46px; border-radius: 50%; background: var(--accent);
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0;
+  font-size: 16px; font-weight: 700; color: #fff;
 }
+.feed-status-dot {
+  position: absolute; bottom: 1px; right: 1px;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #22c55e; border: 2px solid var(--surface);
+}
+.feed-item-info { flex: 1; min-width: 0; }
+.feed-name { font-weight: 700; font-size: 15px; color: var(--text); }
+.feed-action-line { font-size: 12px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+.feed-menu-btn {
+  margin-left: auto; background: none; border: none; color: var(--muted);
+  font-size: 18px; cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  letter-spacing: 2px; transition: color .15s; flex-shrink: 0;
+}
+.feed-menu-btn:hover { color: var(--text); }
+
+/* Inner score card */
+.feed-score-card {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 12px; flex-wrap: wrap;
+}
+.feed-score-mode-icon {
+  width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.feed-score-mode-icon.vocab  { background: rgba(139,92,246,0.2); }
+.feed-score-mode-icon.verbes { background: rgba(16,185,129,0.2); }
+.feed-score-info { flex: 1; min-width: 0; }
+.feed-score-label { font-size: 14px; font-weight: 600; color: var(--text); }
+.feed-score-qty   { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.feed-score-result { text-align: right; }
+.feed-score-pct-big {
+  font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 700;
+  color: var(--text); white-space: nowrap;
+}
+.feed-score-pct-big .pct-good  { color: #4ade80; }
+.feed-score-pct-big .pct-mid   { color: #fbbf24; }
+.feed-score-pct-big .pct-bad   { color: #f87171; }
+.feed-personal-best { font-size: 11px; color: #4ade80; margin-top: 3px; font-weight: 600; }
+
+/* Challenge Back */
+.feed-challenge-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 8px;
+  background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  border: none; transition: opacity .15s; white-space: nowrap; flex-shrink: 0;
+}
+.feed-challenge-btn:hover { opacity: .85; }
+
+/* Footer: reactions + comment toggle */
+.feed-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 4px;
+}
+.feed-reactions { display: flex; gap: 6px; flex-wrap: wrap; }
+.feed-react-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 20px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.feed-react-btn:hover { background: var(--surface); border-color: #555; }
+.feed-react-btn.reacted { background: rgba(59,130,246,0.15); border-color: rgba(96,165,250,0.35); color: var(--accent2); }
 .feed-comment-toggle {
-  background: transparent; border: 1px solid var(--border); border-radius: 20px;
-  color: var(--muted); font-size: 12px; padding: 3px 10px; cursor: pointer;
-  transition: all .15s;
+  display: flex; align-items: center; gap: 6px;
+  background: transparent; border: none;
+  color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer;
+  padding: 4px 0; transition: color .15s; white-space: nowrap;
 }
-.feed-comment-toggle:hover { border-color: var(--accent); color: var(--accent); }
-.feed-chevron { font-size: 10px; margin-left: 2px; opacity: .7; }
+.feed-comment-toggle:hover { color: var(--text); }
+.feed-chevron { font-size: 11px; opacity: .7; }
+.feed-meta { font-size: 12px; color: var(--muted); }
 .feed-comments { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
 .feed-comment-item {
   display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-start;
@@ -1484,6 +1568,51 @@ tr.row-selected { background: rgba(59,130,246,.05); }
 .xp-day-pills { display:flex; gap:4px; flex-wrap:wrap; flex:1; }
 .xp-pill { font-size:11px; padding:2px 7px; border-radius:10px; background:var(--surface2); color:var(--muted); white-space:nowrap; }
 .xp-pill.has-xp { background:rgba(59,130,246,.12); color:var(--accent); }
+
+/* Sidebar cards (leaderboard + stats) */
+.lb-card, .stats-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px 18px; margin-bottom: 16px;
+}
+.lb-card-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 14px;
+}
+.lb-card-title, .stats-card-title {
+  font-size: 15px; font-weight: 700; color: var(--text);
+}
+.lb-countdown { font-size: 11px; color: var(--muted); }
+.lb-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 10px; margin-bottom: 4px;
+  transition: background .15s;
+}
+.lb-row:hover { background: var(--surface2); }
+.lb-row.lb-me { background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2); }
+.lb-rank {
+  width: 26px; text-align: center; font-size: 15px; flex-shrink: 0;
+  color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 700;
+}
+.lb-player { flex: 1; min-width: 0; }
+.lb-player-name {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lb-player-avg { font-size: 11px; color: var(--muted); }
+.lb-player-xp {
+  font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 700;
+  color: var(--accent2); white-space: nowrap;
+}
+.lb-no-data { font-size: 13px; color: var(--muted); text-align: center; padding: 20px 0; }
+
+.stats-card-title { margin-bottom: 14px; }
+.stats-mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.stats-mini-card {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 10px 12px;
+}
+.stats-mini-val { font-size: 18px; font-weight: 700; color: var(--text); font-family: 'DM Mono', monospace; }
+.stats-mini-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
@@ -2159,38 +2288,45 @@ tr.row-selected { background: rgba(59,130,246,.05); }
   ═══════════════════════════════════════════ -->
   <section class="qz-view" id="view-multi" role="tabpanel">
 
-    <!-- Sub-nav -->
-    <div class="multi-subnav">
-      <button class="multi-subnav-btn"        data-sub="classement">🏆 Classement</button>
-      <button class="multi-subnav-btn active" data-sub="feed">📰 Feed</button>
-      <button class="multi-subnav-btn"        data-sub="mystats">📈 Mes stats</button>
-    </div>
+    <div class="multi-layout">
 
-    <!-- Classement -->
-    <div class="multi-sub" id="multi-sub-classement">
-      <div id="lb-weekly-countdown" style="font-size:11px;color:var(--muted);margin-bottom:12px;text-align:right;"></div>
-      <div class="qz-table-wrap">
-        <table class="qz-table" id="lb-table">
-          <thead><tr>
-            <th>#</th><th>Joueur</th><th>XP semaine</th><th>Moy. %</th><th>Parties</th>
-          </tr></thead>
-          <tbody id="lb-body"></tbody>
-        </table>
+      <!-- ── Feed column ── -->
+      <div class="multi-feed-col">
+        <div class="multi-feed-hdr">
+          <div class="multi-feed-hdr-left">
+            <div class="multi-feed-icon">📰</div>
+            <div>
+              <div class="multi-feed-title">Fil d'activité</div>
+              <div class="multi-feed-sub">Les dernières sessions de la communauté</div>
+            </div>
+          </div>
+        </div>
+        <div id="feed-list"></div>
+        <div style="text-align:center;margin-top:12px;">
+          <button class="btn-secondary" id="feed-load-more" style="display:none;font-size:13px;padding:8px 20px;">Charger plus</button>
+        </div>
       </div>
-    </div>
 
-    <!-- Feed -->
-    <div class="multi-sub active" id="multi-sub-feed">
-      <div id="feed-list"></div>
-      <div style="text-align:center;margin-top:12px;">
-        <button class="btn-secondary" id="feed-load-more" style="display:none;font-size:13px;padding:8px 20px;">Charger plus</button>
+      <!-- ── Sidebar ── -->
+      <div class="multi-side-col">
+
+        <!-- Leaderboard card -->
+        <div class="lb-card">
+          <div class="lb-card-hdr">
+            <div class="lb-card-title">🏆 Classement</div>
+            <div id="lb-weekly-countdown" class="lb-countdown"></div>
+          </div>
+          <div id="lb-rows"></div>
+        </div>
+
+        <!-- My stats card -->
+        <div class="stats-card" id="stats-card">
+          <div class="stats-card-title">📈 Mes stats</div>
+          <div class="stats-mini-grid" id="ms-cards"></div>
+          <div class="multi-vs-wrap" id="ms-vs"></div>
+        </div>
+
       </div>
-    </div>
-
-    <!-- Mes stats -->
-    <div class="multi-sub" id="multi-sub-mystats">
-      <div class="qz-gamestats-row" id="ms-cards"></div>
-      <div class="multi-vs-wrap" id="ms-vs"></div>
     </div>
 
   </section>
@@ -4773,17 +4909,6 @@ async function multiInit() {
   multiLoadedAt = Date.now();
 }
 
-/* ── Sub-nav ── */
-document.querySelectorAll('.multi-subnav-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.multi-subnav-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const sub = btn.dataset.sub;
-    document.querySelectorAll('.multi-sub').forEach(el => el.classList.remove('active'));
-    document.getElementById('multi-sub-' + sub).classList.add('active');
-  });
-});
-
 /* ─────────────────────────────────
    LEADERBOARD
 ───────────────────────────────── */
@@ -4817,33 +4942,28 @@ async function multiLoadLeaderboard() {
 }
 
 function renderLeaderboard(rows) {
-  const tbody = document.getElementById('lb-body');
-  // Update header
-  const lbTable = document.getElementById('lb-table');
-  if (lbTable) {
-    lbTable.querySelector('thead tr').innerHTML =
-      '<th>#</th><th>Joueur</th><th>XP semaine</th><th>Moy. %</th><th>Parties</th>';
-  }
+  const container = document.getElementById('lb-rows');
+  if (!container) return;
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="feed-empty">Aucune activité cette semaine.<br><small>Joue un quiz pour apparaître ici !</small></div></td></tr>`;
+    container.innerHTML = `<div class="lb-no-data">Aucune activité cette semaine.<br><small>Joue un quiz pour apparaître !</small></div>`;
     return;
   }
-  tbody.innerHTML = rows.map((r, i) => {
-    const isMe   = currentUser && r.user_id === currentUser.id;
-    const medal  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1;
-    const avgCls = r.avg >= 75 ? 'rate-good' : r.avg >= 50 ? 'rate-mid' : 'rate-bad';
-    return `<tr${isMe ? ' class="lb-me"' : ''}>
-      <td style="font-size:16px;text-align:center">${medal}</td>
-      <td style="font-weight:600">${escHtml(r.display_name)}${isMe ? ' <span style="font-size:11px;color:var(--accent)">(moi)</span>' : ''}</td>
-      <td class="lb-xp">${(r.weekly_xp || 0).toLocaleString()} XP</td>
-      <td class="${avgCls}">${r.avg}%</td>
-      <td style="color:var(--muted)">${r.games}</td>
-    </tr>`;
+  const display = rows.slice(0, 10);
+  container.innerHTML = display.map((r, i) => {
+    const isMe  = currentUser && r.user_id === currentUser.id;
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1);
+    return `<div class="lb-row${isMe ? ' lb-me' : ''}"${isMe ? ' id="lb-me-row"' : ''}>
+      <div class="lb-rank">${medal}</div>
+      <div class="lb-player">
+        <div class="lb-player-name">${escHtml(r.display_name)}${isMe ? ' <span style="font-size:10px;color:var(--accent);font-family:sans-serif">moi</span>' : ''}</div>
+        <div class="lb-player-avg">${r.avg}% · ${r.games} partie${r.games !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="lb-player-xp">${(r.weekly_xp || 0).toLocaleString()} XP</div>
+    </div>`;
   }).join('');
   // Click on own row → XP breakdown
-  tbody.querySelectorAll('tr.lb-me').forEach(row => {
-    row.addEventListener('click', showXpBreakdown);
-  });
+  const meRow = container.querySelector('#lb-me-row');
+  if (meRow) meRow.addEventListener('click', showXpBreakdown);
 }
 
 function renderWeeklyCountdown() {
@@ -4966,50 +5086,88 @@ function feedFormatDate(isoStr) {
 }
 
 function buildFeedItem(s) {
-  const pct    = s.total > 0 ? Math.round((s.score / s.total) * 100) : 0;
-  const bdgCls = pct >= 75 ? 'good' : pct >= 50 ? 'mid' : 'bad';
-  const modeLabel = s.mode === 'verbes' ? '🔤 Verbes NL' : '📚 Vocab';
-  const count  = s.quiz_session_comments?.[0]?.count ?? 0;
+  const pct     = s.total > 0 ? Math.round((s.score / s.total) * 100) : 0;
+  const pctCls  = pct >= 75 ? 'pct-good' : pct >= 50 ? 'pct-mid' : 'pct-bad';
+  const isVerbes = s.mode === 'verbes';
+  const modeIcon  = isVerbes ? '🔤' : '📚';
+  const modeLabel = isVerbes ? 'Verbes NL' : 'Vocabulaire';
+  const modeClass = isVerbes ? 'verbes' : 'vocab';
+  const count   = s.quiz_session_comments?.[0]?.count ?? 0;
   const dateStr = feedFormatDate(s.created_at);
-  const initial = (s.display_name || '?')[0].toUpperCase();
+  const name    = s.display_name || 'Joueur';
+  const initial = name[0].toUpperCase();
+
+  /* Avatar */
   const avatarHtml = s.avatar_url
-    ? `<img class="feed-avatar" src="${escHtml(s.avatar_url)}" alt="${escHtml(s.display_name)}" loading="lazy">`
+    ? `<img class="feed-avatar" src="${escHtml(s.avatar_url)}" alt="${escHtml(name)}" loading="lazy">`
     : `<div class="feed-avatar-initial">${escHtml(initial)}</div>`;
+
+  /* Challenge Back button */
   const challengeBtn = s.word_ids && s.word_ids.length > 0
-    ? `<button class="feed-challenge-btn" data-wids="${escHtml(JSON.stringify(s.word_ids))}">🎯 Challenge</button>`
+    ? `<button class="feed-challenge-btn" data-wids="${escHtml(JSON.stringify(s.word_ids))}">🎯 Challenge Back</button>`
     : '';
+
   return `<div class="feed-item" data-sid="${s.id}">
-    <div class="feed-item-header">
-      ${avatarHtml}
-      <span class="feed-name">${escHtml(s.display_name)}</span>
-      <span class="feed-score-badge ${bdgCls}">${s.score}/${s.total} · ${pct}%</span>
-      <span style="font-size:12px;color:var(--muted)">${modeLabel}</span>
-      <span class="feed-meta">${dateStr}</span>
+
+    <!-- Top row: avatar + name + date + menu -->
+    <div class="feed-item-top">
+      <div class="feed-avatar-wrap">
+        ${avatarHtml}
+      </div>
+      <div class="feed-item-info">
+        <div class="feed-name">${escHtml(name)}</div>
+        <div class="feed-action-line">
+          <span>${modeIcon} ${modeLabel}</span>
+          <span>·</span>
+          <span>${dateStr}</span>
+        </div>
+      </div>
+      <button class="feed-menu-btn" title="Options">···</button>
+    </div>
+
+    <!-- Score card -->
+    <div class="feed-score-card">
+      <div class="feed-score-mode-icon ${modeClass}">${modeIcon}</div>
+      <div class="feed-score-info">
+        <div class="feed-score-label">${modeLabel}</div>
+        <div class="feed-score-qty">${s.score} / ${s.total} questions</div>
+      </div>
+      <div class="feed-score-result">
+        <div class="feed-score-pct-big"><span class="${pctCls}">${pct}%</span></div>
+      </div>
       ${challengeBtn}
-      <button class="feed-comment-toggle" data-sid="${s.id}" data-bound="" title="Masquer les commentaires">
-        💬 ${count > 0 ? count : ''} <span class="feed-chevron">︿</span>
+    </div>
+
+    <!-- Footer: reactions + comment toggle -->
+    <div class="feed-footer">
+      <div class="feed-reactions">
+        <button class="feed-react-btn" data-sid="${s.id}" data-type="fire">🔥 <span class="react-count" data-sid="${s.id}" data-type="fire">0</span></button>
+        <button class="feed-react-btn" data-sid="${s.id}" data-type="muscle">💪 <span class="react-count" data-sid="${s.id}" data-type="muscle">0</span></button>
+        <button class="feed-react-btn" data-sid="${s.id}" data-type="clap">👏 <span class="react-count" data-sid="${s.id}" data-type="clap">0</span></button>
+      </div>
+      <button class="feed-comment-toggle" data-sid="${s.id}" title="Masquer les commentaires">
+        💬 <span class="feed-comment-count">${count > 0 ? count : ''}</span> <span class="feed-chevron">︿</span>
       </button>
     </div>
-    <div class="feed-reactions" data-sid="${s.id}">
-      <button class="feed-react-btn" data-sid="${s.id}" data-type="fire">🔥 <span class="react-count" data-sid="${s.id}" data-type="fire">0</span></button>
-      <button class="feed-react-btn" data-sid="${s.id}" data-type="muscle">💪 <span class="react-count" data-sid="${s.id}" data-type="muscle">0</span></button>
-      <button class="feed-react-btn" data-sid="${s.id}" data-type="clap">👏 <span class="react-count" data-sid="${s.id}" data-type="clap">0</span></button>
-    </div>
-    <div class="feed-comments" data-sid="${s.id}" data-loaded="">
-      <div class="feed-comment-list"><div class="feed-comments-loading" style="font-size:12px;color:var(--muted);padding:4px 0">Chargement…</div></div>
+
+    <!-- Comments (visible by default) -->
+    <div class="feed-comments" data-sid="${s.id}">
+      <div class="feed-comment-list"><div style="font-size:12px;color:var(--muted);padding:4px 0">Chargement…</div></div>
       <div class="feed-comment-form">
         <input type="text" class="qz-input feed-comment-input" placeholder="Ajouter un commentaire…" maxlength="200">
-        <button class="btn-primary feed-comment-submit" data-sid="${s.id}" data-bound="">Publier</button>
+        <button class="btn-primary feed-comment-submit" data-sid="${s.id}">Publier</button>
       </div>
     </div>
+
   </div>`;
 }
 
-async function toggleComments(sid, itemEl) {
+function toggleComments(sid, itemEl) {
   const commentsEl = itemEl.querySelector('.feed-comments');
   const chevron    = itemEl.querySelector('.feed-chevron');
-  const isOpen     = commentsEl.style.display !== 'none';
-  commentsEl.style.display = isOpen ? 'none' : 'block';
+  const isOpen     = !commentsEl.classList.contains('collapsed');
+  commentsEl.classList.toggle('collapsed', isOpen);
+  commentsEl.style.display = isOpen ? 'none' : '';
   if (chevron) chevron.textContent = isOpen ? '﹀' : '︿';
 }
 
@@ -5143,10 +5301,16 @@ async function toggleReaction(sid, type, btn) {
    MES STATS vs GLOBAL
 ───────────────────────────────── */
 function multiLoadMyStats() {
-  if (!currentUser) return;
+  const statsCard = document.getElementById('stats-card');
+  if (!currentUser) { if (statsCard) statsCard.style.display = 'none'; return; }
   const mySessions  = feedData.filter(s => s.user_id === currentUser.id);
   const allSessions = feedData;
-  if (!allSessions.length) return;
+
+  if (!mySessions.length) {
+    if (statsCard) statsCard.style.display = 'none';
+    return;
+  }
+  if (statsCard) statsCard.style.display = '';
 
   const avg = arr => arr.length ? Math.round(arr.reduce((s, r) => s + (r.total > 0 ? r.score / r.total : 0), 0) / arr.length * 100) : 0;
   const myAvg  = avg(mySessions);
@@ -5155,26 +5319,25 @@ function multiLoadMyStats() {
   const myBest  = mySessions.reduce((b, s) => Math.max(b, s.total > 0 ? Math.round(s.score/s.total*100) : 0), 0);
   const myTotalTime = mySessions.reduce((s, r) => s + (r.duration_sec || 0), 0);
 
-  // Stat cards
+  // Mini stat cards (2×2 grid)
   const cards = [
-    { icon: '🎯', val: myAvg + '%',       lbl: 'Mon score moyen' },
-    { icon: '🎮', val: myGames,            lbl: 'Parties jouées' },
-    { icon: '⭐', val: myBest + '%',       lbl: 'Meilleur score' },
-    { icon: '⏱️', val: fmtTime(myTotalTime), lbl: 'Temps total joué' },
+    { val: myAvg + '%',            lbl: 'Moy. perso' },
+    { val: myGames,                lbl: 'Parties' },
+    { val: myBest + '%',           lbl: 'Meilleur' },
+    { val: fmtTime(myTotalTime),   lbl: 'Temps joué' },
   ];
   document.getElementById('ms-cards').innerHTML = cards.map(c => `
-    <div class="qz-gamestat-card">
-      <div class="gs-icon">${c.icon}</div>
-      <div class="gs-value">${c.val}</div>
-      <div class="gs-label">${c.lbl}</div>
+    <div class="stats-mini-card">
+      <div class="stats-mini-val">${c.val}</div>
+      <div class="stats-mini-lbl">${c.lbl}</div>
     </div>`).join('');
 
   // vs global comparison bars
-  const rows = [
+  const vsRows = [
     { lbl: 'Score moyen', me: myAvg, avg: glbAvg },
-    { lbl: 'Meilleur score', me: myBest, avg: Math.max(...allSessions.map(s => s.total > 0 ? Math.round(s.score/s.total*100) : 0)) },
+    { lbl: 'Meilleur score', me: myBest, avg: allSessions.length ? Math.max(...allSessions.map(s => s.total > 0 ? Math.round(s.score/s.total*100) : 0)) : 0 },
   ];
-  const vsHtml = rows.map(r => `
+  const vsHtml = vsRows.map(r => `
     <div class="multi-vs-row">
       <div class="multi-vs-label">${r.lbl}<span>Moi ${r.me}% · Moy. ${r.avg}%</span></div>
       <div class="multi-bar-wrap">
