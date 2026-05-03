@@ -7,7 +7,7 @@
 <title>Knowledge Quiz — LazyPO</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
 /*
 -- Run once in Supabase SQL Editor
@@ -544,6 +544,35 @@ body { padding-left: 64px; }
   white-space: nowrap;
 }
 
+.qz-quiz-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.qz-streak-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 20px;
+  padding: 4px 12px;
+}
+.qz-timer-ring {
+  position: relative;
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.qz-timer-val {
+  position: absolute;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  font-weight: 700;
+  color: var(--text);
+}
+
 .qz-question-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -824,22 +853,30 @@ body { padding-left: 64px; }
 
 /* MCQ */
 .vb-mcq-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 20px 0;
 }
-@media (max-width: 420px) { .vb-mcq-grid { grid-template-columns: 1fr; } }
 .vb-mcq-btn {
-  padding: 14px 12px; background: var(--surface2); border: 1px solid var(--border2);
-  border-radius: var(--r); font-family: 'DM Mono', monospace; font-size: 17px;
-  font-weight: 600; color: var(--text); cursor: pointer; text-align: center;
-  transition: all .15s;
+  padding: 16px 12px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border2);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: center;
 }
-.vb-mcq-btn:hover:not(:disabled) {
-  border-color: var(--accent2); color: var(--accent2);
-  background: rgba(59,130,246,.07);
-}
+.vb-mcq-btn:hover:not(:disabled) { background: var(--surface); border-color: var(--accent); }
+.vb-mcq-btn.mcq-correct { background: rgba(34,197,94,0.15); border-color: #22c55e; color: #22c55e; }
+.vb-mcq-btn.mcq-wrong   { background: rgba(239,68,68,0.15);  border-color: #ef4444; color: #ef4444; }
 .vb-mcq-btn.mcq-ok   { background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.5); color: #86efac; }
 .vb-mcq-btn.mcq-err  { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.4); color: #fca5a5; }
-.vb-mcq-btn:disabled { cursor: default; }
+.vb-mcq-btn:disabled     { cursor: default; }
 
 /* Paradigm card */
 .vb-paradigm {
@@ -1034,6 +1071,38 @@ body { padding-left: 64px; }
   justify-content: flex-end;
 }
 .hm-legend .hm-cell { width: 11px; height: 11px; }
+
+/* Progress charts */
+.prog-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.prog-chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+}
+.prog-chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+}
+.prog-donut-wrap { display: flex; align-items: center; gap: 16px; }
+.prog-donut-legend { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
+.prog-legend-item { display: flex; align-items: center; gap: 6px; }
+.prog-legend-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.prog-bar-item { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.prog-bar-label { font-size: 12px; color: var(--muted); width: 50px; flex-shrink: 0; }
+.prog-bar-bg { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+.prog-bar-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.6s ease; }
+.prog-bar-val { font-size: 12px; font-weight: 600; color: var(--text); width: 30px; text-align: right; }
+@media (max-width: 600px) { .prog-charts-row { grid-template-columns: 1fr; } }
 
 /* Session stats footer in summary */
 .qz-session-footer {
@@ -1348,6 +1417,34 @@ tr.row-selected { background: rgba(59,130,246,.05); }
 .feed-comment-form .qz-input { flex: 1; padding: 6px 10px; font-size: 13px; }
 .feed-empty { text-align:center; color: var(--muted); padding: 40px 0; font-size: 14px; }
 
+/* Reactions */
+.feed-reactions {
+  display: flex; gap: 8px;
+  padding: 8px 0 4px;
+}
+.feed-react-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--muted); font-size: 13px; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.feed-react-btn:hover { background: var(--surface); border-color: #555; color: var(--text); }
+.feed-react-btn.reacted { background: rgba(59,130,246,0.12); border-color: rgba(96,165,250,0.3); color: var(--accent2); }
+
+/* Challenge Back button */
+.feed-challenge-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 8px;
+  background: rgba(139,92,246,0.12);
+  border: 1px solid rgba(139,92,246,0.3);
+  color: #a78bfa;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.feed-challenge-btn:hover { background: rgba(139,92,246,0.22); }
+
 /* My stats vs global */
 .multi-vs-wrap { margin-top: 20px; }
 .multi-vs-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
@@ -1484,6 +1581,11 @@ tr.row-selected { background: rgba(59,130,246,.05); }
       <button class="btn-excel export" id="btn-export-xl">📥 Exporter Excel</button>
       <button class="btn-excel import" id="btn-import-xl">📤 Importer Excel</button>
       <button class="btn-excel print"  id="btn-print-vocab">🖨️ Imprimer</button>
+      <label class="qz-btn-secondary" style="cursor:pointer;" title="Importer un fichier Excel">
+        📥 Import Excel
+        <input type="file" id="btn-import-excel" accept=".xlsx,.xls,.csv" style="display:none">
+      </label>
+      <button class="qz-btn-secondary" id="btn-export-excel" title="Exporter en Excel">📤 Export Excel</button>
       <input type="file" id="xlsx-file-input" accept=".xlsx,.xls,.csv">
       <span class="excel-hint">L'export inclut le scoring SM-2 · L'import met à jour mots &amp; scores</span>
     </div>
@@ -1590,6 +1692,19 @@ tr.row-selected { background: rgba(59,130,246,.05); }
           <div class="qz-progress-bar-fill" id="quiz-progress-fill" style="width:0%"></div>
         </div>
         <span class="qz-progress-text" id="quiz-progress-text">1 / 10</span>
+      </div>
+
+      <div class="qz-quiz-meta-row">
+        <div class="qz-streak-badge" id="quiz-streak-badge" style="display:none;">🔥 <span id="quiz-streak-val">0</span></div>
+        <div class="qz-timer-ring" id="quiz-timer">
+          <svg width="44" height="44" viewBox="0 0 44 44">
+            <circle cx="22" cy="22" r="18" fill="none" stroke="var(--border2)" stroke-width="3"/>
+            <circle cx="22" cy="22" r="18" fill="none" stroke="var(--accent)" stroke-width="3"
+              stroke-linecap="round" stroke-dasharray="113" stroke-dashoffset="0"
+              id="timer-ring-fill" style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1s linear, stroke 0.3s"/>
+          </svg>
+          <span class="qz-timer-val" id="quiz-timer-val">30</span>
+        </div>
       </div>
 
       <div class="qz-question-card">
@@ -1710,6 +1825,18 @@ tr.row-selected { background: rgba(59,130,246,.05); }
     <!-- ── Gamified stats ── -->
     <div class="qz-gamestats-section">
       <div class="qz-gamestats-row">
+        <div class="qz-gamestat-card">
+          <div class="gs-icon">📚</div>
+          <div class="gs-value accent" id="gs-total-words">—</div>
+          <div class="gs-label">Total mots</div>
+          <div class="gs-sublabel" id="gs-total-words-sub"></div>
+        </div>
+        <div class="qz-gamestat-card">
+          <div class="gs-icon">🏆</div>
+          <div class="gs-value good" id="gs-mastered-words">—</div>
+          <div class="gs-label">Maîtrisés</div>
+          <div class="gs-sublabel" id="gs-mastered-sub"></div>
+        </div>
         <div class="qz-gamestat-card" id="gs-streak-card">
           <div class="gs-icon">🔥</div>
           <div class="gs-value" id="gs-streak">0</div>
@@ -1717,22 +1844,10 @@ tr.row-selected { background: rgba(59,130,246,.05); }
           <div class="gs-sublabel" id="gs-streak-sub">Start today!</div>
         </div>
         <div class="qz-gamestat-card">
-          <div class="gs-icon">📅</div>
-          <div class="gs-value" id="gs-sessions-today">0</div>
-          <div class="gs-label">Today</div>
-          <div class="gs-sublabel" id="gs-sessions-week">0 this week</div>
-        </div>
-        <div class="qz-gamestat-card">
           <div class="gs-icon">✅</div>
-          <div class="gs-value" id="gs-total-answers">0</div>
-          <div class="gs-label">Total Answers</div>
-          <div class="gs-sublabel" id="gs-answers-today">0 today</div>
-        </div>
-        <div class="qz-gamestat-card">
-          <div class="gs-icon">⏱️</div>
-          <div class="gs-value" id="gs-time">0m</div>
-          <div class="gs-label">Time Played</div>
-          <div class="gs-sublabel" id="gs-time-today">0m today</div>
+          <div class="gs-value warning" id="gs-success-rate">—</div>
+          <div class="gs-label">Taux de réussite</div>
+          <div class="gs-sublabel" id="gs-success-sub"></div>
         </div>
       </div>
 
@@ -1747,6 +1862,32 @@ tr.row-selected { background: rgba(59,130,246,.05); }
           <div class="hm-cell lv2"></div>
           <div class="hm-cell lv3"></div>
           <span>More</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="prog-charts-row">
+      <div class="prog-chart-card">
+        <div class="prog-chart-title">🤖 Mots système vs 👤 Utilisateur</div>
+        <div class="prog-donut-wrap" id="prog-donut-system">
+          <canvas id="donut-system" width="120" height="120"></canvas>
+          <div class="prog-donut-legend" id="donut-system-legend"></div>
+        </div>
+      </div>
+      <div class="prog-chart-card">
+        <div class="prog-chart-title">🌐 Répartition par langue</div>
+        <div class="prog-bars-wrap" id="prog-bars-lang">
+          <div class="prog-bar-item" id="bar-enfr">
+            <span class="prog-bar-label">EN→FR</span>
+            <div class="prog-bar-bg"><div class="prog-bar-fill accent" id="bar-enfr-fill" style="width:0%"></div></div>
+            <span class="prog-bar-val" id="bar-enfr-val">0</span>
+          </div>
+          <div class="prog-bar-item" id="bar-nlfr">
+            <span class="prog-bar-label">NL→FR</span>
+            <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:0%;background:#a78bfa" id="bar-nlfr-fill"></div></div>
+            <span class="prog-bar-val" id="bar-nlfr-val">0</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1828,6 +1969,13 @@ tr.row-selected { background: rgba(59,130,246,.05); }
 
       <div class="vb-setup-row">
         <div class="vb-setup-group">
+          <div class="vb-setup-label">Mode de réponse</div>
+          <div class="vb-pill-row" id="vb-mode-pills">
+            <button class="qz-pill active" data-vbmode="text">📝 Texte libre</button>
+            <button class="qz-pill"       data-vbmode="qcm">🔘 QCM</button>
+          </div>
+        </div>
+        <div class="vb-setup-group">
           <div class="vb-setup-label">Questions</div>
           <div class="vb-pill-row" id="vb-count-pills">
             <button class="qz-pill"        data-count="5">5</button>
@@ -1842,6 +1990,7 @@ tr.row-selected { background: rgba(59,130,246,.05); }
           <div class="vb-pill-row" id="vb-form-pills">
             <button class="qz-pill active" data-form="all">Toutes</button>
             <button class="qz-pill"        data-form="ovt">OVT</button>
+            <button class="qz-pill"        data-form="ott">OTT</button>
             <button class="qz-pill"        data-form="vtt">VTT</button>
           </div>
         </div>
@@ -1975,6 +2124,7 @@ tr.row-selected { background: rgba(59,130,246,.05); }
           <thead><tr>
             <th>Infinitif</th>
             <th>Traduction</th>
+            <th>O.T.T. (hij)</th>
             <th>OVT sg.</th>
             <th>OVT pl.</th>
             <th>VTT (participe)</th>
@@ -2008,10 +2158,11 @@ tr.row-selected { background: rgba(59,130,246,.05); }
 
     <!-- Classement -->
     <div class="multi-sub" id="multi-sub-classement">
+      <div id="lb-weekly-countdown" style="font-size:11px;color:var(--muted);margin-bottom:12px;text-align:right;"></div>
       <div class="qz-table-wrap">
         <table class="qz-table" id="lb-table">
           <thead><tr>
-            <th>#</th><th>Joueur</th><th>Moy. %</th><th>Parties</th><th>Meilleur</th>
+            <th>#</th><th>Joueur</th><th>XP semaine</th><th>Moy. %</th><th>Parties</th>
           </tr></thead>
           <tbody id="lb-body"></tbody>
         </table>
@@ -2077,6 +2228,45 @@ let quizMode     = 'auto';      // 'auto' | 'forward' | 'reverse'
 let sessionAnswers = [];        // { word, correct, skipped, givenAnswer, direction }
 let sessionOptions = { filter: 'all', count: 10 };
 let sessionStartTime = null;   // Date.now() at quiz start
+let quizTimer     = null;
+let quizTimerSecs = 30;
+const QUIZ_TIMER_TOTAL = 30;
+
+function startQuizTimer() {
+  clearQuizTimer();
+  quizTimerSecs = QUIZ_TIMER_TOTAL;
+  updateTimerUI(quizTimerSecs);
+  quizTimer = setInterval(() => {
+    quizTimerSecs--;
+    updateTimerUI(quizTimerSecs);
+    if (quizTimerSecs <= 0) {
+      clearQuizTimer();
+      // Auto-skip
+      const item = quizQueue[quizIndex];
+      sessionAnswers.push({ word: item.word, correct: false, skipped: true, givenAnswer: '', direction: item.direction });
+      recordAnswer(item.word.id, false);
+      advanceQuiz();
+    }
+  }, 1000);
+}
+
+function clearQuizTimer() {
+  clearInterval(quizTimer);
+  quizTimer = null;
+}
+
+function updateTimerUI(secs) {
+  const val  = document.getElementById('quiz-timer-val');
+  const ring = document.getElementById('timer-ring-fill');
+  if (!val || !ring) return;
+  val.textContent = secs;
+  const circumference = 113; // 2π×18
+  const offset = circumference * (1 - secs / QUIZ_TIMER_TOTAL);
+  ring.style.strokeDashoffset = offset;
+  // Color: green → yellow → red
+  ring.style.stroke = secs > 15 ? 'var(--accent)' : secs > 8 ? '#f59e0b' : '#ef4444';
+  if (val) val.style.color = secs > 15 ? 'var(--text)' : secs > 8 ? '#f59e0b' : '#ef4444';
+}
 
 /* ── Review state ── */
 let reviewQueue = [];
@@ -2945,6 +3135,19 @@ function showQuestion() {
   // Show/hide back button
   const prevBtn = document.getElementById('btn-prev');
   if (prevBtn) prevBtn.style.display = quizIndex > 0 ? 'inline-flex' : 'none';
+
+  // Show streak
+  const streakBadge = document.getElementById('quiz-streak-badge');
+  const streakVal   = document.getElementById('quiz-streak-val');
+  const streak = userXpState?.current_streak_days || 0;
+  if (streakBadge && streak > 0) {
+    streakBadge.style.display = 'flex';
+    streakVal.textContent = streak;
+  } else if (streakBadge) {
+    streakBadge.style.display = 'none';
+  }
+
+  startQuizTimer();
 }
 
 document.getElementById('btn-check').addEventListener('click', checkAnswer);
@@ -2959,6 +3162,7 @@ document.getElementById('quiz-answer-input').addEventListener('keydown', e => {
 });
 
 document.getElementById('btn-skip').addEventListener('click', () => {
+  clearQuizTimer();
   const item = quizQueue[quizIndex];
   sessionAnswers.push({ word: item.word, correct: false, skipped: true, givenAnswer: '', direction: item.direction });
   recordAnswer(item.word.id, false);
@@ -2987,6 +3191,7 @@ document.getElementById('btn-prev').addEventListener('click', () => {
 });
 
 function checkAnswer() {
+  clearQuizTimer();
   const item  = quizQueue[quizIndex];
   const input = document.getElementById('quiz-answer-input');
   const given = input.value.trim();
@@ -3033,6 +3238,7 @@ function checkAnswer() {
 }
 
 function advanceQuiz() {
+  clearQuizTimer();
   quizIndex++;
   if (quizIndex >= quizQueue.length) {
     endSession();
@@ -3116,7 +3322,7 @@ function fmtTime(sec) {
 
 function renderGameStats() {
   const s = computeGameStats();
-  const streak = s.streak;
+  const streak = userXpState?.current_streak_days || s.streak;
 
   // Streak card
   document.getElementById('gs-streak').textContent = streak;
@@ -3132,40 +3338,130 @@ function renderGameStats() {
   else if (streak >= 3) card.classList.add('streak-hot');
   else if (streak >= 1) card.classList.add('streak-on');
 
-  // Sessions card
-  document.getElementById('gs-sessions-today').textContent = s.sessionsToday;
-  document.getElementById('gs-sessions-week').textContent  = `${s.sessionsWeek} this week`;
-
-  // Answers card
-  document.getElementById('gs-total-answers').textContent = s.totalAnswers.toLocaleString('fr-FR');
-  document.getElementById('gs-answers-today').textContent = `${s.todayWords} today`;
-
-  // Time card
-  document.getElementById('gs-time').textContent      = fmtTime(s.totalTime);
-  document.getElementById('gs-time-today').textContent = `${fmtTime(s.todayTime)} today`;
-
   renderHeatmap();
+  renderProgressCharts();
 }
 
-function renderHeatmap() {
+async function renderHeatmap() {
   const grid = document.getElementById('hm-grid');
   if (!grid) return;
-  const log = getQuizLog();
-  const dayMap = {};
-  log.forEach(s => { dayMap[s.date] = (dayMap[s.date] || 0) + s.words; });
+
+  // Try Supabase xp_daily_log first
+  let dayMap = {};
+  if (xpDailyCache === null && currentUser && window.sb) {
+    const dateMinus28 = new Date(Date.now() - 28*24*60*60*1000).toISOString().slice(0,10);
+    const { data } = await window.sb
+      .from('xp_daily_log')
+      .select('date, xp_earned')
+      .eq('user_id', currentUser.id)
+      .gte('date', dateMinus28);
+    xpDailyCache = data || [];
+  }
+  if (xpDailyCache && xpDailyCache.length > 0) {
+    for (const r of xpDailyCache) {
+      dayMap[r.date] = (dayMap[r.date] || 0) + (r.xp_earned || 0);
+    }
+  } else {
+    // Fallback to localStorage
+    const log = getQuizLog();
+    log.forEach(s => { dayMap[s.date] = (dayMap[s.date] || 0) + s.words; });
+  }
 
   const today = new Date();
   const cells = [];
+  const isXpMode = xpDailyCache && xpDailyCache.length > 0;
   for (let i = 27; i >= 0; i--) {
     const d   = new Date(today.getTime() - i * 86400000);
     const key = d.toISOString().slice(0, 10);
     const w   = dayMap[key] || 0;
-    const lv  = w === 0 ? 0 : w <= 5 ? 1 : w <= 15 ? 2 : 3;
+    let lv;
+    if (isXpMode) {
+      lv = w === 0 ? 0 : w <= 30 ? 1 : w <= 100 ? 2 : 3;
+    } else {
+      lv = w === 0 ? 0 : w <= 5 ? 1 : w <= 15 ? 2 : 3;
+    }
     const cls = `hm-cell lv${lv}${i === 0 ? ' today' : ''}`;
     const label = d.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' });
-    cells.push(`<div class="${cls}" title="${label}: ${w} mot${w !== 1 ? 's' : ''}"></div>`);
+    const unit = isXpMode ? 'XP' : `mot${w !== 1 ? 's' : ''}`;
+    cells.push(`<div class="${cls}" title="${label}: ${w} ${unit}"></div>`);
   }
   grid.innerHTML = cells.join('');
+}
+
+function renderProgressCharts() {
+  const total  = vocab.length;
+  const system = vocab.filter(w => w.is_system).length;
+  const user   = total - system;
+  const enfr   = vocab.filter(w => w.language_pair === 'EN→FR').length;
+  const nlfr   = vocab.filter(w => w.language_pair === 'NL→FR').length;
+
+  // Donut (pure canvas — pas de lib externe)
+  drawDonut('donut-system', [
+    { value: system, color: '#3b82f6', label: `Système: ${system}` },
+    { value: user,   color: '#8b5cf6', label: `Utilisateur: ${user}` },
+  ]);
+
+  // Bars
+  const max = Math.max(enfr, nlfr, 1);
+  const barEnfrFill = document.getElementById('bar-enfr-fill');
+  const barNlfrFill = document.getElementById('bar-nlfr-fill');
+  const barEnfrVal  = document.getElementById('bar-enfr-val');
+  const barNlfrVal  = document.getElementById('bar-nlfr-val');
+  if (barEnfrFill) barEnfrFill.style.width = (enfr / max * 100) + '%';
+  if (barNlfrFill) barNlfrFill.style.width = (nlfr / max * 100) + '%';
+  if (barEnfrVal)  barEnfrVal.textContent  = enfr;
+  if (barNlfrVal)  barNlfrVal.textContent  = nlfr;
+
+  // Update KPI cards
+  const mastered = vocab.filter(w => {
+    const p = progress[w.id];
+    return p && p.attempts >= 3 && p.correct / p.attempts >= 0.8;
+  }).length;
+  const allProgress = Object.values(progress).filter(p => p.attempts > 0);
+  const avgRate = allProgress.length > 0
+    ? Math.round(allProgress.reduce((s, p) => s + p.correct / p.attempts, 0) / allProgress.length * 100)
+    : 0;
+
+  const gsTotalWords = document.getElementById('gs-total-words');
+  const gsTotalWordsSub = document.getElementById('gs-total-words-sub');
+  const gsMasteredWords = document.getElementById('gs-mastered-words');
+  const gsMasteredSub = document.getElementById('gs-mastered-sub');
+  const gsSuccessRate = document.getElementById('gs-success-rate');
+  const gsSuccessSub = document.getElementById('gs-success-sub');
+  if (gsTotalWords) gsTotalWords.textContent    = total;
+  if (gsTotalWordsSub) gsTotalWordsSub.textContent = `+${vocab.filter(w => !w.is_system).length} personnels`;
+  if (gsMasteredWords) gsMasteredWords.textContent  = mastered;
+  if (gsMasteredSub) gsMasteredSub.textContent    = total > 0 ? `${Math.round(mastered/total*100)}% du total` : '';
+  if (gsSuccessRate) gsSuccessRate.textContent    = avgRate + '%';
+  if (gsSuccessSub) gsSuccessSub.textContent     = `${allProgress.length} mots testés`;
+}
+
+function drawDonut(canvasId, segments) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = 60, cy = 60, r = 45, lineW = 14;
+  ctx.clearRect(0, 0, 120, 120);
+  const total = segments.reduce((s, seg) => s + (seg.value || 0), 0);
+  if (total === 0) {
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.strokeStyle = 'var(--border2)'; ctx.lineWidth = lineW; ctx.stroke();
+    return;
+  }
+  let startAngle = -Math.PI / 2;
+  for (const seg of segments) {
+    const slice = (seg.value / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, startAngle, startAngle + slice);
+    ctx.strokeStyle = seg.color; ctx.lineWidth = lineW; ctx.lineCap = 'butt';
+    ctx.stroke();
+    startAngle += slice;
+  }
+  // Legend
+  const legend = document.getElementById(canvasId + '-legend');
+  if (legend) {
+    legend.innerHTML = segments.map(s => `<div class="prog-legend-item"><span class="prog-legend-dot" style="background:${s.color}"></span>${s.label}</div>`).join('');
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -3178,8 +3474,9 @@ function endSession() {
     : 0;
   const total   = sessionAnswers.length;
   const correct = sessionAnswers.filter(a => a.correct).length;
+  const sessionWordIds = sessionAnswers.map(a => a.word.id);
   saveQuizSession(total, correct, durationSec);
-  postMultiSession(correct, total, durationSec, 'vocab', quizFilter || 'all', quizMode || 'auto');
+  postMultiSession(correct, total, durationSec, 'vocab', quizFilter || 'all', quizMode || 'auto', sessionWordIds);
 
   const wrong = sessionAnswers.filter(a => !a.correct && !a.skipped);
   if (wrong.length > 0) {
@@ -3505,6 +3802,57 @@ document.getElementById('xlsx-file-input').addEventListener('change', e => {
   if (file) importFromExcel(file);
 });
 
+/* ── New Export / Import Excel buttons (spec Phase 8) ── */
+document.getElementById('btn-export-excel').addEventListener('click', () => {
+  if (typeof XLSX === 'undefined') { showToast('SheetJS non chargé'); return; }
+  const list = getFilteredVocab();
+  const rows = list.map(w => ({
+    'Mot source':    w.source_word,
+    'Traduction':    w.target_translation,
+    'Langue':        w.language_pair,
+    'Exemple':       w.example_sentence || '',
+    'Hint/Tips':     w.tips || '',
+    'Taux réussite': (() => {
+      const p = progress[w.id];
+      return p && p.attempts > 0 ? Math.round(p.correct/p.attempts*100) + '%' : '—';
+    })(),
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Vocabulaire');
+  XLSX.writeFile(wb, `lazypo_vocab_${_today()}.xlsx`);
+  showToast('Export Excel téléchargé !');
+});
+
+document.getElementById('btn-import-excel').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { showToast('SheetJS non chargé'); return; }
+  const data = await file.arrayBuffer();
+  const wb   = XLSX.read(data, { type: 'array' });
+  const ws   = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  // Detect columns flexibly
+  const words = rows.map(r => {
+    const src  = r['Mot source'] || r['source_word'] || r['Word'] || '';
+    const tgt  = r['Traduction'] || r['target_translation'] || r['Translation'] || '';
+    const lang = r['Langue'] || r['language_pair'] || r['Language'] || 'EN→FR';
+    const ex   = r['Exemple'] || r['example_sentence'] || r['Example'] || '';
+    const tips = r['Hint/Tips'] || r['tips'] || r['hint'] || r['Tips'] || '';
+    if (!src || !tgt) return null;
+    return { source_word: src.trim(), target_translation: tgt.trim(), language_pair: lang.trim(), example_sentence: ex.trim() || null, tips: tips.trim() || null };
+  }).filter(Boolean);
+  if (!words.length) { showToast('Aucun mot valide trouvé dans le fichier'); return; }
+  showToast(`Import de ${words.length} mots…`);
+  let added = 0;
+  for (const w of words) {
+    await addWord(w);
+    added++;
+  }
+  showToast(`✅ ${added} mots importés !`);
+  e.target.value = '';
+});
+
 document.getElementById('btn-import-nl')?.addEventListener('click', async () => {
   const btn = document.getElementById('btn-import-nl');
   btn.disabled = true;
@@ -3619,89 +3967,89 @@ function showToast(msg) {
 ═══════════════════════════════════════════════════════════ */
 
 const VB_VERBS = [
-  { id:'zijn',       infinitief:'zijn',       ovt:'was',       ovt_pl:'waren',      vtt:'geweest',    aux:'zijn',      trad:'être',
+  { id:'zijn',       infinitief:'zijn',       ovt:'was',       ovt_pl:'waren',      vtt:'geweest',    aux:'zijn',      trad:'être',          ott:'is',
     ex:{ infinitief:'Ik wil altijd eerlijk ___.', ovt:'Gisteren ___ het erg koud buiten.', vtt:'We zijn al twee keer in Parijs ___.' }},
-  { id:'hebben',     infinitief:'hebben',     ovt:'had',       ovt_pl:'hadden',     vtt:'gehad',      aux:'hebben',    trad:'avoir',
+  { id:'hebben',     infinitief:'hebben',     ovt:'had',       ovt_pl:'hadden',     vtt:'gehad',      aux:'hebben',    trad:'avoir',         ott:'heeft',
     ex:{ infinitief:'Wil jij een kopje koffie ___?', ovt:'Ze ___ gisteren veel huiswerk.', vtt:'Hij heeft altijd veel vrienden ___.' }},
-  { id:'worden',     infinitief:'worden',     ovt:'werd',      ovt_pl:'werden',     vtt:'geworden',   aux:'zijn',      trad:'devenir',
+  { id:'worden',     infinitief:'worden',     ovt:'werd',      ovt_pl:'werden',     vtt:'geworden',   aux:'zijn',      trad:'devenir',       ott:'wordt',
     ex:{ infinitief:'Ik wil later leraar ___.', ovt:'Het ___ snel donker gisteren.', vtt:'Ze is snel bekend ___.' }},
-  { id:'gaan',       infinitief:'gaan',       ovt:'ging',      ovt_pl:'gingen',     vtt:'gegaan',     aux:'zijn',      trad:'aller',
+  { id:'gaan',       infinitief:'gaan',       ovt:'ging',      ovt_pl:'gingen',     vtt:'gegaan',     aux:'zijn',      trad:'aller',         ott:'gaat',
     ex:{ infinitief:'We willen morgen naar het strand ___.', ovt:'Mijn vader ___ vroeg naar zijn werk.', vtt:'Ze is al naar huis ___.' }},
-  { id:'komen',      infinitief:'komen',      ovt:'kwam',      ovt_pl:'kwamen',     vtt:'gekomen',    aux:'zijn',      trad:'venir',
+  { id:'komen',      infinitief:'komen',      ovt:'kwam',      ovt_pl:'kwamen',     vtt:'gekomen',    aux:'zijn',      trad:'venir',         ott:'komt',
     ex:{ infinitief:'Kun jij morgen ___?', ovt:'Hij ___ laat op het feestje.', vtt:'De trein is eindelijk ___.' }},
-  { id:'zien',       infinitief:'zien',       ovt:'zag',       ovt_pl:'zagen',      vtt:'gezien',     aux:'hebben',    trad:'voir',
+  { id:'zien',       infinitief:'zien',       ovt:'zag',       ovt_pl:'zagen',      vtt:'gezien',     aux:'hebben',    trad:'voir',          ott:'ziet',
     ex:{ infinitief:'Kan jij dat bord ___?', ovt:'Ik ___ haar gisteren in de supermarkt.', vtt:'Heb jij die film al ___?' }},
-  { id:'doen',       infinitief:'doen',       ovt:'deed',      ovt_pl:'deden',      vtt:'gedaan',     aux:'hebben',    trad:'faire',
+  { id:'doen',       infinitief:'doen',       ovt:'deed',      ovt_pl:'deden',      vtt:'gedaan',     aux:'hebben',    trad:'faire',         ott:'doet',
     ex:{ infinitief:'Wat wil je vandaag ___?', ovt:'Hij ___ zijn best op het examen.', vtt:'Ze heeft het werk al ___.' }},
-  { id:'schrijven',  infinitief:'schrijven',  ovt:'schreef',   ovt_pl:'schreven',   vtt:'geschreven', aux:'hebben',    trad:'écrire',
+  { id:'schrijven',  infinitief:'schrijven',  ovt:'schreef',   ovt_pl:'schreven',   vtt:'geschreven', aux:'hebben',    trad:'écrire',        ott:'schrijft',
     ex:{ infinitief:'Kun jij dit woord ___?', ovt:'Hij ___ een lange brief aan zijn moeder.', vtt:'Ze heeft een boek over reizen ___.' }},
-  { id:'rijden',     infinitief:'rijden',     ovt:'reed',      ovt_pl:'reden',      vtt:'gereden',    aux:'hebben',    trad:'conduire / rouler',
+  { id:'rijden',     infinitief:'rijden',     ovt:'reed',      ovt_pl:'reden',      vtt:'gereden',    aux:'hebben',    trad:'conduire / rouler', ott:'rijdt',
     ex:{ infinitief:'Ik ga morgen met de auto ___.', ovt:'Hij ___ gisteren naar Amsterdam.', vtt:'Ze heeft vijf uur lang ___.' }},
-  { id:'blijven',    infinitief:'blijven',    ovt:'bleef',     ovt_pl:'bleven',     vtt:'gebleven',   aux:'zijn',      trad:'rester',
+  { id:'blijven',    infinitief:'blijven',    ovt:'bleef',     ovt_pl:'bleven',     vtt:'gebleven',   aux:'zijn',      trad:'rester',        ott:'blijft',
     ex:{ infinitief:'Wil je vanavond ___?', ovt:'Ze ___ tot middernacht op het feest.', vtt:'Hij is de hele dag thuis ___.' }},
-  { id:'lopen',      infinitief:'lopen',      ovt:'liep',      ovt_pl:'liepen',     vtt:'gelopen',    aux:'hebben',    trad:'marcher / courir',
+  { id:'lopen',      infinitief:'lopen',      ovt:'liep',      ovt_pl:'liepen',     vtt:'gelopen',    aux:'hebben',    trad:'marcher / courir', ott:'loopt',
     ex:{ infinitief:'We gaan elke ochtend ___.', ovt:'Ze ___ snel naar het station.', vtt:'We hebben tien kilometer ___.' }},
-  { id:'denken',     infinitief:'denken',     ovt:'dacht',     ovt_pl:'dachten',    vtt:'gedacht',    aux:'hebben',    trad:'penser',
+  { id:'denken',     infinitief:'denken',     ovt:'dacht',     ovt_pl:'dachten',    vtt:'gedacht',    aux:'hebben',    trad:'penser',        ott:'denkt',
     ex:{ infinitief:'Je moet goed ___ voor je antwoordt.', ovt:'Ik ___ dat hij ziek was.', vtt:'We hadden er nooit aan ___.' }},
-  { id:'brengen',    infinitief:'brengen',    ovt:'bracht',    ovt_pl:'brachten',   vtt:'gebracht',   aux:'hebben',    trad:'apporter / amener',
+  { id:'brengen',    infinitief:'brengen',    ovt:'bracht',    ovt_pl:'brachten',   vtt:'gebracht',   aux:'hebben',    trad:'apporter / amener', ott:'brengt',
     ex:{ infinitief:'Kun jij de kinderen naar school ___?', ovt:'Hij ___ bloemen mee voor zijn moeder.', vtt:'Ze heeft de brief naar het postkantoor ___.' }},
-  { id:'vinden',     infinitief:'vinden',     ovt:'vond',      ovt_pl:'vonden',     vtt:'gevonden',   aux:'hebben',    trad:'trouver',
+  { id:'vinden',     infinitief:'vinden',     ovt:'vond',      ovt_pl:'vonden',     vtt:'gevonden',   aux:'hebben',    trad:'trouver',       ott:'vindt',
     ex:{ infinitief:'Kun jij mijn sleutels ___?', ovt:'Ze ___ een portemonnee op straat.', vtt:'Hij heeft eindelijk een nieuwe baan ___.' }},
-  { id:'lezen',      infinitief:'lezen',      ovt:'las',       ovt_pl:'lazen',      vtt:'gelezen',    aux:'hebben',    trad:'lire',
+  { id:'lezen',      infinitief:'lezen',      ovt:'las',       ovt_pl:'lazen',      vtt:'gelezen',    aux:'hebben',    trad:'lire',          ott:'leest',
     ex:{ infinitief:'Ik ga elke avond een boek ___.', ovt:'Ze ___ het boek in één dag.', vtt:'Heb jij dit artikel al ___?' }},
-  { id:'spreken',    infinitief:'spreken',    ovt:'sprak',     ovt_pl:'spraken',    vtt:'gesproken',  aux:'hebben',    trad:'parler',
+  { id:'spreken',    infinitief:'spreken',    ovt:'sprak',     ovt_pl:'spraken',    vtt:'gesproken',  aux:'hebben',    trad:'parler',        ott:'spreekt',
     ex:{ infinitief:'Kun jij Nederlands ___?', ovt:'Hij ___ langzaam met de kinderen.', vtt:'Hebben jullie de directeur al ___?' }},
-  { id:'helpen',     infinitief:'helpen',     ovt:'hielp',     ovt_pl:'hielpen',    vtt:'geholpen',   aux:'hebben',    trad:'aider',
+  { id:'helpen',     infinitief:'helpen',     ovt:'hielp',     ovt_pl:'hielpen',    vtt:'geholpen',   aux:'hebben',    trad:'aider',         ott:'helpt',
     ex:{ infinitief:'Kun jij me even ___?', ovt:'Ze ___ haar buurman met de boodschappen.', vtt:'De arts heeft veel patiënten ___.' }},
-  { id:'geven',      infinitief:'geven',      ovt:'gaf',       ovt_pl:'gaven',      vtt:'gegeven',    aux:'hebben',    trad:'donner',
+  { id:'geven',      infinitief:'geven',      ovt:'gaf',       ovt_pl:'gaven',      vtt:'gegeven',    aux:'hebben',    trad:'donner',        ott:'geeft',
     ex:{ infinitief:'Wil je mij je telefoonnummer ___?', ovt:'Ze ___ hem een cadeau voor zijn verjaardag.', vtt:'De leraar heeft ons veel huiswerk ___.' }},
-  { id:'nemen',      infinitief:'nemen',      ovt:'nam',       ovt_pl:'namen',      vtt:'genomen',    aux:'hebben',    trad:'prendre',
+  { id:'nemen',      infinitief:'nemen',      ovt:'nam',       ovt_pl:'namen',      vtt:'genomen',    aux:'hebben',    trad:'prendre',       ott:'neemt',
     ex:{ infinitief:'Wil je suiker ___ in je koffie?', ovt:'Hij ___ de trein naar Utrecht.', vtt:'Ze heeft de verkeerde weg ___.' }},
-  { id:'kopen',      infinitief:'kopen',      ovt:'kocht',     ovt_pl:'kochten',    vtt:'gekocht',    aux:'hebben',    trad:'acheter',
+  { id:'kopen',      infinitief:'kopen',      ovt:'kocht',     ovt_pl:'kochten',    vtt:'gekocht',    aux:'hebben',    trad:'acheter',       ott:'koopt',
     ex:{ infinitief:'Ik ga morgen een fiets ___.', ovt:'Ze ___ een nieuw jasje in de winkel.', vtt:'Hij heeft een appartement in Amsterdam ___.' }},
-  { id:'beginnen',   infinitief:'beginnen',   ovt:'begon',     ovt_pl:'begonnen',   vtt:'begonnen',   aux:'zijn',      trad:'commencer',
+  { id:'beginnen',   infinitief:'beginnen',   ovt:'begon',     ovt_pl:'begonnen',   vtt:'begonnen',   aux:'zijn',      trad:'commencer',     ott:'begint',
     ex:{ infinitief:'De les gaat om 9 uur ___.', ovt:'Het concert ___ later dan gepland.', vtt:'Ze is net met haar nieuwe baan ___.' }},
-  { id:'vergeten',   infinitief:'vergeten',   ovt:'vergat',    ovt_pl:'vergaten',   vtt:'vergeten',   aux:'hebben',    trad:'oublier',
+  { id:'vergeten',   infinitief:'vergeten',   ovt:'vergat',    ovt_pl:'vergaten',   vtt:'vergeten',   aux:'hebben',    trad:'oublier',       ott:'vergeet',
     ex:{ infinitief:'Je mag dit nooit ___!', ovt:'Ze ___ haar tas in de trein.', vtt:'Ik heb zijn naam helemaal ___.' }},
-  { id:'houden',     infinitief:'houden',     ovt:'hield',     ovt_pl:'hielden',    vtt:'gehouden',   aux:'hebben',    trad:'tenir / garder',
+  { id:'houden',     infinitief:'houden',     ovt:'hield',     ovt_pl:'hielden',    vtt:'gehouden',   aux:'hebben',    trad:'tenir / garder', ott:'houdt',
     ex:{ infinitief:'Je moet je aan de regels ___.', ovt:'Hij ___ zijn belofte.', vtt:'Ze heeft een mooie speech ___.' }},
-  { id:'laten',      infinitief:'laten',      ovt:'liet',      ovt_pl:'lieten',     vtt:'gelaten',    aux:'hebben',    trad:'laisser / faire faire',
+  { id:'laten',      infinitief:'laten',      ovt:'liet',      ovt_pl:'lieten',     vtt:'gelaten',    aux:'hebben',    trad:'laisser / faire faire', ott:'laat',
     ex:{ infinitief:'Moet je de deur open ___?', ovt:'Ze ___ haar kinderen lang buiten spelen.', vtt:'Hij heeft zijn auto in de garage ___.' }},
-  { id:'vallen',     infinitief:'vallen',     ovt:'viel',      ovt_pl:'vielen',     vtt:'gevallen',   aux:'zijn',      trad:'tomber',
+  { id:'vallen',     infinitief:'vallen',     ovt:'viel',      ovt_pl:'vielen',     vtt:'gevallen',   aux:'zijn',      trad:'tomber',        ott:'valt',
     ex:{ infinitief:'Pas op, je gaat ___!', ovt:'Hij ___ op het ijs en brak zijn pols.', vtt:'Het kind is van de fiets ___.' }},
-  { id:'slapen',     infinitief:'slapen',     ovt:'sliep',     ovt_pl:'sliepen',    vtt:'geslapen',   aux:'hebben',    trad:'dormir',
+  { id:'slapen',     infinitief:'slapen',     ovt:'sliep',     ovt_pl:'sliepen',    vtt:'geslapen',   aux:'hebben',    trad:'dormir',        ott:'slaapt',
     ex:{ infinitief:'De baby wil ___.', ovt:'Ik ___ gisternacht heel slecht.', vtt:'Heb jij goed ___?' }},
-  { id:'stijgen',    infinitief:'stijgen',    ovt:'steeg',     ovt_pl:'stegen',     vtt:'gestegen',   aux:'zijn',      trad:'monter / augmenter',
+  { id:'stijgen',    infinitief:'stijgen',    ovt:'steeg',     ovt_pl:'stegen',     vtt:'gestegen',   aux:'zijn',      trad:'monter / augmenter', ott:'stijgt',
     ex:{ infinitief:'De temperatuur gaat dit weekend ___.', ovt:'De prijs ___ vorig jaar met 10%.', vtt:'De pensioenen zijn dit jaar ___.' }},
-  { id:'kiezen',     infinitief:'kiezen',     ovt:'koos',      ovt_pl:'kozen',      vtt:'gekozen',    aux:'hebben',    trad:'choisir',
+  { id:'kiezen',     infinitief:'kiezen',     ovt:'koos',      ovt_pl:'kozen',      vtt:'gekozen',    aux:'hebben',    trad:'choisir',       ott:'kiest',
     ex:{ infinitief:'Je mag zelf ___.', ovt:'Ze ___ de rode jurk voor het feest.', vtt:'De president is gisteren ___.' }},
-  { id:'vertrekken', infinitief:'vertrekken', ovt:'vertrok',   ovt_pl:'vertrokken', vtt:'vertrokken', aux:'zijn',      trad:'partir',
+  { id:'vertrekken', infinitief:'vertrekken', ovt:'vertrok',   ovt_pl:'vertrokken', vtt:'vertrokken', aux:'zijn',      trad:'partir',        ott:'vertrekt',
     ex:{ infinitief:'We moeten om 8 uur ___.', ovt:'De trein ___ twee minuten te laat.', vtt:'Ze is vorig jaar naar Canada ___.' }},
-  { id:'staan',      infinitief:'staan',      ovt:'stond',     ovt_pl:'stonden',    vtt:'gestaan',    aux:'hebben',    trad:'être debout',
+  { id:'staan',      infinitief:'staan',      ovt:'stond',     ovt_pl:'stonden',    vtt:'gestaan',    aux:'hebben',    trad:'être debout',   ott:'staat',
     ex:{ infinitief:'Je moet hier ___!', ovt:'Ze ___ lang in de rij bij de kassa.', vtt:'Het standbeeld heeft daar altijd ___.' }},
-  { id:'zitten',     infinitief:'zitten',     ovt:'zat',       ovt_pl:'zaten',      vtt:'gezeten',    aux:'hebben',    trad:'être assis',
+  { id:'zitten',     infinitief:'zitten',     ovt:'zat',       ovt_pl:'zaten',      vtt:'gezeten',    aux:'hebben',    trad:'être assis',    ott:'zit',
     ex:{ infinitief:'Wil je hier naast mij ___?', ovt:'Hij ___ de hele avond op de bank.', vtt:'Ze heeft uren op het perron ___.' }},
-  { id:'liggen',     infinitief:'liggen',     ovt:'lag',       ovt_pl:'lagen',      vtt:'gelegen',    aux:'hebben',    trad:'être couché / se trouver',
+  { id:'liggen',     infinitief:'liggen',     ovt:'lag',       ovt_pl:'lagen',      vtt:'gelegen',    aux:'hebben',    trad:'être couché / se trouver', ott:'ligt',
     ex:{ infinitief:'Ik wil even ___.', ovt:'Het boek ___ op de tafel.', vtt:'Ze heeft ziek in bed ___.' }},
-  { id:'snijden',    infinitief:'snijden',    ovt:'sneed',     ovt_pl:'sneden',     vtt:'gesneden',   aux:'hebben',    trad:'couper',
+  { id:'snijden',    infinitief:'snijden',    ovt:'sneed',     ovt_pl:'sneden',     vtt:'gesneden',   aux:'hebben',    trad:'couper',        ott:'snijdt',
     ex:{ infinitief:'Kun jij het brood ___?', ovt:'Ze ___ de groenten voor de soep.', vtt:'Hij heeft zich in zijn vinger ___.' }},
-  { id:'weten',      infinitief:'weten',      ovt:'wist',      ovt_pl:'wisten',     vtt:'geweten',    aux:'hebben',    trad:'savoir',
+  { id:'weten',      infinitief:'weten',      ovt:'wist',      ovt_pl:'wisten',     vtt:'geweten',    aux:'hebben',    trad:'savoir',        ott:'weet',
     ex:{ infinitief:'Hoe kun je dat ___?', ovt:'Ik ___ niet wat ik moest zeggen.', vtt:'Dat had ik nooit ___.' }},
-  { id:'roepen',     infinitief:'roepen',     ovt:'riep',      ovt_pl:'riepen',     vtt:'geroepen',   aux:'hebben',    trad:'appeler / crier',
+  { id:'roepen',     infinitief:'roepen',     ovt:'riep',      ovt_pl:'riepen',     vtt:'geroepen',   aux:'hebben',    trad:'appeler / crier', ott:'roept',
     ex:{ infinitief:'Je mag niet zo hard ___.', ovt:'Ze ___ zijn naam over de straat.', vtt:'Ze heeft hem al ___.' }},
-  { id:'vliegen',    infinitief:'vliegen',    ovt:'vloog',     ovt_pl:'vlogen',     vtt:'gevlogen',   aux:'hebben',    trad:'voler',
+  { id:'vliegen',    infinitief:'vliegen',    ovt:'vloog',     ovt_pl:'vlogen',     vtt:'gevlogen',   aux:'hebben',    trad:'voler',         ott:'vliegt',
     ex:{ infinitief:'Vogels kunnen ___.', ovt:'Het vliegtuig ___ over de stad.', vtt:'We hebben drie uur lang ___.' }},
-  { id:'zwemmen',    infinitief:'zwemmen',    ovt:'zwom',      ovt_pl:'zwommen',    vtt:'gezwommen',  aux:'hebben',    trad:'nager',
+  { id:'zwemmen',    infinitief:'zwemmen',    ovt:'zwom',      ovt_pl:'zwommen',    vtt:'gezwommen',  aux:'hebben',    trad:'nager',         ott:'zwemt',
     ex:{ infinitief:'Hij kan goed ___.', ovt:'Ze ___ elke ochtend een kilometer.', vtt:'We hebben vandaag ___.' }},
-  { id:'dragen',     infinitief:'dragen',     ovt:'droeg',     ovt_pl:'droegen',    vtt:'gedragen',   aux:'hebben',    trad:'porter',
+  { id:'dragen',     infinitief:'dragen',     ovt:'droeg',     ovt_pl:'droegen',    vtt:'gedragen',   aux:'hebben',    trad:'porter',        ott:'draagt',
     ex:{ infinitief:'Wil je dit pakket ___?', ovt:'Hij ___ een zware rugzak op zijn rug.', vtt:'Ze heeft altijd mooie kleren ___.' }},
-  { id:'vragen',     infinitief:'vragen',     ovt:'vroeg',     ovt_pl:'vroegen',    vtt:'gevraagd',   aux:'hebben',    trad:'demander',
+  { id:'vragen',     infinitief:'vragen',     ovt:'vroeg',     ovt_pl:'vroegen',    vtt:'gevraagd',   aux:'hebben',    trad:'demander',      ott:'vraagt',
     ex:{ infinitief:'Ik wil je iets ___.', ovt:'Ze ___ hem om hulp.', vtt:'Heb jij hem al om toestemming ___?' }},
-  { id:'schieten',   infinitief:'schieten',   ovt:'schoot',    ovt_pl:'schoten',    vtt:'geschoten',  aux:'hebben',    trad:'tirer',
+  { id:'schieten',   infinitief:'schieten',   ovt:'schoot',    ovt_pl:'schoten',    vtt:'geschoten',  aux:'hebben',    trad:'tirer',         ott:'schiet',
     ex:{ infinitief:'Je mag hier niet ___.', ovt:'De speler ___ de bal in het doel.', vtt:'Hij heeft drie keer ___.' }},
 ];
 
-const VB_FORM_LABELS = { infinitief: 'Infinitif', ovt: 'O.V.T.', vtt: 'V.T.T.' };
+const VB_FORM_LABELS = { infinitief: 'Infinitif', ott: 'O.T.T.', ovt: 'O.V.T.', vtt: 'V.T.T.' };
 
 /* ── State ── */
 let vbQueue    = [];
@@ -3710,6 +4058,7 @@ let vbAnswers  = [];
 let vbProgress = {};
 let vbCount    = 10;
 let vbFormFilter = 'all';
+let vbMode = 'text'; // 'text' | 'qcm'
 
 function vbLoadProgress() {
   try { vbProgress = JSON.parse(localStorage.getItem('lazypo_verbs_progress') || '{}'); }
@@ -3735,7 +4084,7 @@ function vbShuffle(a) {
 
 /* ── Queue ── */
 function vbBuildQueue(count, formFilter) {
-  const forms = formFilter === 'all' ? ['infinitief', 'ovt', 'vtt'] : [formFilter];
+  const forms = formFilter === 'all' ? ['infinitief', 'ott', 'ovt', 'vtt'] : [formFilter];
   let pool = [];
   VB_VERBS.forEach(v => forms.forEach(f => pool.push({ verb: v, form: f })));
 
@@ -3789,22 +4138,64 @@ function vbShowQuestion() {
   document.getElementById('vb-paradigm').classList.remove('show');
   document.getElementById('vb-next-row').style.display = 'none';
 
-  if (q.useMCQ) {
+  // Mode QCM
+  if (vbMode === 'qcm') {
     document.getElementById('vb-input-zone').style.display = 'none';
-    document.getElementById('vb-mcq-zone').style.display   = 'grid';
-    const options = vbGetOptions(q.verb, q.form, answer);
-    document.getElementById('vb-mcq-zone').innerHTML = options.map(opt =>
-      `<button class="vb-mcq-btn" onclick="vbCheckMCQ(this,'${escHtml(answer)}')"
-        data-val="${escHtml(opt)}">${escHtml(opt)}</button>`
-    ).join('');
-  } else {
-    document.getElementById('vb-input-zone').style.display = 'flex';
-    document.getElementById('vb-mcq-zone').style.display   = 'none';
-    const inp = document.getElementById('vb-answer-input');
-    inp.value = ''; inp.className = 'qz-answer-input'; inp.disabled = false;
-    document.getElementById('vb-check-btn').style.display = 'inline-flex';
-    setTimeout(() => inp.focus(), 50);
+    const mcqZone = document.getElementById('vb-mcq-zone');
+    mcqZone.style.display = 'grid';
+    // Generate choices: correct + 3 distractors
+    const correct = q.verb[q.form];
+    const distractors = vbShuffle(
+      VB_VERBS.filter(v => v.id !== q.verb.id).map(v => v[q.form]).filter(Boolean)
+    ).slice(0, 3);
+    const choices = vbShuffle([correct, ...distractors]);
+    mcqZone.innerHTML = choices.map(c => `
+      <button class="vb-mcq-btn" data-val="${escHtml(c)}">${escHtml(c)}</button>
+    `).join('');
+    mcqZone.querySelectorAll('.vb-mcq-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.bound) return;
+        btn.dataset.bound = '1';
+        const given = btn.dataset.val;
+        const isOk = given === correct;
+        btn.classList.add(isOk ? 'mcq-correct' : 'mcq-wrong');
+        if (!isOk) {
+          mcqZone.querySelectorAll('.vb-mcq-btn').forEach(b => {
+            if (b.dataset.val === correct) b.classList.add('mcq-correct');
+          });
+        }
+        mcqZone.querySelectorAll('.vb-mcq-btn').forEach(b => b.disabled = true);
+        // Record answer
+        vbAnswers.push({ verb: q.verb, form: q.form, correct: isOk, given });
+        vbProgress[q.verb.id] = vbProgress[q.verb.id] || { attempts: 0, correct: 0 };
+        vbProgress[q.verb.id].attempts++;
+        if (isOk) vbProgress[q.verb.id].correct++;
+        vbSaveProgress();
+        // Show paradigm + next
+        document.getElementById('vb-paradigm').classList.add('show');
+        const row = document.getElementById('vb-paradigm-row');
+        row.innerHTML = ['infinitief','ott','ovt','vtt'].map(f => `
+          <div class="vb-pcell">
+            <div class="vb-pcell-lbl">${VB_FORM_LABELS[f]}</div>
+            <div class="vb-pcell-val${f === q.form ? ' hi' : ''}">${escHtml(q.verb[f] || '—')}</div>
+            ${f === 'ovt' ? `<div class="vb-pcell-aux">pl. ${escHtml(q.verb.ovt_pl)}</div>` : ''}
+            ${f === 'vtt' ? `<div class="vb-pcell-aux">${q.verb.aux} + …</div>` : ''}
+            ${f === 'infinitief' ? `<div class="vb-pcell-aux" style="font-style:italic;color:var(--accent)">${escHtml(q.verb.trad)}</div>` : ''}
+          </div>`).join('');
+        document.getElementById('vb-sentence-reveal').innerHTML =
+          vbRenderSentence(escHtml(q.verb.ex[q.form] || '').replace('___', '___'), q.verb[q.form], true);
+        document.getElementById('vb-next-row').style.display = 'flex';
+        document.getElementById('vb-next-btn').focus();
+      });
+    });
+    return; // skip text input setup
   }
+  document.getElementById('vb-input-zone').style.display = '';
+  document.getElementById('vb-mcq-zone').style.display = 'none';
+  const inp = document.getElementById('vb-answer-input');
+  inp.value = ''; inp.className = 'qz-answer-input'; inp.disabled = false;
+  document.getElementById('vb-check-btn').style.display = 'inline-flex';
+  setTimeout(() => inp.focus(), 50);
 }
 
 function vbCheckMCQ(btn, correct) {
@@ -3845,10 +4236,10 @@ function vbShowFeedback(isOk, given, correct) {
   // Paradigm
   const paradigm = document.getElementById('vb-paradigm');
   const row = document.getElementById('vb-paradigm-row');
-  row.innerHTML = ['infinitief','ovt','vtt'].map(f => `
+  row.innerHTML = ['infinitief','ott','ovt','vtt'].map(f => `
     <div class="vb-pcell">
       <div class="vb-pcell-lbl">${VB_FORM_LABELS[f]}</div>
-      <div class="vb-pcell-val${f === q.form ? ' hi' : ''}">${escHtml(q.verb[f])}</div>
+      <div class="vb-pcell-val${f === q.form ? ' hi' : ''}">${escHtml(q.verb[f] || '—')}</div>
       ${f === 'ovt' ? `<div class="vb-pcell-aux">pl. ${escHtml(q.verb.ovt_pl)}</div>` : ''}
       ${f === 'vtt' ? `<div class="vb-pcell-aux">${q.verb.aux} + …</div>` : ''}
       ${f === 'infinitief' ? `<div class="vb-pcell-aux" style="font-style:italic;color:var(--accent)">${escHtml(q.verb.trad)}</div>` : ''}
@@ -3964,6 +4355,7 @@ function vbShowRef() {
     <tr>
       <td style="font-weight:700;font-family:'DM Mono',monospace">${escHtml(v.infinitief)}</td>
       <td style="font-size:12px;color:var(--accent);font-style:italic">${escHtml(v.trad)}</td>
+      <td style="font-family:'DM Mono',monospace;color:#a78bfa">${escHtml(v.ott || '—')}</td>
       <td style="font-family:'DM Mono',monospace;color:var(--accent2)">${escHtml(v.ovt)}</td>
       <td style="font-family:'DM Mono',monospace;color:var(--muted)">${escHtml(v.ovt_pl)}</td>
       <td style="font-family:'DM Mono',monospace;color:#86efac">${escHtml(v.vtt)}</td>
@@ -3982,7 +4374,7 @@ function vbBackToSetup() {
 
 /* ── Controls ── */
 function vbUpdateNote() {
-  const forms  = vbFormFilter === 'all' ? 3 : 1;
+  const forms  = vbFormFilter === 'all' ? 4 : 1;
   const total  = VB_VERBS.length * forms;
   const n      = vbCount === 'all' ? total : Math.min(vbCount, total);
   document.getElementById('vb-avail-note').textContent = `${n} question${n > 1 ? 's' : ''} sur ${total} disponibles`;
@@ -4003,6 +4395,14 @@ document.querySelectorAll('#vb-form-pills .qz-pill').forEach(btn => {
     btn.classList.add('active');
     vbFormFilter = btn.dataset.form;
     vbUpdateNote();
+  });
+});
+
+document.querySelectorAll('#vb-mode-pills .qz-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#vb-mode-pills .qz-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    vbMode = btn.dataset.vbmode;
   });
 });
 
@@ -4059,6 +4459,7 @@ const XP_RULES = {
 let userXpState       = null;
 let xpReconciling     = false;
 let xpTodayNewWords   = 0;   // in-memory counter, reset per UTC day
+let xpDailyCache      = null;
 
 /* ── Word creation tracking ── */
 function xpTrackWordCreated() {
@@ -4299,79 +4700,7 @@ async function showXpBreakdown() {
   document.getElementById('multi-sub-classement').appendChild(panel);
 }
 
-/* ── Override renderLeaderboard to use total_xp ── */
-async function multiLoadLeaderboard() {
-  // Fetch XP state for all users
-  const [{ data: xpRows }, { data: sessions, error }] = await Promise.all([
-    window.sb.from('user_xp').select('user_id, total_xp, current_streak_days'),
-    window.sb.from('quiz_sessions').select('user_id, display_name, score, total')
-      .order('created_at', { ascending: false }).limit(500),
-  ]);
-  if (error) return;
-
-  // Build name map from sessions
-  const nameMap = {};
-  for (const s of (sessions || [])) { if (!nameMap[s.user_id]) nameMap[s.user_id] = s.display_name; }
-
-  // Build aggregated stats
-  const aggMap = {};
-  for (const s of (sessions || [])) {
-    if (!aggMap[s.user_id]) aggMap[s.user_id] = { games: 0, totalScore: 0, totalPossible: 0, best: 0 };
-    const m = aggMap[s.user_id];
-    m.games++;
-    m.totalScore    += s.score;
-    m.totalPossible += s.total;
-    if (s.total > 0) m.best = Math.max(m.best, Math.round((s.score / s.total) * 100));
-  }
-
-  // Merge XP with stats
-  lbData = (xpRows || []).map(x => {
-    const agg = aggMap[x.user_id] || { games: 0, totalScore: 0, totalPossible: 0, best: 0 };
-    const avg = agg.totalPossible > 0 ? Math.round((agg.totalScore / agg.totalPossible) * 100) : 0;
-    return {
-      user_id:   x.user_id,
-      display_name: nameMap[x.user_id] || 'Joueur',
-      total_xp:  x.total_xp || 0,
-      streak:    x.current_streak_days || 0,
-      avg, games: agg.games, best: agg.best,
-    };
-  }).sort((a, b) => b.total_xp - a.total_xp || b.streak - a.streak || b.games - a.games);
-
-  renderLeaderboard(lbData);
-}
-
-function renderLeaderboard(rows) {
-  const tbody = document.getElementById('lb-body');
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="feed-empty">Aucune partie enregistrée.<br><small>Joue un quiz pour apparaître ici !</small></div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = rows.map((r, i) => {
-    const isMe   = currentUser && r.user_id === currentUser.id;
-    const medal  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1;
-    const avgCls = r.avg >= 75 ? 'rate-good' : r.avg >= 50 ? 'rate-mid' : 'rate-bad';
-    const streakBadge = r.streak > 0 ? ` 🔥${r.streak}` : '';
-    return `<tr${isMe ? ' class="lb-me"' : ''}${isMe ? ' style="cursor:pointer" title="Voir mon historique XP"' : ''}>
-      <td style="font-size:16px;text-align:center">${medal}</td>
-      <td style="font-weight:600">${escHtml(r.display_name)}${isMe ? ' <span style="font-size:11px;color:var(--accent)">(moi)</span>' : ''}${streakBadge}</td>
-      <td class="lb-xp">${r.total_xp.toLocaleString()} XP</td>
-      <td class="${avgCls}">${r.avg}%</td>
-      <td style="color:var(--muted)">${r.games}</td>
-    </tr>`;
-  }).join('');
-
-  // Click on own row → XP breakdown
-  tbody.querySelectorAll('tr.lb-me').forEach(row => {
-    row.addEventListener('click', showXpBreakdown);
-  });
-}
-
-// Update leaderboard header
-const lbTable = document.getElementById('lb-table');
-if (lbTable) {
-  lbTable.querySelector('thead tr').innerHTML =
-    '<th>#</th><th>Joueur</th><th>Total XP</th><th>Moy. %</th><th>Parties</th>';
-}
+// Weekly leaderboard defined below in MODULE MULTI section
 
 // Run reconciliation on load (after auth ready)
 document.addEventListener('lazypo:profile', () => {
@@ -4390,6 +4719,7 @@ let feedData       = [];
 let lbData         = [];
 let multiDisplayName = null;
 let multiAvatarUrl   = null;
+let feedReactions  = {}; // { sessionId: { fire: N, muscle: N, clap: N, mine: Set } }
 
 const MULTI_CACHE_TTL = 2 * 60 * 1000; // 2 min
 
@@ -4406,7 +4736,7 @@ async function getMultiDisplayName() {
 }
 
 /* ── Auto-post session after each quiz ── */
-async function postMultiSession(score, total, durationSec, mode, lang, direction) {
+async function postMultiSession(score, total, durationSec, mode, lang, direction, wordIds = []) {
   if (!currentUser || !window.sb) return;
   const name = await getMultiDisplayName();
   try {
@@ -4415,7 +4745,8 @@ async function postMultiSession(score, total, durationSec, mode, lang, direction
       display_name: name,
       avatar_url: multiAvatarUrl || null,
       score, total, duration_sec: durationSec, mode, lang,
-      direction: direction || 'auto'
+      direction: direction || 'auto',
+      word_ids: wordIds.length > 0 ? wordIds : null,
     });
     multiLoaded = false;
     xpScheduleReconciliation(); // trigger XP after session posted
@@ -4447,49 +4778,77 @@ document.querySelectorAll('.multi-subnav-btn').forEach(btn => {
    LEADERBOARD
 ───────────────────────────────── */
 async function multiLoadLeaderboard() {
-  const { data, error } = await window.sb
-    .from('quiz_sessions')
-    .select('user_id, display_name, score, total')
-    .order('created_at', { ascending: false })
-    .limit(500);
-  if (error) return;
-  lbData = aggregateLeaderboard(data || []);
-  renderLeaderboard(lbData);
-}
-
-function aggregateLeaderboard(sessions) {
-  const map = {};
-  for (const s of sessions) {
-    if (!map[s.user_id]) map[s.user_id] = { user_id: s.user_id, display_name: s.display_name, games: 0, totalScore: 0, totalPossible: 0, best: 0 };
-    const m = map[s.user_id];
-    m.games++;
-    m.totalScore    += s.score;
-    m.totalPossible += s.total;
-    if (s.total > 0) m.best = Math.max(m.best, Math.round((s.score / s.total) * 100));
+  const dateMinus7 = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+  const [{ data: logs }, { data: sessions }] = await Promise.all([
+    window.sb.from('xp_daily_log').select('user_id, xp_earned').gte('date', dateMinus7),
+    window.sb.from('quiz_sessions').select('user_id, display_name, score, total').order('created_at', { ascending: false }).limit(500),
+  ]);
+  // Name map
+  const nameMap = {};
+  for (const s of (sessions || [])) { if (!nameMap[s.user_id]) nameMap[s.user_id] = s.display_name; }
+  // Weekly XP
+  const xpMap = {};
+  for (const l of (logs || [])) { xpMap[l.user_id] = (xpMap[l.user_id] || 0) + (l.xp_earned || 0); }
+  // Session stats
+  const aggMap = {};
+  for (const s of (sessions || [])) {
+    if (!aggMap[s.user_id]) aggMap[s.user_id] = { games:0, totalScore:0, totalPossible:0 };
+    aggMap[s.user_id].games++;
+    aggMap[s.user_id].totalScore    += s.score;
+    aggMap[s.user_id].totalPossible += s.total;
   }
-  return Object.values(map)
-    .map(m => ({ ...m, avg: m.totalPossible > 0 ? Math.round((m.totalScore / m.totalPossible) * 100) : 0 }))
-    .sort((a, b) => b.avg - a.avg || b.games - a.games);
+  lbData = Object.keys(xpMap).map(uid => {
+    const agg = aggMap[uid] || { games:0, totalScore:0, totalPossible:0 };
+    const avg = agg.totalPossible > 0 ? Math.round(agg.totalScore / agg.totalPossible * 100) : 0;
+    return { user_id: uid, display_name: nameMap[uid] || 'Joueur', weekly_xp: xpMap[uid], avg, games: agg.games };
+  }).sort((a,b) => b.weekly_xp - a.weekly_xp || b.avg - a.avg);
+  renderLeaderboard(lbData);
+  renderWeeklyCountdown();
 }
 
 function renderLeaderboard(rows) {
   const tbody = document.getElementById('lb-body');
+  // Update header
+  const lbTable = document.getElementById('lb-table');
+  if (lbTable) {
+    lbTable.querySelector('thead tr').innerHTML =
+      '<th>#</th><th>Joueur</th><th>XP semaine</th><th>Moy. %</th><th>Parties</th>';
+  }
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="feed-empty">Aucune partie enregistrée.<br><small>Joue un quiz pour apparaître ici !</small></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="feed-empty">Aucune activité cette semaine.<br><small>Joue un quiz pour apparaître ici !</small></div></td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map((r, i) => {
-    const isMe = currentUser && r.user_id === currentUser.id;
-    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1;
+    const isMe   = currentUser && r.user_id === currentUser.id;
+    const medal  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1;
     const avgCls = r.avg >= 75 ? 'rate-good' : r.avg >= 50 ? 'rate-mid' : 'rate-bad';
     return `<tr${isMe ? ' class="lb-me"' : ''}>
       <td style="font-size:16px;text-align:center">${medal}</td>
       <td style="font-weight:600">${escHtml(r.display_name)}${isMe ? ' <span style="font-size:11px;color:var(--accent)">(moi)</span>' : ''}</td>
+      <td class="lb-xp">${(r.weekly_xp || 0).toLocaleString()} XP</td>
       <td class="${avgCls}">${r.avg}%</td>
       <td style="color:var(--muted)">${r.games}</td>
-      <td style="color:var(--success)">${r.best}%</td>
     </tr>`;
   }).join('');
+  // Click on own row → XP breakdown
+  tbody.querySelectorAll('tr.lb-me').forEach(row => {
+    row.addEventListener('click', showXpBreakdown);
+  });
+}
+
+function renderWeeklyCountdown() {
+  const now = new Date();
+  const nextMonday = new Date(now);
+  nextMonday.setUTCHours(0,0,0,0);
+  const dow = nextMonday.getUTCDay(); // 0=Sun,1=Mon,...
+  const daysUntil = (8 - dow) % 7 || 7;
+  nextMonday.setUTCDate(nextMonday.getUTCDate() + daysUntil);
+  const diff = nextMonday - now;
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const el = document.getElementById('lb-weekly-countdown');
+  if (el) el.textContent = `Reset dans ${d}j ${h}h ${m}m`;
 }
 
 /* ─────────────────────────────────
@@ -4506,6 +4865,19 @@ async function multiLoadFeed(reset = false) {
   const rows = data || [];
   feedData = reset ? rows : [...feedData, ...rows];
   feedOffset += rows.length;
+  // Load reactions
+  const sids = rows.map(r => r.id);
+  if (sids.length > 0) {
+    const { data: rxns } = await window.sb
+      .from('quiz_session_reactions')
+      .select('session_id, type, user_id')
+      .in('session_id', sids);
+    for (const r of (rxns || [])) {
+      if (!feedReactions[r.session_id]) feedReactions[r.session_id] = { fire:0, muscle:0, clap:0, mine: new Set() };
+      feedReactions[r.session_id][r.type] = (feedReactions[r.session_id][r.type] || 0) + 1;
+      if (currentUser && r.user_id === currentUser.id) feedReactions[r.session_id].mine.add(r.type);
+    }
+  }
   renderFeed(rows, !reset);
   document.getElementById('feed-load-more').style.display = rows.length === 20 ? 'inline-flex' : 'none';
 }
@@ -4532,6 +4904,32 @@ function renderFeed(sessions, append) {
       btn.addEventListener('click', () => submitComment(btn.dataset.sid, btn.closest('.feed-comments')));
     }
   });
+  // Attach challenge back listeners
+  list.querySelectorAll('.feed-challenge-btn').forEach(btn => {
+    if (btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => {
+      const wids = JSON.parse(btn.dataset.wids || '[]');
+      launchChallengeQuiz(wids);
+    });
+  });
+  // Attach reaction listeners
+  list.querySelectorAll('.feed-react-btn').forEach(btn => {
+    if (btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => toggleReaction(btn.dataset.sid, btn.dataset.type, btn));
+  });
+  // Update reaction counts and states
+  sessions.forEach(s => {
+    const rx = feedReactions[s.id];
+    if (!rx) return;
+    ['fire','muscle','clap'].forEach(type => {
+      const cnt = list.querySelector(`.react-count[data-sid="${s.id}"][data-type="${type}"]`);
+      if (cnt) cnt.textContent = rx[type] || 0;
+      const btn = list.querySelector(`.feed-react-btn[data-sid="${s.id}"][data-type="${type}"]`);
+      if (btn && rx.mine?.has(type)) btn.classList.add('reacted');
+    });
+  });
 }
 
 function feedFormatDate(isoStr) {
@@ -4550,6 +4948,9 @@ function buildFeedItem(s) {
   const avatarHtml = s.avatar_url
     ? `<img class="feed-avatar" src="${escHtml(s.avatar_url)}" alt="${escHtml(s.display_name)}" loading="lazy">`
     : `<div class="feed-avatar-initial">${escHtml(initial)}</div>`;
+  const challengeBtn = s.word_ids && s.word_ids.length > 0
+    ? `<button class="feed-challenge-btn" data-wids="${escHtml(JSON.stringify(s.word_ids))}">🎯 Challenge</button>`
+    : '';
   return `<div class="feed-item" data-sid="${s.id}">
     <div class="feed-item-header">
       ${avatarHtml}
@@ -4557,7 +4958,13 @@ function buildFeedItem(s) {
       <span class="feed-score-badge ${bdgCls}">${s.score}/${s.total} · ${pct}%</span>
       <span style="font-size:12px;color:var(--muted)">${modeLabel}</span>
       <span class="feed-meta">${dateStr}</span>
+      ${challengeBtn}
       <button class="feed-comment-toggle" data-sid="${s.id}" data-bound="">💬 ${count > 0 ? count : ''}</button>
+    </div>
+    <div class="feed-reactions" data-sid="${s.id}">
+      <button class="feed-react-btn" data-sid="${s.id}" data-type="fire">🔥 <span class="react-count" data-sid="${s.id}" data-type="fire">0</span></button>
+      <button class="feed-react-btn" data-sid="${s.id}" data-type="muscle">💪 <span class="react-count" data-sid="${s.id}" data-type="muscle">0</span></button>
+      <button class="feed-react-btn" data-sid="${s.id}" data-type="clap">👏 <span class="react-count" data-sid="${s.id}" data-type="clap">0</span></button>
     </div>
     <div class="feed-comments" style="display:none;" data-sid="${s.id}" data-loaded="">
       <div class="feed-comment-list"></div>
@@ -4617,6 +5024,58 @@ async function submitComment(sid, commentsEl) {
 }
 
 document.getElementById('feed-load-more').addEventListener('click', () => multiLoadFeed(false));
+
+function launchChallengeQuiz(wordIds) {
+  const words = vocab.filter(w => wordIds.includes(w.id));
+  if (!words.length) { showToast('Mots non disponibles'); return; }
+  sessionAnswers = [];
+  sessionStartTime = Date.now();
+  quizQueue = words.map(word => {
+    const dir = Math.random() < 0.5 ? 'forward' : 'reverse';
+    return {
+      word,
+      question: dir === 'forward' ? word.source_word : word.target_translation,
+      answer:   dir === 'forward' ? word.target_translation : word.source_word,
+      direction: dir,
+    };
+  });
+  quizIndex = 0;
+  // Switch to quiz tab and show active
+  document.querySelectorAll('.qz-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('[data-tab="quiz"]')?.classList.add('active');
+  document.querySelectorAll('.qz-view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-quiz')?.classList.add('active');
+  document.getElementById('quiz-setup').style.display   = 'none';
+  document.getElementById('quiz-active').style.display  = 'block';
+  document.getElementById('quiz-summary').style.display = 'none';
+  showQuestion();
+  showToast('🎯 Challenge lancé !');
+}
+
+async function toggleReaction(sid, type, btn) {
+  if (!currentUser) { showToast('Connecte-toi pour réagir'); return; }
+  if (!feedReactions[sid]) feedReactions[sid] = { fire:0, muscle:0, clap:0, mine: new Set() };
+  const rx = feedReactions[sid];
+  const name = await getMultiDisplayName();
+  if (rx.mine.has(type)) {
+    // Remove
+    rx.mine.delete(type);
+    rx[type] = Math.max(0, (rx[type] || 1) - 1);
+    btn.classList.remove('reacted');
+    await window.sb.from('quiz_session_reactions')
+      .delete().eq('session_id', sid).eq('user_id', currentUser.id).eq('type', type);
+  } else {
+    // Add
+    rx.mine.add(type);
+    rx[type] = (rx[type] || 0) + 1;
+    btn.classList.add('reacted');
+    await window.sb.from('quiz_session_reactions').upsert({
+      session_id: sid, user_id: currentUser.id, display_name: name, type,
+    }, { onConflict: 'session_id,user_id,type' });
+  }
+  const cnt = btn.querySelector('.react-count');
+  if (cnt) cnt.textContent = rx[type] || 0;
+}
 
 /* ─────────────────────────────────
    MES STATS vs GLOBAL
