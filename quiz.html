@@ -154,14 +154,7 @@ body { padding-left: 64px; }
    VOCABULARY VIEW
 ══════════════════════════════════════ */
 
-/* Quick-add form */
-.qz-add-form {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px 20px;
-  margin-bottom: 20px;
-}
+/* Quick-add form — base styles (full redesign below near Responsive) */
 .qz-add-row {
   display: flex;
   gap: 10px;
@@ -244,28 +237,7 @@ body { padding-left: 64px; }
 .btn-secondary:hover { background: #2e2e2e; }
 .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
 
-/* Filter bar */
-.qz-filter-bar {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-.qz-search {
-  flex: 1; min-width: 180px;
-  padding: 9px 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  outline: none;
-  transition: border-color .15s;
-}
-.qz-search::placeholder { color: var(--muted); }
-.qz-search:focus { border-color: var(--accent); }
+/* Filter bar — redesigned below near Responsive */
 
 .qz-pill-group {
   display: flex;
@@ -1614,6 +1586,86 @@ tr.row-selected { background: rgba(59,130,246,.05); }
 .stats-mini-val { font-size: 18px; font-weight: 700; color: var(--text); font-family: 'DM Mono', monospace; }
 .stats-mini-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
+/* Add-form redesign */
+.qz-add-form {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px 24px; margin-bottom: 16px;
+}
+.qz-add-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+.qz-add-fields { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.qz-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 110px; }
+.qz-field-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.qz-field.shrink { flex: 0 0 auto; }
+.qz-swap-btn {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--surface2);
+  border: 1px solid var(--border2); color: var(--muted); cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  align-self: flex-end; transition: border-color .15s, color .15s; line-height: 1;
+}
+.qz-swap-btn:hover { border-color: var(--accent); color: var(--accent); }
+.qz-dir-toggle { display: flex; gap: 0; overflow: hidden; border-radius: 8px; border: 1px solid var(--border2); }
+.qz-dir-btn {
+  padding: 8px 12px; background: var(--surface2); border: none;
+  color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; transition: all .15s; white-space: nowrap;
+}
+.qz-dir-btn.active { background: var(--accent); color: #fff; }
+.qz-dir-btn:hover:not(.active) { color: var(--text); }
+
+/* Filter bar redesign */
+.qz-filter-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 18px; margin-bottom: 14px;
+}
+.qz-search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 320px; }
+.qz-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none; }
+.qz-search {
+  width: 100%; padding: 9px 14px 9px 36px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; outline: none; transition: border-color .15s;
+}
+.qz-search:focus { border-color: var(--accent); }
+.qz-search::placeholder { color: var(--muted); }
+
+/* update lang-nl to be green as per mockup */
+.lang-nl {
+  background: rgba(34,197,94,.15);
+  border: 1px solid rgba(34,197,94,.3);
+  color: #4ade80;
+}
+
+.icon-btn.danger {
+  background: rgba(239,68,68,.12);
+  color: #ef4444;
+  border: 1px solid rgba(239,68,68,.2);
+}
+.icon-btn.danger:hover { background: rgba(239,68,68,.22); color: #f87171; }
+
+/* Rate bar */
+.rate-wrap { display: flex; flex-direction: column; gap: 4px; }
+.rate-bar-bg { height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; min-width: 60px; }
+.rate-bar-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+
+/* Pagination */
+.vocab-pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-top: 1px solid var(--border);
+  font-size: 13px; color: var(--muted); gap: 12px; flex-wrap: wrap;
+}
+.pg-btns { display: flex; gap: 4px; }
+.pg-btn {
+  min-width: 32px; height: 32px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s; font-family: 'DM Sans', sans-serif;
+}
+.pg-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pg-btn:hover:not(.active):not(:disabled) { border-color: var(--accent); }
+.pg-btn:disabled { opacity: .35; cursor: not-allowed; }
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   body { padding-left: 0; }
@@ -1657,18 +1709,39 @@ tr.row-selected { background: rgba(59,130,246,.05); }
 
     <!-- Quick-add form -->
     <div class="qz-add-form">
-      <div class="qz-add-row">
-        <input type="text" id="add-source"  class="qz-input" placeholder="Word (EN or NL)" autocomplete="off">
-        <input type="text" id="add-target"  class="qz-input" placeholder="French translation" autocomplete="off">
-        <div class="qz-lang-toggle" role="group" aria-label="Language pair">
-          <button class="qz-lang-btn active" data-lang="EN→FR">EN→FR</button>
-          <button class="qz-lang-btn"        data-lang="NL→FR">NL→FR</button>
+      <div class="qz-add-title">Add a new word</div>
+      <div class="qz-add-fields">
+        <div class="qz-field">
+          <label class="qz-field-label">Word (EN)</label>
+          <input type="text" id="add-source-en" class="qz-input" placeholder="e.g. leverage" autocomplete="off">
         </div>
-        <input type="text" id="add-example" class="qz-input qz-input-example" placeholder="Example sentence (optional)" autocomplete="off">
-        <button class="btn-primary" id="btn-add-word">Add Word</button>
-      </div>
-      <div class="qz-add-row" style="margin-top:8px;">
-        <input type="text" id="add-tips" class="qz-input" placeholder="💡 Tips / mnémotechnique (optional)" autocomplete="off" style="flex:1;">
+        <button class="qz-swap-btn" id="btn-swap-lang" title="Swap language">⇄</button>
+        <div class="qz-field">
+          <label class="qz-field-label">Word (NL)</label>
+          <input type="text" id="add-source-nl" class="qz-input" placeholder="e.g. hefboom" autocomplete="off">
+        </div>
+        <div class="qz-field">
+          <label class="qz-field-label">Translation (FR)</label>
+          <input type="text" id="add-target" class="qz-input" placeholder="e.g. levier" autocomplete="off">
+        </div>
+        <div class="qz-field shrink">
+          <label class="qz-field-label">Direction</label>
+          <div class="qz-dir-toggle" role="group" aria-label="Language pair">
+            <button class="qz-dir-btn active" data-lang="EN→FR">EN → FR</button>
+            <button class="qz-dir-btn" data-lang="NL→FR">NL → FR</button>
+          </div>
+        </div>
+        <div class="qz-field" style="flex:1.5">
+          <label class="qz-field-label">Example</label>
+          <input type="text" id="add-example" class="qz-input" placeholder="e.g. We should leverage our assets." autocomplete="off">
+        </div>
+        <div class="qz-field">
+          <label class="qz-field-label">Tips</label>
+          <input type="text" id="add-tips" class="qz-input" placeholder="Mnémotechnique…" autocomplete="off">
+        </div>
+        <div class="qz-field shrink" style="align-self:flex-end">
+          <button class="btn-primary" id="btn-add-word" style="white-space:nowrap">Add Word</button>
+        </div>
       </div>
     </div>
 
@@ -1688,30 +1761,28 @@ tr.row-selected { background: rgba(59,130,246,.05); }
     </div>
 
     <!-- Filter bar -->
+    <select id="vocab-sort" class="qz-sort-select" style="display:none" aria-label="Sort vocabulary">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="az">A → Z</option>
+      <option value="hardest">Hardest first</option>
+    </select>
     <div class="qz-filter-bar">
-      <input type="search" id="vocab-search" class="qz-search" placeholder="🔍  Search words…" autocomplete="off">
+      <div class="qz-search-wrap">
+        <span class="qz-search-icon">🔍</span>
+        <input type="search" id="vocab-search" class="qz-search" placeholder="Search words…" autocomplete="off">
+      </div>
       <div class="qz-pill-group" role="group" aria-label="Language filter">
         <button class="qz-pill active" data-lang-filter="all">All</button>
-        <button class="qz-pill"        data-lang-filter="EN→FR">EN→FR</button>
-        <button class="qz-pill"        data-lang-filter="NL→FR">NL→FR</button>
-        <button class="qz-pill"        data-lang-filter="nl-fr">🇳🇱 nl-fr</button>
+        <button class="qz-pill" data-lang-filter="EN→FR">EN</button>
+        <button class="qz-pill" data-lang-filter="NL">NL</button>
       </div>
-      <div class="qz-pill-group" role="group" aria-label="Source filter">
-        <button class="qz-pill active" data-source-filter="all">Tous</button>
-        <button class="qz-pill"        data-source-filter="user">👤 Mes mots</button>
-        <button class="qz-pill"        data-source-filter="system">🤖 Système</button>
+      <div class="qz-pill-group" role="group" aria-label="Level filter">
+        <button class="qz-pill active" data-level-filter="all">All Levels</button>
+        <button class="qz-pill" data-level-filter="beginner">Beginner</button>
+        <button class="qz-pill" data-level-filter="intermediate">Intermediate</button>
+        <button class="qz-pill" data-level-filter="advanced">Advanced</button>
       </div>
-      <div class="qz-pill-group" role="group" aria-label="Performance filter">
-        <button class="qz-pill active" data-perf-filter="all">Tous niveaux</button>
-        <button class="qz-pill"        data-perf-filter="failed">❌ Ratés</button>
-        <button class="qz-pill"        data-perf-filter="weak">⚠️ Fragiles</button>
-      </div>
-      <select id="vocab-sort" class="qz-sort-select" aria-label="Sort vocabulary">
-        <option value="newest">Newest first</option>
-        <option value="oldest">Oldest first</option>
-        <option value="az">A → Z</option>
-        <option value="hardest">Hardest first</option>
-      </select>
       <span class="qz-word-count" id="word-count">0 words</span>
     </div>
 
@@ -1738,15 +1809,12 @@ tr.row-selected { background: rgba(59,130,246,.05); }
       <table class="qz-table" id="vocab-table" aria-label="Vocabulary list">
         <thead>
           <tr>
-            <th class="qz-cb-cell"><input type="checkbox" class="qz-cb" id="cb-select-all" title="Tout sélectionner"></th>
-            <th>Source Word</th>
-            <th>Translation</th>
+            <th class="sortable" data-sort="az">Source word ↕</th>
+            <th>Translation ↕</th>
             <th>Language</th>
             <th>Example</th>
-            <th>💡 Tips</th>
-            <th>Success Rate</th>
-            <th>Source</th>
-            <th>Added</th>
+            <th>Tips</th>
+            <th class="sortable" data-sort="hardest">Success rate ↕</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -1755,6 +1823,7 @@ tr.row-selected { background: rgba(59,130,246,.05); }
         </tbody>
       </table>
     </div>
+    <div id="vocab-pagination" class="vocab-pagination"></div>
   </section>
 
   <!-- ════════════════════════════════
@@ -2639,13 +2708,6 @@ function updateBulkBar() {
     bar.classList.add('visible');
     count.textContent = `${n} sélectionné${n > 1 ? 's' : ''}`;
   }
-  // Sync select-all checkbox
-  const cbAll = document.getElementById('cb-select-all');
-  if (cbAll) {
-    const visible = getFilteredVocab();
-    cbAll.checked = visible.length > 0 && visible.every(w => selectedIds.has(w.id));
-    cbAll.indeterminate = !cbAll.checked && visible.some(w => selectedIds.has(w.id));
-  }
 }
 
 async function bulkDelete() {
@@ -2744,24 +2806,33 @@ async function recordAnswer(wordId, isCorrect) {
 let selectedLang    = 'EN→FR';
 let filterLang      = 'all';
 let sourceFilter    = 'all';   // 'all' | 'user' | 'system'
-let perfFilter      = 'all';   // 'all' | 'failed' | 'weak'
+let perfFilter      = 'all';   // kept for compatibility
+let levelFilter     = 'all';   // 'all' | 'beginner' | 'intermediate' | 'advanced'
 let systemFilter    = 'include'; // 'include' | 'exclude' | 'only'  (quiz)
 let searchQuery     = '';
 let sortMode        = 'newest';
 let editingId       = null;
+let vocabPage       = 0;
+const VOCAB_PER_PAGE = 20;
 
-/* Lang toggle */
-document.querySelectorAll('.qz-lang-btn').forEach(btn => {
+/* Direction toggle */
+document.querySelectorAll('.qz-dir-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.qz-lang-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.qz-dir-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     selectedLang = btn.dataset.lang;
   });
+});
+/* Swap button */
+document.getElementById('btn-swap-lang').addEventListener('click', () => {
+  selectedLang = selectedLang === 'EN→FR' ? 'NL→FR' : 'EN→FR';
+  document.querySelectorAll('.qz-dir-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === selectedLang));
 });
 
 /* Search */
 document.getElementById('vocab-search').addEventListener('input', e => {
   searchQuery = e.target.value.toLowerCase();
+  vocabPage = 0;
   renderVocab();
 });
 
@@ -2771,26 +2842,18 @@ document.querySelectorAll('[data-lang-filter]').forEach(btn => {
     document.querySelectorAll('[data-lang-filter]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     filterLang = btn.dataset.langFilter;
+    vocabPage = 0;
     renderVocab();
   });
 });
 
-/* Source filter (user / system) */
-document.querySelectorAll('[data-source-filter]').forEach(btn => {
+/* Level filter (replaces perf filter) */
+document.querySelectorAll('[data-level-filter]').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-source-filter]').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('[data-level-filter]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    sourceFilter = btn.dataset.sourceFilter;
-    renderVocab();
-  });
-});
-
-/* Perf filter */
-document.querySelectorAll('[data-perf-filter]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-perf-filter]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    perfFilter = btn.dataset.perfFilter;
+    levelFilter = btn.dataset.levelFilter;
+    vocabPage = 0;
     renderVocab();
   });
 });
@@ -2839,19 +2902,7 @@ document.getElementById('btn-print-vocab').addEventListener('click', () => {
   setTimeout(() => area.remove(), 1000);
 });
 
-// Select-all checkbox
-document.getElementById('cb-select-all').addEventListener('change', e => {
-  const visible = getFilteredVocab();
-  if (e.target.checked) {
-    visible.forEach(w => selectedIds.add(w.id));
-  } else {
-    visible.forEach(w => selectedIds.delete(w.id));
-  }
-  renderVocab();
-  updateBulkBar();
-});
-
-// Row checkboxes (delegated)
+// Row checkboxes (delegated — kept for potential future use, currently no checkboxes in table)
 document.getElementById('vocab-tbody').addEventListener('change', e => {
   const cb = e.target.closest('.row-cb');
   if (!cb) return;
@@ -2876,33 +2927,40 @@ document.getElementById('bulk-deselect').addEventListener('click', () => {
 /* Add word form */
 document.getElementById('btn-add-word').addEventListener('click', submitAddWord);
 
-['add-source','add-target','add-example','add-tips'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', e => {
+['add-source-en','add-source-nl','add-target','add-example','add-tips'].forEach(id => {
+  document.getElementById(id)?.addEventListener('keydown', e => {
     if (e.key === 'Enter') submitAddWord();
   });
 });
 
 function submitAddWord() {
-  const source  = document.getElementById('add-source').value.trim();
-  const target  = document.getElementById('add-target').value.trim();
-  const example = document.getElementById('add-example').value.trim();
-  const tips    = document.getElementById('add-tips').value.trim();
+  const sourceEn = document.getElementById('add-source-en').value.trim();
+  const sourceNl = document.getElementById('add-source-nl').value.trim();
+  const source   = selectedLang === 'NL→FR' ? sourceNl : sourceEn;
+  const target   = document.getElementById('add-target').value.trim();
+  const example  = document.getElementById('add-example').value.trim();
+  const tips     = document.getElementById('add-tips').value.trim();
   if (!source || !target) { showToast('Please fill in source word and translation'); return; }
   addWord({ source_word: source, target_translation: target, language_pair: selectedLang, example_sentence: example || null, ...(tips ? { tips } : {}) });
-  document.getElementById('add-source').value  = '';
-  document.getElementById('add-target').value  = '';
-  document.getElementById('add-example').value = '';
-  document.getElementById('add-tips').value    = '';
-  document.getElementById('add-source').focus();
+  document.getElementById('add-source-en').value = '';
+  document.getElementById('add-source-nl').value = '';
+  document.getElementById('add-target').value    = '';
+  document.getElementById('add-example').value   = '';
+  document.getElementById('add-tips').value      = '';
+  (selectedLang === 'NL→FR'
+    ? document.getElementById('add-source-nl')
+    : document.getElementById('add-source-en')).focus();
 }
 
 function getFilteredVocab() {
   let list = [...vocab];
-  if (filterLang !== 'all')   list = list.filter(w => w.language_pair === filterLang);
+  if (filterLang === 'EN→FR') list = list.filter(w => w.language_pair === 'EN→FR');
+  else if (filterLang === 'NL') list = list.filter(w => w.language_pair === 'NL→FR' || w.language_pair === 'nl-fr');
   if (sourceFilter === 'user')   list = list.filter(w => !w.is_system);
   if (sourceFilter === 'system') list = list.filter(w =>  w.is_system);
-  if (perfFilter === 'failed') list = list.filter(w => { const r = rateOf(w.id); return r >= 0 && r < 0.5; });
-  if (perfFilter === 'weak')   list = list.filter(w => { const r = rateOf(w.id); return r >= 0 && r < 0.75; });
+  if (levelFilter === 'beginner')     list = list.filter(w => { const r = rateOf(w.id); return r < 0 || r < 0.5; });
+  if (levelFilter === 'intermediate') list = list.filter(w => { const r = rateOf(w.id); return r >= 0.5 && r < 0.8; });
+  if (levelFilter === 'advanced')     list = list.filter(w => { const r = rateOf(w.id); return r >= 0.8; });
   if (searchQuery) list = list.filter(w =>
     w.source_word.toLowerCase().includes(searchQuery) ||
     w.target_translation.toLowerCase().includes(searchQuery)
@@ -2912,11 +2970,7 @@ function getFilteredVocab() {
   } else if (sortMode === 'az') {
     list.sort((a, b) => a.source_word.localeCompare(b.source_word));
   } else if (sortMode === 'hardest') {
-    list.sort((a, b) => {
-      const ra = rateOf(a.id);
-      const rb = rateOf(b.id);
-      return ra - rb;
-    });
+    list.sort((a, b) => rateOf(a.id) - rateOf(b.id));
   }
   return list;
 }
@@ -2936,59 +2990,84 @@ function renderVocab() {
     (fil < total) ? `${fil} / ${total} mots` : `${total} mot${total !== 1 ? 's' : ''}`;
 
   if (!vocab.length) {
-    tbody.innerHTML = `<tr><td colspan="10"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="7"><div class="qz-empty">
       <div class="qz-empty-icon">📚</div>
       <h3>No words yet</h3>
       <p>Add your first vocabulary word using the form above.<br>Start with something simple!</p>
     </div></td></tr>`;
+    document.getElementById('vocab-pagination').innerHTML = '';
     return;
   }
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="10"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="7"><div class="qz-empty">
       <div class="qz-empty-icon">🔍</div>
       <h3>No matches</h3>
-      <p>Try adjusting your search or language filter.</p>
+      <p>Try adjusting your search or filter.</p>
     </div></td></tr>`;
+    document.getElementById('vocab-pagination').innerHTML = '';
     return;
   }
 
-  tbody.innerHTML = list.map(word => renderVocabRow(word)).join('');
+  // Clamp vocabPage
+  const maxPage = Math.max(0, Math.ceil(fil / VOCAB_PER_PAGE) - 1);
+  if (vocabPage > maxPage) vocabPage = maxPage;
+
+  const start = vocabPage * VOCAB_PER_PAGE;
+  const end   = Math.min(start + VOCAB_PER_PAGE, fil);
+  const page  = list.slice(start, end);
+
+  tbody.innerHTML = page.map(word => renderVocabRow(word)).join('');
   updateBulkBar();
   attachRowListeners();
+  renderPagination(fil, start, end);
+}
+
+function renderPagination(total, start, end) {
+  const el = document.getElementById('vocab-pagination');
+  if (!el || total === 0) { if (el) el.innerHTML = ''; return; }
+  const pages = Math.ceil(total / VOCAB_PER_PAGE);
+  const cur   = vocabPage;
+  const btns  = Array.from({ length: pages }, (_, i) =>
+    `<button class="pg-btn${i === cur ? ' active' : ''}" data-page="${i}">${i + 1}</button>`
+  ).join('');
+  el.innerHTML = `
+    <span>Showing ${start + 1} to ${end} of ${total} results</span>
+    <div class="pg-btns">
+      <button class="pg-btn" id="pg-prev" ${cur === 0 ? 'disabled' : ''}>&#8249;</button>
+      ${btns}
+      <button class="pg-btn" id="pg-next" ${cur >= pages - 1 ? 'disabled' : ''}>&#8250;</button>
+    </div>`;
+  el.querySelector('#pg-prev')?.addEventListener('click', () => { vocabPage--; renderVocab(); });
+  el.querySelector('#pg-next')?.addEventListener('click', () => { vocabPage++; renderVocab(); });
+  el.querySelectorAll('[data-page]').forEach(b => {
+    b.addEventListener('click', () => { vocabPage = parseInt(b.dataset.page); renderVocab(); });
+  });
 }
 
 function renderVocabRow(word) {
-  const p   = progress[word.id];
-  const rate = rateCell(p);
-  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl';
-  const ex  = word.example_sentence ? escHtml(word.example_sentence) : '—';
-  const added = word.created_at ? timeAgo(word.created_at) : '—';
-  const checked = selectedIds.has(word.id) ? 'checked' : '';
-  const selClass = selectedIds.has(word.id) ? ' row-selected' : '';
-
-  const srcBadge = word.is_system
-    ? `<span class="source-badge source-system">🤖 système</span>`
-    : `<span class="source-badge source-user">👤 moi</span>`;
-
-  const tipDisplay = word.tips ? `<span title="${escHtml(word.tips)}">${escHtml(word.tips.length > 30 ? word.tips.slice(0,30) + '…' : word.tips)}</span>` : '<span style="opacity:.3">—</span>';
-
-  const r = rateOf(word.id);
-  const perfClass = r >= 0 && r < 0.5 ? ' row-failed' : r >= 0.5 && r < 0.75 ? ' row-weak' : '';
-  const perfDot   = r >= 0 && r < 0.5 ? '<span class="fail-dot" title="Raté (< 50%)"></span>'
-                  : r >= 0.5 && r < 0.75 ? '<span class="weak-dot" title="Fragile (< 75%)"></span>' : '';
-  const rowClass = [selClass.trim(), perfClass.trim()].filter(Boolean).join(' ');
-
-  return `<tr data-id="${word.id}"${rowClass ? ` class="${rowClass}"` : ''}>
-    <td class="qz-cb-cell"><input type="checkbox" class="qz-cb row-cb" data-id="${word.id}" ${checked} aria-label="Sélectionner"></td>
-    <td class="source-word">${escHtml(word.source_word)}${perfDot}</td>
+  const r   = rateOf(word.id);
+  const pct = r < 0 ? null : Math.round(r * 100);
+  const pctStr  = pct === null ? '—' : pct + '%';
+  const rateCls = pct === null ? 'rate-none' : pct >= 80 ? 'rate-good' : pct >= 50 ? 'rate-mid' : 'rate-bad';
+  const barClr  = pct === null ? 'transparent' : pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
+  const isNL    = word.language_pair !== 'EN→FR';
+  const ex      = word.example_sentence ? escHtml(word.example_sentence) : '<span style="opacity:.3">—</span>';
+  const tip     = word.tips
+    ? `<span title="${escHtml(word.tips)}">${escHtml(word.tips.length > 28 ? word.tips.slice(0,28)+'…' : word.tips)}</span>`
+    : '<span style="opacity:.3">—</span>';
+  return `<tr data-id="${word.id}">
+    <td class="source-word">${escHtml(word.source_word)}</td>
     <td>${escHtml(word.target_translation)}</td>
-    <td><span class="lang-badge ${langClass}">${word.language_pair}</span></td>
-    <td class="example" title="${escHtml(word.example_sentence || '')}">${ex}</td>
-    <td class="tip-cell">${tipDisplay}</td>
-    <td>${rate}</td>
-    <td>${srcBadge}</td>
-    <td class="ts-cell" title="${word.created_at ? new Date(word.created_at).toLocaleString() : ''}">${added}</td>
+    <td><span class="lang-badge ${isNL ? 'lang-nl' : 'lang-en'}">${isNL ? 'NL' : 'EN'}</span></td>
+    <td class="example" title="${escHtml(word.example_sentence||'')}">${ex}</td>
+    <td class="tip-cell">${tip}</td>
+    <td>
+      <div class="rate-wrap">
+        <span class="${rateCls}">${pctStr}</span>
+        ${pct !== null ? `<div class="rate-bar-bg"><div class="rate-bar-fill" style="width:${pct}%;background:${barClr}"></div></div>` : ''}
+      </div>
+    </td>
     <td>
       <button class="icon-btn btn-edit" data-id="${word.id}" title="Edit" aria-label="Edit word">✏️</button>
       <button class="icon-btn danger btn-delete" data-id="${word.id}" title="Delete" aria-label="Delete word">🗑️</button>
@@ -2997,21 +3076,18 @@ function renderVocabRow(word) {
 }
 
 function renderEditRow(word) {
-  const langClass = word.language_pair === 'EN→FR' ? 'lang-en' : 'lang-nl';
   return `<tr data-id="${word.id}" class="editing-row">
-    <td></td>
     <td><input class="edit-input" id="ei-source" value="${escHtml(word.source_word)}"></td>
     <td><input class="edit-input" id="ei-target" value="${escHtml(word.target_translation)}"></td>
     <td>
-      <div class="qz-lang-toggle" style="margin:0;">
-        <button class="qz-lang-btn${word.language_pair==='EN→FR'?' active':''}" data-lang="EN→FR">EN→FR</button>
-        <button class="qz-lang-btn${word.language_pair==='NL→FR'?' active':''}" data-lang="NL→FR">NL→FR</button>
+      <div class="qz-dir-toggle" style="margin:0;">
+        <button class="qz-dir-btn${word.language_pair==='EN→FR'?' active':''}" data-lang="EN→FR">EN</button>
+        <button class="qz-dir-btn${word.language_pair!=='EN→FR'?' active':''}" data-lang="NL→FR">NL</button>
       </div>
     </td>
     <td><input class="edit-input" id="ei-example" value="${escHtml(word.example_sentence||'')}"></td>
     <td><input class="edit-input" id="ei-tips" value="${escHtml(word.tips||'')}" placeholder="💡 Tips…"></td>
-    <td>—</td><td>—</td>
-    <td class="ts-cell">${word.created_at ? timeAgo(word.created_at) : '—'}</td>
+    <td>—</td>
     <td>
       <button class="btn-primary btn-save-edit" data-id="${word.id}" style="padding:6px 12px;font-size:13px;">Save</button>
       <button class="btn-secondary btn-cancel-edit" style="padding:6px 10px;font-size:13px;margin-left:4px;">✕</button>
@@ -3051,10 +3127,10 @@ function startEdit(id) {
 }
 
 function attachEditListeners() {
-  // lang toggle inside edit row
-  document.querySelectorAll('.editing-row .qz-lang-btn').forEach(btn => {
+  // direction toggle inside edit row
+  document.querySelectorAll('.editing-row .qz-dir-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.editing-row .qz-lang-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.editing-row .qz-dir-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     });
   });
@@ -3065,7 +3141,7 @@ function attachEditListeners() {
     const target = document.getElementById('ei-target')?.value.trim();
     const example= document.getElementById('ei-example')?.value.trim();
     const tips   = document.getElementById('ei-tips')?.value.trim();
-    const lang   = document.querySelector('.editing-row .qz-lang-btn.active')?.dataset.lang || 'EN→FR';
+    const lang   = document.querySelector('.editing-row .qz-dir-btn.active')?.dataset.lang || 'EN→FR';
     if (!source || !target) { showToast('Source and translation are required'); return; }
     await updateWord(id, { source_word: source, target_translation: target, language_pair: lang, example_sentence: example || null, ...(tips ? { tips } : {}) });
     editingId = null;
