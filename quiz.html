@@ -1720,12 +1720,7 @@ tr.row-selected { background: rgba(59,130,246,.05); }
       <button class="btn-excel export" id="btn-export-xl">📥 Exporter Excel</button>
       <button class="btn-excel import" id="btn-import-xl">📤 Importer Excel</button>
       <button class="btn-excel print"  id="btn-print-vocab">🖨️ Imprimer</button>
-      <label class="qz-btn-secondary" style="cursor:pointer;" title="Importer un fichier Excel">
-        📥 Import Excel
-        <input type="file" id="btn-import-excel" accept=".xlsx,.xls,.csv" style="display:none">
-      </label>
-      <button class="qz-btn-secondary" id="btn-export-excel" title="Exporter en Excel">📤 Export Excel</button>
-      <input type="file" id="xlsx-file-input" accept=".xlsx,.xls,.csv">
+      <input type="file" id="xlsx-file-input" accept=".xlsx,.xls,.csv" style="display:none">
       <span class="excel-hint">L'export inclut le scoring SM-2 · L'import met à jour mots &amp; scores</span>
     </div>
 
@@ -3948,56 +3943,6 @@ document.getElementById('xlsx-file-input').addEventListener('change', e => {
   if (file) importFromExcel(file);
 });
 
-/* ── New Export / Import Excel buttons (spec Phase 8) ── */
-document.getElementById('btn-export-excel').addEventListener('click', () => {
-  if (typeof XLSX === 'undefined') { showToast('SheetJS non chargé'); return; }
-  const list = getFilteredVocab();
-  const rows = list.map(w => ({
-    'Mot source':    w.source_word,
-    'Traduction':    w.target_translation,
-    'Langue':        w.language_pair,
-    'Exemple':       w.example_sentence || '',
-    'Hint/Tips':     w.tips || '',
-    'Taux réussite': (() => {
-      const p = progress[w.id];
-      return p && p.attempts > 0 ? Math.round(p.correct/p.attempts*100) + '%' : '—';
-    })(),
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Vocabulaire');
-  XLSX.writeFile(wb, `lazypo_vocab_${_today()}.xlsx`);
-  showToast('Export Excel téléchargé !');
-});
-
-document.getElementById('btn-import-excel').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (typeof XLSX === 'undefined') { showToast('SheetJS non chargé'); return; }
-  const data = await file.arrayBuffer();
-  const wb   = XLSX.read(data, { type: 'array' });
-  const ws   = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-  // Detect columns flexibly
-  const words = rows.map(r => {
-    const src  = r['Mot source'] || r['source_word'] || r['Word'] || '';
-    const tgt  = r['Traduction'] || r['target_translation'] || r['Translation'] || '';
-    const lang = r['Langue'] || r['language_pair'] || r['Language'] || 'EN→FR';
-    const ex   = r['Exemple'] || r['example_sentence'] || r['Example'] || '';
-    const tips = r['Hint/Tips'] || r['tips'] || r['hint'] || r['Tips'] || '';
-    if (!src || !tgt) return null;
-    return { source_word: src.trim(), target_translation: tgt.trim(), language_pair: lang.trim(), example_sentence: ex.trim() || null, tips: tips.trim() || null };
-  }).filter(Boolean);
-  if (!words.length) { showToast('Aucun mot valide trouvé dans le fichier'); return; }
-  showToast(`Import de ${words.length} mots…`);
-  let added = 0;
-  for (const w of words) {
-    await addWord(w);
-    added++;
-  }
-  showToast(`✅ ${added} mots importés !`);
-  e.target.value = '';
-});
 
 document.getElementById('btn-import-nl')?.addEventListener('click', async () => {
   const btn = document.getElementById('btn-import-nl');
