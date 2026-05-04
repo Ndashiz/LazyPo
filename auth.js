@@ -477,19 +477,29 @@
         throw new Error('Impossible de générer une URL publique. Le bucket "avatars" doit être marqué Public.');
       }
 
-      // 4. Verify the URL is actually reachable (catches missing public_read policy)
-      try {
-        const probe = await fetch(publicUrl, { method: 'HEAD', cache: 'no-store' });
-        if (!probe.ok) {
-          throw new Error(
-            `L'image a été uploadée mais le bucket n'est pas accessible publiquement (status ${probe.status}). ` +
-            `Va dans Supabase → Storage → bucket "avatars", active "Public", et vérifie que la policy ` +
-            `"avatars_public_read" existe.`
-          );
-        }
-      } catch (e) {
-        // Surface our explicit errors; ignore raw network/CORS noise (img tag will catch real issues)
-        if (e.message?.includes('uploadée mais')) throw e;
+      // 4. Verify the URL is actually reachable.
+      //    We use <img> rather than fetch() because Supabase Storage
+      //    returns CORS-blocked errors for cross-origin HEAD requests
+      //    even when the public read policy is missing — fetch would
+      //    swallow that as a TypeError and we'd never know. <img> tags
+      //    aren't subject to that constraint and give us a clean
+      //    onload / onerror signal.
+      const reachable = await new Promise((resolve) => {
+        const probe = new Image();
+        const timeout = setTimeout(() => resolve(false), 8000);
+        probe.onload  = () => { clearTimeout(timeout); resolve(true); };
+        probe.onerror = () => { clearTimeout(timeout); resolve(false); };
+        // Cache-bust to force a fresh fetch
+        probe.src = publicUrl + (publicUrl.includes('?') ? '&' : '?') + 'v=' + Date.now();
+      });
+      if (!reachable) {
+        throw new Error(
+          'La photo a été uploadée mais elle n\'est pas accessible publiquement. ' +
+          'Étapes à vérifier dans Supabase :\n' +
+          '  1. Storage → bucket "avatars" → activer "Public bucket"\n' +
+          '  2. SQL Editor : créer la policy avatars_public_read si elle manque\n' +
+          'Voir le message d\'aide complet dans la console.'
+        );
       }
 
       // 5. Best-effort cleanup of older files for this user
