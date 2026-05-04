@@ -3675,8 +3675,17 @@ function endSession() {
   const total   = sessionAnswers.length;
   const correct = sessionAnswers.filter(a => a.correct).length;
   const sessionWordIds = sessionAnswers.map(a => a.word.id);
+  // Word snapshots so Challenge Back works cross-user
+  // (each user has their own vocabulary copy with different IDs)
+  const sessionWords = sessionAnswers.map(a => ({
+    source_word:        a.word.source_word,
+    target_translation: a.word.target_translation,
+    language_pair:      a.word.language_pair,
+    example_sentence:   a.word.example_sentence || null,
+    tips:               a.word.tips || null
+  }));
   saveQuizSession(total, correct, durationSec);
-  postMultiSession(correct, total, durationSec, 'vocab', quizFilter || 'all', quizMode || 'auto', sessionWordIds);
+  postMultiSession(correct, total, durationSec, 'vocab', quizFilter || 'all', quizMode || 'auto', sessionWordIds, sessionWords);
 
   const wrong = sessionAnswers.filter(a => !a.correct && !a.skipped);
   if (wrong.length > 0) {
@@ -4886,7 +4895,7 @@ async function getMultiDisplayName() {
 }
 
 /* ── Auto-post session after each quiz ── */
-async function postMultiSession(score, total, durationSec, mode, lang, direction, wordIds = []) {
+async function postMultiSession(score, total, durationSec, mode, lang, direction, wordIds = [], words = []) {
   if (!currentUser || !window.sb) return;
   const name = await getMultiDisplayName();
   try {
@@ -4897,6 +4906,9 @@ async function postMultiSession(score, total, durationSec, mode, lang, direction
       score, total, duration_sec: durationSec, mode, lang,
       direction: direction || 'auto',
       word_ids: wordIds.length > 0 ? wordIds : null,
+      // Snapshot of word data so Challenge Back works for other users
+      // (each user has their own vocabulary copy with different IDs)
+      words: words.length > 0 ? words : null,
     });
     multiLoaded = false;
     xpScheduleReconciliation(); // trigger XP after session posted
@@ -5060,8 +5072,11 @@ function renderFeed(sessions, append) {
     if (btn.dataset.bound) return;
     btn.dataset.bound = '1';
     btn.addEventListener('click', () => {
-      const wids = JSON.parse(btn.dataset.wids || '[]');
-      launchChallengeQuiz(wids);
+      let words = [];
+      let wids  = [];
+      try { words = JSON.parse(btn.dataset.words || '[]'); } catch(_) {}
+      try { wids  = JSON.parse(btn.dataset.wids  || '[]'); } catch(_) {}
+      launchChallengeQuiz(words, wids);
     });
   });
   // Attach reaction listeners
@@ -5106,9 +5121,14 @@ function buildFeedItem(s) {
     ? `<img class="feed-avatar" src="${escHtml(s.avatar_url)}" alt="${escHtml(name)}" loading="lazy">`
     : `<div class="feed-avatar-initial">${escHtml(initial)}</div>`;
 
-  /* Challenge Back button */
-  const challengeBtn = s.word_ids && s.word_ids.length > 0
-    ? `<button class="feed-challenge-btn" data-wids="${escHtml(JSON.stringify(s.word_ids))}">🎯 Challenge Back</button>`
+  /* Challenge Back button — works cross-user when `words` snapshot is set,
+     falls back to legacy `word_ids` for old sessions. */
+  const hasSnapshot = Array.isArray(s.words) && s.words.length > 0;
+  const hasIds      = Array.isArray(s.word_ids) && s.word_ids.length > 0;
+  const challengeBtn = (hasSnapshot || hasIds)
+    ? `<button class="feed-challenge-btn"
+         data-words="${hasSnapshot ? escHtml(JSON.stringify(s.words)) : ''}"
+         data-wids="${hasIds ? escHtml(JSON.stringify(s.word_ids)) : ''}">🎯 Challenge Back</button>`
     : '';
 
   return `<div class="feed-item" data-sid="${s.id}">
@@ -5249,9 +5269,35 @@ async function submitComment(sid, commentsEl) {
 
 document.getElementById('feed-load-more').addEventListener('click', () => multiLoadFeed(false));
 
-function launchChallengeQuiz(wordIds) {
-  const words = vocab.filter(w => wordIds.includes(w.id));
-  if (!words.length) { showToast('Mots non disponibles'); return; }
+/**
+ * Launch a quiz with the same words a peer played.
+ * @param {Array} wordSnapshots - Array of {source_word, target_translation, language_pair, …}
+ *                                stored on the session row. Cross-user safe.
+ * @param {Array} wordIdsFallback - Legacy: array of UUIDs from the original user's vocab.
+ *                                  Used only if snapshots aren't available (old sessions).
+ */
+function launchChallengeQuiz(wordSnapshots, wordIdsFallback) {
+  let words = [];
+  if (Array.isArray(wordSnapshots) && wordSnapshots.length) {
+    // New path : use the snapshot directly — works regardless of who posted
+    words = wordSnapshots.map(w => ({
+      // Synthetic word object — no `id` because it doesn't belong to anyone's vocabulary
+      id:                 null,
+      source_word:        w.source_word,
+      target_translation: w.target_translation,
+      language_pair:      w.language_pair,
+      example_sentence:   w.example_sentence || null,
+      tips:               w.tips || null,
+    }));
+  } else if (Array.isArray(wordIdsFallback) && wordIdsFallback.length) {
+    // Legacy path : sessions posted before the snapshot existed.
+    // Only works for users who happen to have those exact vocab IDs.
+    words = vocab.filter(w => wordIdsFallback.includes(w.id));
+  }
+  if (!words.length) {
+    showToast('Mots non disponibles — cette session date d\'avant le fix Challenge Back.');
+    return;
+  }
   sessionAnswers = [];
   sessionStartTime = Date.now();
   quizQueue = words.map(word => {
