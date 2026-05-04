@@ -641,6 +641,23 @@ ${exposeCode}
       _updateActiveItem(url);
       closeSidebar();
 
+      // Re-broadcast cached auth events so page-level listeners (e.g.
+      // countdown.js, sidebar lock state, etc.) re-trigger their data
+      // loads. These events normally fire only once at initial page
+      // load and would otherwise be missed entirely on SPA navigation.
+      try {
+        if (window.LazyAuth?.__profile) {
+          document.dispatchEvent(new CustomEvent('lazypo:profile', {
+            detail: window.LazyAuth.__profile
+          }));
+        }
+        if (window.LazyAuth?.__adminUnread != null) {
+          document.dispatchEvent(new CustomEvent('lazypo:admin-notifs', {
+            detail: { unread: window.LazyAuth.__adminUnread }
+          }));
+        }
+      } catch (e) { console.error('[spa-rebroadcast]', e); }
+
     } catch (_) {
       // Fallback: restore elements + hard navigate
       saved.forEach(el => document.body.appendChild(el));
