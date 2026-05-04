@@ -273,7 +273,8 @@ body {
         <div class="field-row">
           <div class="field">
             <label for="inputUsername">Username</label>
-            <input id="inputUsername" type="text" placeholder="Your username">
+            <input id="inputUsername" type="text" placeholder="Your pseudo (3–20 chars)" minlength="3" maxlength="20">
+            <div id="usernameHint" style="display:none;font-size:12px;color:#fbbf24;margin-top:4px;line-height:1.4;"></div>
           </div>
           <div class="field">
             <label for="inputEmail">Email</label>
@@ -412,13 +413,29 @@ function renderProfile() {
   const user    = currentSession.user;
   const profile = currentProfile;
 
-  const username = profile?.username || user.email?.split('@')[0] || '';
+  const rawUsername = profile?.username || '';
+  const usernameLooksLikeEmail = /@/.test(rawUsername);
+  const usernameDisplay = rawUsername || user.email?.split('@')[0] || '';
   const avatar   = profile?.avatar_url || null;
   const isAdmin  = profile?.is_admin || false;
-  const initial  = (username || user.email || 'U')[0].toUpperCase();
+  const initial  = (usernameDisplay || user.email || 'U')[0].toUpperCase();
 
-  // Username field
-  document.getElementById('inputUsername').value = username;
+  // Username field — keep the current value but flag it visually if it
+  // looks like an email (legacy data) so the user knows to replace it
+  const usernameInput = document.getElementById('inputUsername');
+  usernameInput.value = rawUsername;
+  usernameInput.placeholder = 'Your pseudo (3–20 chars)';
+
+  // Show an inline hint below the field if the current pseudo is an email
+  const hintEl = document.getElementById('usernameHint');
+  if (hintEl) {
+    if (usernameLooksLikeEmail) {
+      hintEl.textContent = '⚠️ Your current pseudo is an email — click the field above to choose a real one.';
+      hintEl.style.display = 'block';
+    } else {
+      hintEl.style.display = 'none';
+    }
+  }
 
   // Avatar
   const preview = document.getElementById('avatarPreview');
@@ -461,18 +478,35 @@ dropArea.addEventListener('drop',      (e) => {
   else showMsg('avatarMsg', 'Please drop an image file.', 'error');
 });
 
-function previewAvatar(file) {
+async function previewAvatar(file) {
   if (file.size > 2 * 1024 * 1024) { showMsg('avatarMsg', 'File is too large (max 2 MB).', 'error'); return; }
   pendingAvatarFile = file;
+
+  // Show local preview immediately
   const reader = new FileReader();
   reader.onload = (e) => {
     const preview = document.getElementById('avatarPreview');
     let img = preview.querySelector('img');
     if (!img) { img = document.createElement('img'); img.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;'; preview.appendChild(img); }
     img.src = e.target.result;
-    showMsg('avatarMsg', 'Preview ready — save profile to upload.', 'success');
   };
   reader.readAsDataURL(file);
+
+  // Upload immediately — no need to wait for "Save changes"
+  showMsg('avatarMsg', '<span class="spin"></span>Uploading…', 'success');
+  try {
+    const url = await LazyAuth.uploadAvatar(currentSession.user.id, file);
+    // Persist only avatar_url so the username field stays untouched if the
+    // user is in the middle of typing a new pseudo
+    const { error } = await LazyAuth.saveProfile(currentSession.user.id, { avatar_url: url });
+    if (error) throw error;
+    pendingAvatarFile = null;
+    currentProfile = { ...currentProfile, avatar_url: url };
+    showMsg('avatarMsg', '✅ Photo updated!', 'success');
+  } catch (err) {
+    console.error('[avatar upload]', err);
+    showMsg('avatarMsg', err.message || 'Upload failed. Make sure the "avatars" bucket exists in Supabase.', 'error');
+  }
 }
 
 /* ── Save profile ── */
