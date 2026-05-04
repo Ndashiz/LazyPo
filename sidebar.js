@@ -375,6 +375,20 @@
     .sb:hover .sb-item.sb-pending .sb-lock { opacity: 0.95; }
     .sb-item.sb-pending .sb-lock { color: #fbbf24; }
 
+    /* ── Account avatar slot (swaps emoji for photo when available) ── */
+    .sb-icon-avatar { position: relative; overflow: hidden; }
+    .sb-icon-avatar .sb-avatar-img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover;
+      border-radius: inherit;
+      display: none;
+    }
+    .sb-icon-avatar.has-photo .sb-avatar-img { display: block; }
+    .sb-icon-avatar.has-photo .sb-icon-fallback { display: none; }
+    .sb-icon-avatar.has-photo { background: transparent; }
+    .sb-item:hover .sb-icon-avatar.has-photo,
+    .sb-item.active .sb-icon-avatar.has-photo { background: transparent; }
+
     /* ── Admin notif badge ── */
     .sb-item .sb-notif-badge {
       position: absolute; top: 4px; left: 28px;
@@ -388,6 +402,24 @@
   `;
   document.head.appendChild(styleEl);
 
+  /* Swap the "My Account" sidebar icon for the user's avatar photo.
+     Only flip to has-photo once the image loads — otherwise a broken URL
+     would leave a blank square instead of the 👤 fallback. */
+  function _applyAccountAvatar(avatarUrl) {
+    const slot = document.querySelector('[data-sb-id="account"] .sb-icon-avatar');
+    if (!slot) return;
+    const img = slot.querySelector('.sb-avatar-img');
+    if (!img) return;
+    if (!avatarUrl) {
+      slot.classList.remove('has-photo');
+      img.removeAttribute('src');
+      return;
+    }
+    img.onload  = () => slot.classList.add('has-photo');
+    img.onerror = () => { slot.classList.remove('has-photo'); img.removeAttribute('src'); };
+    img.src = avatarUrl;
+  }
+
   /* Show admin-only items + handle module locks once profile resolves */
   document.addEventListener('lazypo:profile', function (e) {
     const detail = e.detail || {};
@@ -396,6 +428,7 @@
         el.classList.add('sb-admin-visible');
       });
     }
+    _applyAccountAvatar(detail.avatar);
     const allowed = new Set(detail.allowedModules || ['quiz']);
     const pending = new Set(detail.pendingModules || []);
     document.querySelectorAll('[data-sb-id]').forEach(el => {
@@ -441,10 +474,19 @@
       : '';
     const lockSpan    = GATED_MODULES.has(item.id) ? '<span class="sb-lock">🔒</span>' : '';
 
+    // The account icon is a special slot: when the user has an avatar URL
+    // (broadcast via lazypo:profile), we swap the emoji for the photo.
+    const iconHtml = item.id === 'account'
+      ? `<div class="sb-icon sb-icon-avatar">
+           <img class="sb-avatar-img" alt="">
+           <span class="sb-icon-fallback">${item.icon}</span>
+         </div>`
+      : `<div class="sb-icon">${item.icon}</div>`;
+
     return `
       <div class="sb-item${active}${adminClass}" data-sb-id="${item.id}">
         <${tag} class="sb-item-link" ${hrefAttr} ${targetAttr} ${clickAttr}>
-          <div class="sb-icon">${item.icon}</div>
+          ${iconHtml}
           <span class="sb-label">${item.label}</span>
           ${lockSpan}
         </${tag}>
