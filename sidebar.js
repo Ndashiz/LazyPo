@@ -532,6 +532,27 @@
     });
   }
 
+  /**
+   * Wraps an inline script's body in an IIFE so its top-level `let` /
+   * `const` / `class` declarations stay local. This prevents
+   * "Can't create duplicate variable" SyntaxError when SPA-navigating
+   * back to a page (or to a page that shares variable names with the
+   * one we came from). Top-level `function` and `var` declarations are
+   * re-exposed on `window` afterwards so existing inline `onclick=`
+   * handlers keep working.
+   */
+  function _wrapInlineForSpa(code) {
+    if (!code || !code.trim()) return code;
+    // Best-effort regex extraction at line start (top-level only).
+    const fnMatches  = [...code.matchAll(/^[ \t]*(?:async[ \t]+)?function[ \t]+(\w+)/gm)];
+    const varMatches = [...code.matchAll(/^[ \t]*var[ \t]+(\w+)/gm)];
+    const names = [...new Set([...fnMatches, ...varMatches].map(m => m[1]))];
+    const exposeCode = names.length
+      ? '\n' + names.map(n => `try{window.${n}=${n};}catch(_){}`).join('\n')
+      : '';
+    return `(function(){\n${code}\n${exposeCode}\n}).call(window);`;
+  }
+
   async function _spaNavigate(url) {
     // Detach persisted elements before wiping body
     const saved = SPA_PERSIST
@@ -580,7 +601,7 @@
           if (t.type === 'ext') {
             el.src = t.src; el.onload = res; el.onerror = res;
           } else {
-            el.textContent = t.code;
+            el.textContent = _wrapInlineForSpa(t.code);
           }
           document.body.appendChild(el);
           if (t.type === 'inline') res();
