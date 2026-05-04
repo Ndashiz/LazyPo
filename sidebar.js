@@ -358,16 +358,22 @@
     /* ── Locked module items (no access) ── */
     .sb-item.sb-locked .sb-icon { opacity: 0.45; }
     .sb-item.sb-locked .sb-item-link { color: #444; }
+    /* Pending requests : slightly less dimmed than locked, yellow icon */
+    .sb-item.sb-pending .sb-icon { opacity: 0.65; }
+    .sb-item.sb-pending .sb-item-link { color: #6a6a4a; }
     /* Lock span is rendered for every gated module but hidden until the
-       sb-locked class is applied (i.e. user does not have access). */
+       sb-locked OR sb-pending class is applied. */
     .sb-item .sb-lock { display: none; }
-    .sb-item.sb-locked .sb-lock {
+    .sb-item.sb-locked .sb-lock,
+    .sb-item.sb-pending .sb-lock {
       display: block;
       position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
       font-size: 11px; opacity: 0;
       transition: opacity 0.18s ease;
     }
     .sb:hover .sb-item.sb-locked .sb-lock { opacity: 0.7; }
+    .sb:hover .sb-item.sb-pending .sb-lock { opacity: 0.95; }
+    .sb-item.sb-pending .sb-lock { color: #fbbf24; }
 
     /* ── Admin notif badge ── */
     .sb-item .sb-notif-badge {
@@ -391,14 +397,16 @@
       });
     }
     const allowed = new Set(detail.allowedModules || ['quiz']);
+    const pending = new Set(detail.pendingModules || []);
     document.querySelectorAll('[data-sb-id]').forEach(el => {
       const id = el.getAttribute('data-sb-id');
       if (!GATED_MODULES.has(id)) return;
-      if (detail.isAdmin || allowed.has(id)) {
-        el.classList.remove('sb-locked');
-      } else {
-        el.classList.add('sb-locked');
-      }
+      const hasAccess = detail.isAdmin || allowed.has(id);
+      const isPending = !hasAccess && pending.has(id);
+      el.classList.toggle('sb-locked',  !hasAccess && !isPending);
+      el.classList.toggle('sb-pending', isPending);
+      const icon = el.querySelector('.sb-lock');
+      if (icon) icon.textContent = isPending ? '⏳' : '🔒';
     });
   });
 

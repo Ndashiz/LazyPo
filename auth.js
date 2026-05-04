@@ -277,10 +277,25 @@
       ? profile.allowed_modules
       : ['quiz'];
 
+    /* Fetch user's pending requests so sidebar can show an hourglass icon
+       on modules waiting for admin validation. Rejected/approved requests
+       are NOT included — rejected falls back to the default 🔒 icon. */
+    let pendingModules = [];
+    if (!session.__dev) {
+      try {
+        const { data: reqs } = await window.sb
+          .from('module_access_requests')
+          .select('module_id')
+          .eq('user_id', session.user.id)
+          .eq('status', 'pending');
+        pendingModules = (reqs || []).map(r => r.module_id);
+      } catch (_) {}
+    }
+
     /* Cache profile + broadcast to other modules (sidebar, page guards, …) */
-    window.LazyAuth.__profile = { isAdmin, username, email, avatar, allowedModules };
+    window.LazyAuth.__profile = { isAdmin, username, email, avatar, allowedModules, pendingModules };
     document.dispatchEvent(new CustomEvent('lazypo:profile', {
-      detail: { isAdmin, username, email, avatar, allowedModules }
+      detail: { isAdmin, username, email, avatar, allowedModules, pendingModules }
     }));
 
     /* Admin extras : fetch unread notification count + expose */
