@@ -422,14 +422,90 @@
 
       return { error: null };
     },
-    /** Upload avatar and return public URL */
+    /**
+     * Upload an avatar and return its publicly-accessible URL.
+     *
+     * Strategy:
+     *  1. Use a UNIQUE filename per upload (timestamp-based) — sidesteps
+     *     browser cache, lets old photos coexist briefly, and avoids
+     *     race-y "upsert" semantics that have bitten us in the past.
+     *  2. Pre-flight check : confirm the bucket exists with a list().
+     *     If the bucket is missing, throw an explicit error before
+     *     wasting a network upload.
+     *  3. Upload as INSERT (no upsert needed thanks to the unique name).
+     *  4. Get the public URL and probe it with HEAD — catches the case
+     *     where the bucket isn't actually public or the public_read
+     *     policy is missing (otherwise we'd save an unreadable URL).
+     *  5. Best-effort cleanup of older avatar files in this user's
+     *     folder so the bucket doesn't grow forever. Cleanup failures
+     *     are non-fatal — the new avatar is what matters.
+     */
     uploadAvatar: async (userId, file) => {
-      const ext  = file.name.split('.').pop();
-      const path = `${userId}/avatar.${ext}`;
-      const { error } = await window.sb.storage.from('avatars').upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data } = window.sb.storage.from('avatars').getPublicUrl(path);
-      return data.publicUrl;
+      // Sanitise extension
+      const rawExt = (file.name.split('.').pop() || 'png').toLowerCase();
+      const ext = /^(jpg|jpeg|png|gif|webp)$/.test(rawExt) ? rawExt : 'png';
+      const filename = `${Date.now()}.${ext}`;
+      const path = `${userId}/${filename}`;
+
+      // 1. Pre-flight: bucket reachable?
+      try {
+        const probe = await window.sb.storage.from('avatars').list(userId, { limit: 1 });
+        if (probe.error && /not found|does not exist/i.test(probe.error.message || '')) {
+          throw new Error('Le bucket "avatars" n\'existe pas dans Supabase Storage. Crée-le (Public ON).');
+        }
+      } catch (e) {
+        if (e.message?.includes('bucket')) throw e;
+        // Other list errors are non-fatal — we'll surface them via the upload step.
+      }
+
+      // 2. Upload (unique filename → no upsert needed)
+      const { error: upErr } = await window.sb.storage
+        .from('avatars')
+        .upload(path, file, {
+          upsert: false,
+          contentType: file.type || `image/${ext}`,
+          cacheControl: '3600',
+        });
+      if (upErr) {
+        throw new Error(`Upload échoué : ${upErr.message}. Vérifie les policies RLS du bucket "avatars".`);
+      }
+
+      // 3. Public URL
+      const { data: pu } = window.sb.storage.from('avatars').getPublicUrl(path);
+      const publicUrl = pu?.publicUrl;
+      if (!publicUrl) {
+        throw new Error('Impossible de générer une URL publique. Le bucket "avatars" doit être marqué Public.');
+      }
+
+      // 4. Verify the URL is actually reachable (catches missing public_read policy)
+      try {
+        const probe = await fetch(publicUrl, { method: 'HEAD', cache: 'no-store' });
+        if (!probe.ok) {
+          throw new Error(
+            `L'image a été uploadée mais le bucket n'est pas accessible publiquement (status ${probe.status}). ` +
+            `Va dans Supabase → Storage → bucket "avatars", active "Public", et vérifie que la policy ` +
+            `"avatars_public_read" existe.`
+          );
+        }
+      } catch (e) {
+        // Surface our explicit errors; ignore raw network/CORS noise (img tag will catch real issues)
+        if (e.message?.includes('uploadée mais')) throw e;
+      }
+
+      // 5. Best-effort cleanup of older files for this user
+      try {
+        const { data: existing } = await window.sb.storage.from('avatars').list(userId);
+        if (Array.isArray(existing) && existing.length > 0) {
+          const toDelete = existing
+            .filter(f => f.name && f.name !== filename)
+            .map(f => `${userId}/${f.name}`);
+          if (toDelete.length) {
+            await window.sb.storage.from('avatars').remove(toDelete);
+          }
+        }
+      } catch (_) { /* non-fatal */ }
+
+      return publicUrl;
     },
   };
 

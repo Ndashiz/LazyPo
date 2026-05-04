@@ -437,15 +437,18 @@ function renderProfile() {
     }
   }
 
-  // Avatar
+  // Avatar — clear any previous image first, then render the current one
   const preview = document.getElementById('avatarPreview');
   document.getElementById('avatarInitial').textContent = initial;
+  preview.querySelectorAll('img').forEach(i => i.remove());
   if (avatar) {
     const img = new Image();
-    img.src = avatar;
-    img.onload = () => { preview.querySelector('img')?.remove(); preview.appendChild(img); };
-    img.onerror = () => {};
     img.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;';
+    img.src = avatar;
+    img.onload  = () => preview.appendChild(img);
+    img.onerror = () => {
+      console.warn('[avatar] failed to load', avatar, '— bucket public read policy missing?');
+    };
   }
 
   // Role badge
@@ -478,49 +481,76 @@ dropArea.addEventListener('drop',      (e) => {
   else showMsg('avatarMsg', 'Please drop an image file.', 'error');
 });
 
+/**
+ * Avatar pipeline (auto-save) :
+ *  1. Local preview (FileReader) so the user gets instant feedback
+ *  2. Upload to Supabase Storage via LazyAuth.uploadAvatar (which itself
+ *     verifies bucket reachability + public access)
+ *  3. Persist URL on profiles.avatar_url
+ *  4. Re-fetch profile to verify the URL actually stuck (catches silent
+ *     RLS failures)
+ *  5. Re-render the local preview from the SAVED URL (not the data URL)
+ *     so any post-refresh issue surfaces immediately, while the user
+ *     is still on the page and can act on the error.
+ *  6. Refresh the sidebar widget.
+ */
 async function previewAvatar(file) {
-  if (file.size > 2 * 1024 * 1024) { showMsg('avatarMsg', 'File is too large (max 2 MB).', 'error'); return; }
+  if (!file) return;
+  if (!file.type?.startsWith('image/')) {
+    showMsg('avatarMsg', 'Format non supporté. Choisis une image (JPG, PNG, GIF, WEBP).', 'error');
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    showMsg('avatarMsg', 'File is too large (max 2 MB).', 'error');
+    return;
+  }
   pendingAvatarFile = file;
 
-  // Show local preview immediately
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const preview = document.getElementById('avatarPreview');
-    let img = preview.querySelector('img');
-    if (!img) { img = document.createElement('img'); img.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;'; preview.appendChild(img); }
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  // 1. Local preview
+  const preview = document.getElementById('avatarPreview');
+  const localUrl = URL.createObjectURL(file);
+  preview.querySelectorAll('img').forEach(i => i.remove());
+  const previewImg = document.createElement('img');
+  previewImg.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;';
+  previewImg.src = localUrl;
+  preview.appendChild(previewImg);
 
-  // Upload immediately — no need to wait for "Save changes"
   showMsg('avatarMsg', '<span class="spin"></span>Uploading…', 'success');
   try {
+    // 2. Upload (uploadAvatar throws explicit errors for bucket misconfig)
     const url = await LazyAuth.uploadAvatar(currentSession.user.id, file);
     console.log('[avatar] uploaded to', url);
 
-    // Persist only avatar_url so the username field stays untouched if the
-    // user is in the middle of typing a new pseudo
+    // 3. Persist on profile
     const { error } = await LazyAuth.saveProfile(currentSession.user.id, { avatar_url: url });
     if (error) throw error;
 
-    // Verify the save actually persisted by re-fetching the profile —
-    // catches silent RLS failures or schema mismatches.
+    // 4. Verify the save persisted
     const verify = await LazyAuth.getProfile(currentSession.user.id);
     if (!verify || verify.avatar_url !== url) {
-      throw new Error("La photo a été uploadée mais n'a pas été sauvegardée dans le profil. Vérifie les permissions RLS sur la table profiles.");
+      throw new Error(
+        "La photo a été uploadée mais n'a pas été sauvegardée dans le profil. " +
+        "Vérifie les policies RLS sur la table profiles (own_profile)."
+      );
     }
-
-    pendingAvatarFile = null;
     currentProfile = verify;
-    showMsg('avatarMsg', '✅ Photo updated!', 'success');
+    pendingAvatarFile = null;
 
-    // Refresh the sidebar avatar so the new photo shows immediately
+    // 5. Re-render from the saved URL — confirms the public URL works end-to-end.
+    //    Replace the local-blob preview with the actual saved image.
+    URL.revokeObjectURL(localUrl);
+    renderProfile();
+
+    showMsg('avatarMsg', '✅ Photo enregistrée — visible partout.', 'success');
+
+    // 6. Sidebar refresh
     if (typeof LazyAuth.refreshNavUser === 'function') {
       LazyAuth.refreshNavUser();
     }
   } catch (err) {
     console.error('[avatar upload]', err);
-    showMsg('avatarMsg', err.message || 'Upload failed. Vérifie que le bucket "avatars" existe et est public dans Supabase.', 'error');
+    URL.revokeObjectURL(localUrl);
+    showMsg('avatarMsg', err.message || 'Upload échoué. Vérifie que le bucket "avatars" existe et est public.', 'error');
   }
 }
 
