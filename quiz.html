@@ -774,6 +774,70 @@ body { padding-left: 64px; }
   flex-wrap: wrap;
 }
 
+/* Challenge Back — add played words to my vocabulary */
+.qz-challenge-add {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.qz-challenge-add-header {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.qz-challenge-add-sub {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.qz-challenge-add-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+.qz-challenge-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  cursor: pointer;
+}
+.qz-challenge-row:last-child { border-bottom: none; }
+.qz-challenge-row.is-existing { opacity: 0.55; cursor: default; }
+.qz-challenge-row .qz-challenge-cb { cursor: pointer; }
+.qz-challenge-row.is-existing .qz-challenge-cb { cursor: not-allowed; }
+.qz-challenge-pair {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+.qz-challenge-src { font-weight: 600; }
+.qz-challenge-arrow { color: var(--muted); }
+.qz-challenge-tgt { color: var(--success); font-weight: 500; }
+.qz-challenge-tag {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  white-space: nowrap;
+}
+.qz-challenge-add-actions {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 /* ══════════════════════════════════════
    VERBES IRRÉGULIERS
 ══════════════════════════════════════ */
@@ -2008,6 +2072,19 @@ tr.row-selected { background: rgba(59,130,246,.05); }
         <div id="missed-list"></div>
       </div>
 
+      <!-- Challenge Back: add played words to my own vocabulary -->
+      <div id="challenge-add-section" class="qz-challenge-add" style="display:none;">
+        <div class="qz-challenge-add-header">
+          <span>📥 Ajouter à mon vocabulaire</span>
+          <span class="qz-challenge-add-sub">Coche les mots que tu veux garder dans ta liste</span>
+        </div>
+        <div id="challenge-add-list" class="qz-challenge-add-list"></div>
+        <div class="qz-challenge-add-actions">
+          <button type="button" class="btn-secondary" id="btn-challenge-toggle-all">Tout cocher / décocher</button>
+          <button type="button" class="btn-primary"   id="btn-add-challenge-words">Ajouter les mots cochés</button>
+        </div>
+      </div>
+
       <div class="qz-summary-btns">
         <button class="btn-secondary" id="btn-back-vocab">Back to Vocabulary</button>
         <button class="btn-primary"   id="btn-try-again">Try Again</button>
@@ -2433,6 +2510,7 @@ let quizMode     = 'auto';      // 'auto' | 'forward' | 'reverse'
 let sessionAnswers = [];        // { word, correct, skipped, givenAnswer, direction }
 let sessionOptions = { filter: 'all', count: 10 };
 let sessionStartTime = null;   // Date.now() at quiz start
+let challengeWords = null;     // set when the just-finished session was a Challenge Back (cross-user snapshot)
 let quizTimer     = null;
 let quizTimerSecs = 30;
 const QUIZ_TIMER_TOTAL = 30;
@@ -3268,6 +3346,7 @@ function shuffle(arr) {
 document.getElementById('btn-start-quiz').addEventListener('click', () => {
   sessionAnswers = [];
   sessionStartTime = Date.now();
+  challengeWords = null;
   quizQueue  = buildQuizQueue(quizFilter, quizCount, quizMode);
   quizIndex  = 0;
   document.getElementById('quiz-setup').style.display   = 'none';
@@ -3791,6 +3870,8 @@ function showSummary() {
     missedSec.style.display = 'none';
   }
 
+  renderChallengeAddPanel();
+
   // Session footer stats
   const sfStreak = computeStreak();
   const sfDur    = sessionStartTime ? Math.round((Date.now() - sessionStartTime) / 1000) : 0;
@@ -3816,6 +3897,97 @@ document.getElementById('btn-back-vocab').addEventListener('click', () => {
   document.getElementById('quiz-review').style.display  = 'none';
   document.getElementById('quiz-setup').style.display   = 'block';
   switchTab('vocab');
+});
+
+/* ═══════════════════════════════════════════════════════════
+   CHALLENGE BACK — add played words to own vocabulary
+═══════════════════════════════════════════════════════════ */
+
+function vocabHas(word) {
+  const sw = (word.source_word || '').trim().toLowerCase();
+  const tt = (word.target_translation || '').trim().toLowerCase();
+  const lp = word.language_pair || '';
+  return vocab.some(v =>
+    (v.source_word || '').trim().toLowerCase() === sw &&
+    (v.target_translation || '').trim().toLowerCase() === tt &&
+    v.language_pair === lp
+  );
+}
+
+function renderChallengeAddPanel() {
+  const sec = document.getElementById('challenge-add-section');
+  if (!sec) return;
+  if (!currentUser || !Array.isArray(challengeWords) || !challengeWords.length) {
+    sec.style.display = 'none';
+    return;
+  }
+  // Dedupe within the played list itself (a word may have appeared twice)
+  const seen = new Set();
+  const uniq = challengeWords.filter(w => {
+    const k = `${(w.source_word||'').trim().toLowerCase()}|${(w.target_translation||'').trim().toLowerCase()}|${w.language_pair||''}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  const list = document.getElementById('challenge-add-list');
+  list.innerHTML = uniq.map((w, i) => {
+    const exists = vocabHas(w);
+    const [src, tgt] = (w.language_pair || '→').split('→');
+    return `
+      <label class="qz-challenge-row${exists ? ' is-existing' : ''}">
+        <input type="checkbox"
+               class="qz-challenge-cb"
+               data-idx="${i}"
+               ${exists ? 'disabled' : 'checked'}>
+        <span class="qz-challenge-pair">${escHtml(src)}→${escHtml(tgt)}</span>
+        <span class="qz-challenge-src">${escHtml(w.source_word)}</span>
+        <span class="qz-challenge-arrow">→</span>
+        <span class="qz-challenge-tgt">${escHtml(w.target_translation)}</span>
+        ${exists ? '<span class="qz-challenge-tag">déjà dans ta liste</span>' : ''}
+      </label>`;
+  }).join('');
+  // Stash the deduped array for the click handler
+  sec.dataset.payload = JSON.stringify(uniq);
+  sec.style.display = 'block';
+}
+
+document.getElementById('btn-challenge-toggle-all').addEventListener('click', () => {
+  const boxes = document.querySelectorAll('#challenge-add-list .qz-challenge-cb:not([disabled])');
+  const anyUnchecked = Array.from(boxes).some(b => !b.checked);
+  boxes.forEach(b => { b.checked = anyUnchecked; });
+});
+
+document.getElementById('btn-add-challenge-words').addEventListener('click', async () => {
+  if (!currentUser) { showToast('Connecte-toi pour ajouter des mots'); return; }
+  const sec = document.getElementById('challenge-add-section');
+  const payload = JSON.parse(sec.dataset.payload || '[]');
+  const checked = Array.from(
+    document.querySelectorAll('#challenge-add-list .qz-challenge-cb:not([disabled])')
+  ).filter(b => b.checked).map(b => parseInt(b.dataset.idx, 10));
+  if (!checked.length) { showToast('Aucun mot sélectionné'); return; }
+
+  const btn = document.getElementById('btn-add-challenge-words');
+  btn.disabled = true;
+  const rows = checked.map(i => ({
+    source_word:        payload[i].source_word,
+    target_translation: payload[i].target_translation,
+    language_pair:      payload[i].language_pair,
+    example_sentence:   payload[i].example_sentence || null,
+    tips:               payload[i].tips || null,
+    user_id:            currentUser.id,
+  }));
+  const { error } = await window.sb.from('vocabulary').insert(rows);
+  btn.disabled = false;
+  if (error) { showToast('Erreur : ' + error.message); return; }
+  if (typeof xpTrackWordCreated === 'function') {
+    rows.forEach(() => xpTrackWordCreated());
+  }
+  await loadVocab();
+  renderVocab();
+  updateAvailNote();
+  challengeWords = null;
+  sec.style.display = 'none';
+  showToast(`✅ ${rows.length} mot${rows.length > 1 ? 's' : ''} ajouté${rows.length > 1 ? 's' : ''} !`);
 });
 
 /* ═══════════════════════════════════════════════════════════
@@ -5300,6 +5472,14 @@ function launchChallengeQuiz(wordSnapshots, wordIdsFallback) {
   }
   sessionAnswers = [];
   sessionStartTime = Date.now();
+  // Mark this as a multiplayer party so the summary can offer to add the words
+  challengeWords = words.map(w => ({
+    source_word:        w.source_word,
+    target_translation: w.target_translation,
+    language_pair:      w.language_pair,
+    example_sentence:   w.example_sentence || null,
+    tips:               w.tips || null,
+  }));
   quizQueue = words.map(word => {
     const dir = Math.random() < 0.5 ? 'forward' : 'reverse';
     return {
