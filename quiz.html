@@ -839,6 +839,142 @@ body { padding-left: 64px; }
 }
 
 /* ══════════════════════════════════════
+   CHALLENGE BACK — end-of-game summary
+══════════════════════════════════════ */
+.qz-challenge-banner {
+  display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(135deg, rgba(139,92,246,.14) 0%, rgba(59,130,246,.08) 100%);
+  border: 1px solid rgba(167,139,250,.3);
+  border-radius: 14px; padding: 14px 18px; margin-bottom: 18px;
+}
+.qz-ch-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 2px solid rgba(167,139,250,.4); flex-shrink: 0;
+  object-fit: cover; background: var(--surface2);
+}
+.qz-ch-avatar-init {
+  width: 44px; height: 44px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+  background: rgba(139,92,246,.3); color: #fff; font-weight: 700; font-size: 17px;
+  border: 2px solid rgba(167,139,250,.4);
+}
+.qz-ch-banner-text { flex: 1; min-width: 0; }
+.qz-ch-banner-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: #c4b5fd; font-family: 'DM Mono', monospace; }
+.qz-ch-banner-name  { font-size: 16px; font-weight: 700; color: var(--text); margin-top: 2px; }
+
+.qz-ch-vs-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 24px 22px; margin-bottom: 18px; text-align: center;
+}
+.qz-ch-verdict {
+  font-size: 22px; font-weight: 800; letter-spacing: .04em;
+  margin-bottom: 14px; font-family: 'DM Sans', sans-serif;
+}
+.qz-ch-verdict.win  { color: #4ade80; }
+.qz-ch-verdict.lose { color: #f87171; }
+.qz-ch-verdict.tie  { color: #fbbf24; }
+.qz-ch-vs-row {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center;
+}
+.qz-ch-vs-side { text-align: center; }
+.qz-ch-vs-who { font-size: 12px; color: var(--muted); margin-bottom: 6px;
+  font-family: 'DM Mono', monospace; letter-spacing: .04em; }
+.qz-ch-vs-score {
+  font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 700; color: var(--text);
+}
+.qz-ch-vs-pct { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.qz-ch-vs-pct.good { color: #4ade80; }
+.qz-ch-vs-pct.mid  { color: #fbbf24; }
+.qz-ch-vs-pct.bad  { color: #f87171; }
+.qz-ch-vs-sep { font-size: 18px; color: var(--muted); font-weight: 700;
+  font-family: 'DM Mono', monospace; }
+
+.qz-ch-section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px 18px; margin-bottom: 16px;
+}
+.qz-ch-section-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.qz-ch-section-title {
+  font-size: 13px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+  font-family: 'DM Mono', monospace;
+}
+.qz-ch-select-toggle {
+  display: inline-flex; gap: 6px; padding: 5px 12px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); font-size: 12px; cursor: pointer; font-family: inherit;
+}
+.qz-ch-select-toggle:hover { border-color: var(--accent); }
+
+.qz-ch-words-list { display: flex; flex-direction: column; gap: 6px; }
+.qz-ch-word-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.qz-ch-word-item:hover { border-color: rgba(96,165,250,.4); }
+.qz-ch-word-item.checked {
+  border-color: rgba(96,165,250,.5); background: rgba(59,130,246,.08);
+}
+.qz-ch-word-item input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0;
+}
+.qz-ch-word-item .qz-ch-w-pair {
+  flex: 1; min-width: 0; display: flex; gap: 10px; align-items: baseline;
+  font-size: 14px; flex-wrap: wrap;
+}
+.qz-ch-w-src { font-weight: 600; color: var(--text); }
+.qz-ch-w-arrow { color: var(--muted); font-size: 12px; }
+.qz-ch-w-tgt { color: var(--muted); }
+.qz-ch-w-lang {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--muted); padding: 2px 6px; border-radius: 4px;
+  background: var(--surface); border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.qz-ch-publish-row {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.qz-ch-publish-info { font-size: 12px; color: var(--muted); flex: 1; min-width: 200px; }
+.qz-ch-publish-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 10px; font-weight: 600; font-size: 13px;
+  border: none; cursor: pointer; font-family: inherit;
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%); color: #fff;
+  transition: transform .1s, opacity .15s;
+}
+.qz-ch-publish-btn:hover { opacity: .92; }
+.qz-ch-publish-btn:active { transform: scale(.97); }
+.qz-ch-publish-btn:disabled {
+  background: var(--surface2); color: var(--muted); cursor: not-allowed; opacity: .7;
+}
+
+.qz-ch-btns {
+  display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap;
+}
+.qz-ch-add-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 10px; font-weight: 600; font-size: 13px;
+  border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  cursor: pointer; font-family: inherit; transition: opacity .15s;
+}
+.qz-ch-add-btn:hover { opacity: .9; }
+.qz-ch-add-btn:disabled { opacity: .5; cursor: not-allowed; }
+.qz-ch-back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 10px; font-weight: 500; font-size: 13px;
+  border: 1px solid var(--border2); background: transparent; color: var(--text);
+  cursor: pointer; font-family: inherit; transition: border-color .15s;
+}
+.qz-ch-back-btn:hover { border-color: var(--accent); }
+
+/* ══════════════════════════════════════
    VERBES IRRÉGULIERS
 ══════════════════════════════════════ */
 .vb-intro {
@@ -1358,7 +1494,136 @@ tr.row-selected { background: rgba(59,130,246,.05); }
   background: rgba(168,85,247,.07); border-color: rgba(168,85,247,.22); color: #c084fc;
 }
 .btn-excel.print:hover { background: rgba(168,85,247,.16); }
+.btn-excel.share {
+  background: rgba(236,72,153,.07); border-color: rgba(236,72,153,.22); color: #f472b6;
+}
+.btn-excel.share:hover { background: rgba(236,72,153,.16); }
 #xlsx-file-input { display: none; }
+
+/* ══════════════════════════════════════
+   SHARE / IMPORT VOCABULARY — modals
+══════════════════════════════════════ */
+.qz-share-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.qz-share-overlay.open { display: flex; }
+.qz-share-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 24px;
+  max-width: 640px; width: 100%; max-height: 88vh;
+  display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.6);
+  animation: qzShareIn .25s ease;
+}
+@keyframes qzShareIn {
+  from { opacity: 0; transform: translateY(12px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.qz-share-hdr {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 14px;
+}
+.qz-share-title { font-size: 18px; font-weight: 700; color: var(--text); }
+.qz-share-sub   { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.qz-share-close {
+  background: transparent; border: 1px solid var(--border2);
+  color: var(--muted); font-size: 16px; cursor: pointer;
+  width: 30px; height: 30px; border-radius: 8px; line-height: 1;
+  font-family: inherit; flex-shrink: 0;
+}
+.qz-share-close:hover { color: var(--text); border-color: var(--accent); }
+
+.qz-share-toolbar {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  font-size: 12px; color: var(--muted);
+}
+.qz-share-toggle-all {
+  display: inline-flex; gap: 5px; padding: 5px 12px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); font-size: 12px; cursor: pointer; font-family: inherit;
+}
+.qz-share-toggle-all:hover { border-color: var(--accent); }
+.qz-share-count { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+
+.qz-share-list {
+  display: flex; flex-direction: column; gap: 5px;
+  overflow-y: auto; max-height: 50vh;
+  padding: 2px;
+}
+.qz-share-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 9px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.qz-share-item:hover { border-color: rgba(96,165,250,.4); }
+.qz-share-item.checked {
+  border-color: rgba(96,165,250,.5); background: rgba(59,130,246,.08);
+}
+.qz-share-item input[type="checkbox"] {
+  width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0;
+}
+.qz-share-pair {
+  flex: 1; min-width: 0; display: flex; gap: 8px; align-items: baseline;
+  font-size: 13px; flex-wrap: wrap;
+}
+.qz-share-src   { font-weight: 600; color: var(--text); }
+.qz-share-arrow { color: var(--muted); font-size: 11px; }
+.qz-share-tgt   { color: var(--muted); }
+.qz-share-lang  {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--muted); padding: 2px 6px; border-radius: 4px;
+  background: var(--surface); border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.qz-share-link-area {
+  display: none; gap: 8px; align-items: stretch;
+  padding: 10px 12px; border-radius: 10px;
+  background: rgba(96,165,250,.08); border: 1px solid rgba(96,165,250,.25);
+}
+.qz-share-link-input {
+  flex: 1; min-width: 0; padding: 8px 12px; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px;
+}
+.qz-share-link-copy {
+  padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 600;
+  font-family: inherit; white-space: nowrap; transition: opacity .15s;
+}
+.qz-share-link-copy:hover { opacity: .9; }
+
+.qz-share-btns {
+  display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;
+}
+.qz-share-btn-cancel {
+  padding: 9px 18px; border-radius: 9px; cursor: pointer;
+  background: transparent; border: 1px solid var(--border2);
+  color: var(--text); font-size: 13px; font-weight: 500; font-family: inherit;
+  transition: border-color .15s;
+}
+.qz-share-btn-cancel:hover { border-color: var(--accent); }
+.qz-share-btn-primary {
+  padding: 9px 18px; border-radius: 9px; cursor: pointer;
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  color: #fff; border: none;
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  transition: opacity .15s;
+}
+.qz-share-btn-primary:hover { opacity: .92; }
+.qz-share-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.qz-share-import-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: .04em;
+  padding: 3px 9px; border-radius: 100px;
+  background: rgba(167,139,250,.14); border: 1px solid rgba(167,139,250,.3);
+  color: #c4b5fd; font-family: 'DM Mono', monospace;
+  margin-left: 8px;
+}
 
 /* Row highlighting for failed / weak words */
 .qz-table tr.row-failed td { background: rgba(239,68,68,.06); }
@@ -1431,6 +1696,44 @@ tr.row-selected { background: rgba(59,130,246,.05); }
   transition: border-color .15s; white-space: nowrap; font-family: 'DM Sans', sans-serif;
 }
 .multi-sort-btn:hover { border-color: var(--accent); }
+
+/* Admin-only demo button (revealed via lazypo:profile when isAdmin) */
+.multi-demo-btn {
+  display: none;
+  align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 10px;
+  background: linear-gradient(135deg, rgba(139,92,246,.18) 0%, rgba(59,130,246,.10) 100%);
+  border: 1px solid rgba(167,139,250,.4);
+  color: #c4b5fd; font-size: 13px; font-weight: 600; cursor: pointer;
+  white-space: nowrap; font-family: 'DM Sans', sans-serif;
+  transition: border-color .15s, transform .1s, box-shadow .15s;
+}
+.multi-demo-btn:hover { border-color: #a78bfa; box-shadow: 0 4px 14px rgba(139,92,246,.18); }
+.multi-demo-btn:active { transform: scale(.97); }
+.multi-demo-btn.admin-visible { display: inline-flex; }
+.multi-demo-badge {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: #a78bfa;
+  background: rgba(167,139,250,.14); border: 1px solid rgba(167,139,250,.3);
+  padding: 1px 5px; border-radius: 100px; font-family: 'DM Mono', monospace;
+}
+
+.multi-demo-banner {
+  display: none; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: 10px; margin-bottom: 14px;
+  background: linear-gradient(135deg, rgba(139,92,246,.12) 0%, rgba(59,130,246,.06) 100%);
+  border: 1px solid rgba(167,139,250,.3);
+  color: #ddd6fe; font-size: 13px;
+}
+.multi-demo-banner.active { display: flex; }
+.multi-demo-exit {
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18);
+  color: #fff; font-size: 12px; padding: 5px 14px; border-radius: 8px;
+  cursor: pointer; font-family: inherit; font-weight: 500;
+  transition: background .15s;
+}
+.multi-demo-exit:hover { background: rgba(255,255,255,.15); }
 
 /* Feed items */
 .feed-item {
@@ -1845,13 +2148,65 @@ tr.row-selected { background: rgba(59,130,246,.05); }
       <span class="qz-word-count" id="word-count">0 words</span>
     </div>
 
-    <!-- Excel export / import / print -->
+    <!-- Excel export / import / print + share -->
     <div class="qz-excel-row">
       <button class="btn-excel export" id="btn-export-xl">📥 Exporter Excel</button>
       <button class="btn-excel import" id="btn-import-xl">📤 Importer Excel</button>
       <button class="btn-excel print"  id="btn-print-vocab">🖨️ Imprimer</button>
+      <button class="btn-excel share"  id="btn-share-vocab">🔗 Partager ma liste</button>
       <input type="file" id="xlsx-file-input" accept=".xlsx,.xls,.csv" style="display:none">
       <span class="excel-hint">L'export inclut le scoring SM-2 · L'import met à jour mots &amp; scores</span>
+    </div>
+
+    <!-- Share modal — generate a sharable link from selected vocab words -->
+    <div class="qz-share-overlay" id="vocab-share-overlay" role="dialog" aria-labelledby="vocab-share-title">
+      <div class="qz-share-card">
+        <div class="qz-share-hdr">
+          <div>
+            <div class="qz-share-title" id="vocab-share-title">🔗 Partager ma liste</div>
+            <div class="qz-share-sub">Coche les mots à partager. Un lien sera généré que tu peux envoyer à un autre joueur.</div>
+          </div>
+          <button class="qz-share-close" id="vocab-share-close" type="button" aria-label="Fermer">✕</button>
+        </div>
+        <div class="qz-share-toolbar">
+          <button class="qz-share-toggle-all" id="vocab-share-toggle-all" type="button">Tout décocher</button>
+          <span class="qz-share-count" id="vocab-share-count">0 / 0 mots sélectionnés</span>
+        </div>
+        <div class="qz-share-list" id="vocab-share-list"></div>
+        <div class="qz-share-link-area" id="vocab-share-link-area">
+          <input type="text" class="qz-share-link-input" id="vocab-share-url" readonly>
+          <button class="qz-share-link-copy" id="vocab-share-copy" type="button">📋 Copier</button>
+        </div>
+        <div class="qz-share-btns">
+          <button class="qz-share-btn-cancel" id="vocab-share-cancel" type="button">Fermer</button>
+          <button class="qz-share-btn-primary" id="vocab-share-generate" type="button">Générer le lien</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import modal — auto-opens when URL contains #import=<base64> -->
+    <div class="qz-share-overlay" id="vocab-import-overlay" role="dialog" aria-labelledby="vocab-import-title">
+      <div class="qz-share-card">
+        <div class="qz-share-hdr">
+          <div>
+            <div class="qz-share-title" id="vocab-import-title">
+              📥 <span id="vocab-import-from">Quelqu'un</span> te partage <span id="vocab-import-count-hdr">— mots</span>
+              <span class="qz-share-import-badge">PARTAGE</span>
+            </div>
+            <div class="qz-share-sub">Coche les mots que tu veux ajouter à ton vocabulaire. Tu peux décocher ceux que tu connais déjà.</div>
+          </div>
+          <button class="qz-share-close" id="vocab-import-close" type="button" aria-label="Fermer">✕</button>
+        </div>
+        <div class="qz-share-toolbar">
+          <button class="qz-share-toggle-all" id="vocab-import-toggle-all" type="button">Tout décocher</button>
+          <span class="qz-share-count" id="vocab-import-count">0 / 0</span>
+        </div>
+        <div class="qz-share-list" id="vocab-import-list"></div>
+        <div class="qz-share-btns">
+          <button class="qz-share-btn-cancel" id="vocab-import-cancel" type="button">Annuler</button>
+          <button class="qz-share-btn-primary" id="vocab-import-apply" type="button" disabled>+ Ajouter au vocabulaire</button>
+        </div>
+      </div>
     </div>
 
     <!-- Bulk action bar -->
@@ -2090,6 +2445,59 @@ tr.row-selected { background: rgba(59,130,246,.05); }
         <button class="btn-primary"   id="btn-try-again">Try Again</button>
       </div>
     </div>
+
+    <!-- Challenge summary (hidden by default — shown only after a Challenge Back) -->
+    <div id="quiz-challenge-summary" class="qz-summary" style="display:none;">
+
+      <div class="qz-challenge-banner">
+        <div id="qz-ch-avatar-slot"></div>
+        <div class="qz-ch-banner-text">
+          <div class="qz-ch-banner-label">🎯 Challenge contre</div>
+          <div class="qz-ch-banner-name" id="qz-ch-orig-name">—</div>
+        </div>
+      </div>
+
+      <div class="qz-ch-vs-card">
+        <div class="qz-ch-verdict" id="qz-ch-verdict">—</div>
+        <div class="qz-ch-vs-row">
+          <div class="qz-ch-vs-side">
+            <div class="qz-ch-vs-who">Toi</div>
+            <div class="qz-ch-vs-score" id="qz-ch-me-score">0 / 0</div>
+            <div class="qz-ch-vs-pct" id="qz-ch-me-pct">0%</div>
+          </div>
+          <div class="qz-ch-vs-sep">VS</div>
+          <div class="qz-ch-vs-side">
+            <div class="qz-ch-vs-who" id="qz-ch-them-who">Eux</div>
+            <div class="qz-ch-vs-score" id="qz-ch-them-score">0 / 0</div>
+            <div class="qz-ch-vs-pct" id="qz-ch-them-pct">0%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qz-ch-section">
+        <div class="qz-ch-section-hdr">
+          <div class="qz-ch-section-title">📢 Publier sur le fil</div>
+        </div>
+        <div class="qz-ch-publish-row">
+          <div class="qz-ch-publish-info">Ton résultat sera ajouté en commentaire sur la session d'origine.</div>
+          <button class="qz-ch-publish-btn" id="qz-ch-publish-btn" type="button">Publier mon résultat</button>
+        </div>
+      </div>
+
+      <div class="qz-ch-section">
+        <div class="qz-ch-section-hdr">
+          <div class="qz-ch-section-title">📚 Ajouter à mon vocabulaire</div>
+          <button class="qz-ch-select-toggle" id="qz-ch-select-all" type="button">Tout sélectionner</button>
+        </div>
+        <div class="qz-ch-words-list" id="qz-ch-words-list"></div>
+      </div>
+
+      <div class="qz-ch-btns">
+        <button class="qz-ch-back-btn" id="qz-ch-back-btn" type="button">← Retour au Multi</button>
+        <button class="qz-ch-add-btn" id="qz-ch-add-btn" type="button" disabled>+ Ajouter au vocabulaire</button>
+      </div>
+    </div>
+
   </section>
 
   <!-- ════════════════════════════════
@@ -2436,6 +2844,14 @@ tr.row-selected { background: rgba(59,130,246,.05); }
               <div class="multi-feed-sub">Les dernières sessions de la communauté</div>
             </div>
           </div>
+          <button class="multi-demo-btn" id="multi-demo-btn" type="button"
+                  title="Affiche un fil d'exemple avec 100 joueurs simulés (admin uniquement)">
+            🧪 Demo · 100 joueurs <span class="multi-demo-badge">Admin</span>
+          </button>
+        </div>
+        <div class="multi-demo-banner" id="multi-demo-banner">
+          <span>🧪 <strong>Mode démo</strong> — fil simulé avec 100 joueurs fictifs. Aucune donnée n'est enregistrée.</span>
+          <button class="multi-demo-exit" id="multi-demo-exit" type="button">Quitter le mode démo</button>
         </div>
         <div id="feed-list"></div>
         <div style="text-align:center;margin-top:12px;">
@@ -3020,6 +3436,257 @@ function submitAddWord() {
   document.getElementById('add-tips').value    = '';
   document.getElementById('add-source').focus();
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SHARE / IMPORT VOCABULARY — link-based, no DB writes for sender.
+   Sender: select words → encode as base64 in URL hash → copy.
+   Receiver: open the URL → modal previews words → choose & add.
+═══════════════════════════════════════════════════════════ */
+
+function shareEncode(obj) {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+}
+function shareDecode(b64) {
+  try { return JSON.parse(decodeURIComponent(escape(atob(b64)))); }
+  catch { return null; }
+}
+
+const SHARE_MAX_WORDS = 200;
+
+function openShareModal() {
+  if (!vocab.length) { showToast('Ta liste est vide — ajoute des mots d\'abord.'); return; }
+  const overlay = document.getElementById('vocab-share-overlay');
+  const list    = document.getElementById('vocab-share-list');
+  list.innerHTML = vocab.map((w, idx) => `
+    <label class="qz-share-item checked" data-idx="${idx}">
+      <input type="checkbox" data-idx="${idx}" checked>
+      <div class="qz-share-pair">
+        <span class="qz-share-src">${escHtml(w.source_word)}</span>
+        <span class="qz-share-arrow">→</span>
+        <span class="qz-share-tgt">${escHtml(w.target_translation)}</span>
+      </div>
+      <span class="qz-share-lang">${escHtml(w.language_pair || '')}</span>
+    </label>`).join('');
+  document.getElementById('vocab-share-link-area').style.display = 'none';
+  document.getElementById('vocab-share-url').value = '';
+  document.getElementById('vocab-share-generate').style.display = 'inline-flex';
+  document.getElementById('vocab-share-generate').textContent = 'Générer le lien';
+  document.getElementById('vocab-share-toggle-all').textContent = 'Tout décocher';
+  updateShareCount();
+  overlay.classList.add('open');
+}
+
+function closeShareModal() {
+  document.getElementById('vocab-share-overlay').classList.remove('open');
+}
+
+function updateShareCount() {
+  const list  = document.getElementById('vocab-share-list');
+  const total = list.querySelectorAll('input[type="checkbox"]').length;
+  const cnt   = list.querySelectorAll('input[type="checkbox"]:checked').length;
+  document.getElementById('vocab-share-count').textContent =
+    `${cnt} / ${total} mots sélectionnés${cnt > SHARE_MAX_WORDS ? ` · max ${SHARE_MAX_WORDS}` : ''}`;
+  document.getElementById('vocab-share-generate').disabled = cnt === 0;
+}
+
+function generateShareLink() {
+  const list = document.getElementById('vocab-share-list');
+  const checkedIdx = [...list.querySelectorAll('input[type="checkbox"]:checked')]
+    .map(cb => parseInt(cb.dataset.idx, 10));
+  if (!checkedIdx.length) return;
+  if (checkedIdx.length > SHARE_MAX_WORDS) {
+    showToast(`Trop de mots — limite à ${SHARE_MAX_WORDS} par partage.`);
+    return;
+  }
+  const words = checkedIdx.map(i => {
+    const w = vocab[i];
+    const obj = { s: w.source_word, t: w.target_translation, l: w.language_pair };
+    if (w.example_sentence) obj.e = w.example_sentence;
+    if (w.tips)             obj.p = w.tips;
+    return obj;
+  });
+  const payload = {
+    v:    1,
+    from: multiDisplayName || 'Un joueur LazyPO',
+    words,
+  };
+  const encoded = shareEncode(payload);
+  const url = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') +
+              'quiz.html#import=' + encoded;
+  document.getElementById('vocab-share-url').value = url;
+  document.getElementById('vocab-share-link-area').style.display = 'flex';
+  document.getElementById('vocab-share-generate').style.display = 'none';
+  // Auto-select the input for easy manual copy
+  const input = document.getElementById('vocab-share-url');
+  setTimeout(() => input.select(), 60);
+}
+
+async function copyShareLink() {
+  const input = document.getElementById('vocab-share-url');
+  try {
+    await navigator.clipboard.writeText(input.value);
+    showToast('🔗 Lien copié dans le presse-papier !');
+  } catch {
+    input.select();
+    showToast('Sélectionne le lien et copie-le manuellement (Ctrl+C / ⌘+C)');
+  }
+}
+
+/* ── Receiver side ── */
+function detectShareImport() {
+  const m = (window.location.hash || '').match(/import=([A-Za-z0-9+/=_-]+)/);
+  if (!m) return;
+  const payload = shareDecode(m[1]);
+  if (!payload || !Array.isArray(payload.words) || !payload.words.length) {
+    showToast('Lien de partage invalide.');
+    history.replaceState(null, '', window.location.pathname);
+    return;
+  }
+  openImportModal(payload);
+}
+
+function openImportModal(payload) {
+  const overlay = document.getElementById('vocab-import-overlay');
+  const list    = document.getElementById('vocab-import-list');
+  document.getElementById('vocab-import-from').textContent = payload.from || 'Quelqu\'un';
+  document.getElementById('vocab-import-count-hdr').textContent =
+    `${payload.words.length} mot${payload.words.length > 1 ? 's' : ''}`;
+  list.innerHTML = payload.words.map((w, idx) => `
+    <label class="qz-share-item checked" data-idx="${idx}">
+      <input type="checkbox" data-idx="${idx}" checked>
+      <div class="qz-share-pair">
+        <span class="qz-share-src">${escHtml(w.s || '')}</span>
+        <span class="qz-share-arrow">→</span>
+        <span class="qz-share-tgt">${escHtml(w.t || '')}</span>
+      </div>
+      <span class="qz-share-lang">${escHtml(w.l || '')}</span>
+    </label>`).join('');
+  overlay.dataset.payload = JSON.stringify(payload.words);
+  document.getElementById('vocab-import-toggle-all').textContent = 'Tout décocher';
+  updateImportCount();
+  overlay.classList.add('open');
+}
+
+function closeImportModal() {
+  document.getElementById('vocab-import-overlay').classList.remove('open');
+  // Clean URL so a refresh doesn't re-open the modal
+  history.replaceState(null, '', window.location.pathname);
+}
+
+function updateImportCount() {
+  const list  = document.getElementById('vocab-import-list');
+  const total = list.querySelectorAll('input[type="checkbox"]').length;
+  const cnt   = list.querySelectorAll('input[type="checkbox"]:checked').length;
+  document.getElementById('vocab-import-count').textContent = `${cnt} / ${total}`;
+  document.getElementById('vocab-import-apply').disabled = cnt === 0;
+}
+
+async function applyShareImport() {
+  if (!currentUser) { showToast('Connecte-toi pour importer.'); return; }
+  const overlay = document.getElementById('vocab-import-overlay');
+  const words   = JSON.parse(overlay.dataset.payload || '[]');
+  const list    = document.getElementById('vocab-import-list');
+  const checkedIdx = [...list.querySelectorAll('input[type="checkbox"]:checked')]
+    .map(cb => parseInt(cb.dataset.idx, 10));
+  if (!checkedIdx.length) return;
+
+  const applyBtn = document.getElementById('vocab-import-apply');
+  applyBtn.disabled = true;
+  applyBtn.textContent = 'Ajout…';
+
+  let added = 0, dup = 0, err = 0;
+  for (const i of checkedIdx) {
+    const w = words[i];
+    if (!w || !w.s || !w.t) { err++; continue; }
+    const { error } = await window.sb.from('vocabulary').insert({
+      user_id:            currentUser.id,
+      source_word:        w.s,
+      target_translation: w.t,
+      language_pair:      w.l || 'EN→FR',
+      example_sentence:   w.e || null,
+      tips:               w.p || null,
+    });
+    if (!error) { added++; xpTrackWordCreated(); }
+    else if (String(error.message || '').toLowerCase().includes('duplicate') || error.code === '23505') dup++;
+    else err++;
+  }
+  await loadVocab();
+  renderVocab();
+  updateAvailNote();
+
+  let msg = added > 0 ? `${added} mot${added > 1 ? 's' : ''} ajouté${added > 1 ? 's' : ''}` : '';
+  if (dup > 0) msg += `${msg ? ' · ' : ''}${dup} doublon${dup > 1 ? 's' : ''} ignoré${dup > 1 ? 's' : ''}`;
+  if (err > 0) msg += `${msg ? ' · ' : ''}${err} erreur${err > 1 ? 's' : ''}`;
+  showToast(msg || 'Terminé');
+
+  applyBtn.textContent = '+ Ajouter au vocabulaire';
+  closeImportModal();
+}
+
+/* ── Wire up share/import handlers (DOM ready) ── */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-share-vocab')?.addEventListener('click', openShareModal);
+  document.getElementById('vocab-share-close')?.addEventListener('click', closeShareModal);
+  document.getElementById('vocab-share-cancel')?.addEventListener('click', closeShareModal);
+  document.getElementById('vocab-share-generate')?.addEventListener('click', generateShareLink);
+  document.getElementById('vocab-share-copy')?.addEventListener('click', copyShareLink);
+  document.getElementById('vocab-share-overlay')?.addEventListener('click', e => {
+    if (e.target.id === 'vocab-share-overlay') closeShareModal();
+  });
+  document.getElementById('vocab-share-list')?.addEventListener('change', e => {
+    if (e.target.matches('input[type="checkbox"]')) {
+      e.target.closest('.qz-share-item').classList.toggle('checked', e.target.checked);
+      updateShareCount();
+    }
+  });
+  document.getElementById('vocab-share-toggle-all')?.addEventListener('click', () => {
+    const boxes = [...document.querySelectorAll('#vocab-share-list input[type="checkbox"]')];
+    const allChecked = boxes.length > 0 && boxes.every(cb => cb.checked);
+    boxes.forEach(cb => {
+      cb.checked = !allChecked;
+      cb.closest('.qz-share-item').classList.toggle('checked', cb.checked);
+    });
+    document.getElementById('vocab-share-toggle-all').textContent =
+      allChecked ? 'Tout cocher' : 'Tout décocher';
+    updateShareCount();
+  });
+
+  document.getElementById('vocab-import-cancel')?.addEventListener('click', closeImportModal);
+  document.getElementById('vocab-import-close')?.addEventListener('click', closeImportModal);
+  document.getElementById('vocab-import-apply')?.addEventListener('click', applyShareImport);
+  document.getElementById('vocab-import-overlay')?.addEventListener('click', e => {
+    if (e.target.id === 'vocab-import-overlay') closeImportModal();
+  });
+  document.getElementById('vocab-import-list')?.addEventListener('change', e => {
+    if (e.target.matches('input[type="checkbox"]')) {
+      e.target.closest('.qz-share-item').classList.toggle('checked', e.target.checked);
+      updateImportCount();
+    }
+  });
+  document.getElementById('vocab-import-toggle-all')?.addEventListener('click', () => {
+    const boxes = [...document.querySelectorAll('#vocab-import-list input[type="checkbox"]')];
+    const allChecked = boxes.length > 0 && boxes.every(cb => cb.checked);
+    boxes.forEach(cb => {
+      cb.checked = !allChecked;
+      cb.closest('.qz-share-item').classList.toggle('checked', cb.checked);
+    });
+    document.getElementById('vocab-import-toggle-all').textContent =
+      allChecked ? 'Tout cocher' : 'Tout décocher';
+    updateImportCount();
+  });
+
+  // Esc key closes any open share/import modal
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('vocab-share-overlay')?.classList.contains('open')) closeShareModal();
+    if (document.getElementById('vocab-import-overlay')?.classList.contains('open')) closeImportModal();
+  });
+
+  // Auto-open import modal if URL contains a #import=<base64> share payload.
+  // Runs independently of auth so the modal can preview shared words even
+  // before the user is authenticated; the "Apply" action enforces auth itself.
+  detectShareImport();
+});
 
 function getFilteredVocab() {
   let list = [...vocab];
@@ -3764,7 +4431,11 @@ function endSession() {
     tips:               a.word.tips || null
   }));
   saveQuizSession(total, correct, durationSec);
-  postMultiSession(correct, total, durationSec, 'vocab', quizFilter || 'all', quizMode || 'auto', sessionWordIds, sessionWords);
+  // In challenge mode, skip postMultiSession — the result is shared via a comment
+  // on the original session when the user clicks "Publier mon résultat".
+  if (!challengeContext) {
+    postMultiSession(correct, total, durationSec, 'vocab', quizFilter || 'all', quizMode || 'auto', sessionWordIds, sessionWords);
+  }
 
   const wrong = sessionAnswers.filter(a => !a.correct && !a.skipped);
   if (wrong.length > 0) {
@@ -3776,7 +4447,7 @@ function endSession() {
     document.getElementById('quiz-summary').style.display = 'none';
     showReviewItem();
   } else {
-    showSummary();
+    challengeContext ? showChallengeSummary() : showSummary();
   }
 }
 
@@ -3817,7 +4488,7 @@ document.getElementById('review-btn-next').addEventListener('click', () => {
   reviewIndex++;
   if (reviewIndex >= reviewQueue.length) {
     document.getElementById('quiz-review').style.display = 'none';
-    showSummary();
+    challengeContext ? showChallengeSummary() : showSummary();
   } else {
     showReviewItem();
   }
@@ -5089,6 +5760,7 @@ async function postMultiSession(score, total, durationSec, mode, lang, direction
 
 /* ── Init (called when tab is opened) ── */
 async function multiInit() {
+  if (__multiDemoMode) return;
   if (multiLoaded && Date.now() - multiLoadedAt < MULTI_CACHE_TTL) return;
   await getMultiDisplayName();
   await Promise.all([multiLoadLeaderboard(), multiLoadFeed(true)]);
@@ -5096,6 +5768,184 @@ async function multiInit() {
   multiLoaded  = true;
   multiLoadedAt = Date.now();
 }
+
+/* ─────────────────────────────────
+   DEMO MODE — admin-only fake feed
+   Génère 100 sessions fictives + réactions + commentaires
+   sans aucune écriture en base.
+───────────────────────────────── */
+let __multiDemoMode = false;
+let __demoComments  = {};
+
+const DEMO_NAMES = [
+  'Léa Dubois','Tom Bernard','Sarah Karim','Mohamed Aït','Camille Roux',
+  'Julien Petit','Aïcha Benali','Lucas Martin','Emma Tremblay','Hugo Lefèvre',
+  'Chloé Garcia','Nathan Robert','Manon Vidal','Adam Sow','Inès Moreau',
+  'Yanis Boudji','Zoé Caron','Raphaël Noir','Léna Dupont','Noah Kessler',
+  'Mia Lambert','Théo Faure','Jade Renard','Enzo Marchal','Louise Pernot',
+  'Mateo Silva','Ambre Gauthier','Liam Tan','Eva Demir','Sacha Brun',
+  'Lina Maziz','Adam Vassel','Lou Halimi','Maël Costa','Anna Romero',
+  'Ethan Bauer','Iris Lacroix','Naël Pierre','Romy Fischer','Ezra Klein',
+  'Rose Mathieu','Aaron Gold','Nora Diallo','Eden Vidal','Ali Reza',
+  'Yasmine Tahar','Ilan Mazet','Alice Cordier','Idriss Belhaj','Maya Lévy',
+];
+const DEMO_COMMENTS = [
+  'GG mec 🔥','Trop fort','Allez encore un effort !','Bien joué 👏',
+  'On revoit ça demain ?','Easy 😎','Faut que je m\'entraîne plus',
+  'Challenge accepted','Tu cartonnes','C\'était dur celui-là',
+  '+1','Respect 💪','100% next time','J\'ai eu 60% pareil',
+  'On fait un duel ?','Bonne perf','Allez allez 🙌','Insane',
+  'Bien essayé','Je tente ça ce soir','La régularité paie',
+];
+const DEMO_AVATARS = [
+  'https://i.pravatar.cc/150?img=1','https://i.pravatar.cc/150?img=5',
+  'https://i.pravatar.cc/150?img=9','https://i.pravatar.cc/150?img=12',
+  'https://i.pravatar.cc/150?img=15','https://i.pravatar.cc/150?img=20',
+  'https://i.pravatar.cc/150?img=25','https://i.pravatar.cc/150?img=33',
+  'https://i.pravatar.cc/150?img=37','https://i.pravatar.cc/150?img=44',
+  'https://i.pravatar.cc/150?img=47','https://i.pravatar.cc/150?img=51',
+  'https://i.pravatar.cc/150?img=57','https://i.pravatar.cc/150?img=64',
+  'https://i.pravatar.cc/150?img=68',
+];
+
+function __demoPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function __demoRandInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function generateDemoSessions(count) {
+  const now = Date.now();
+  const sessions = [];
+  for (let i = 0; i < count; i++) {
+    const total = __demoPick([5, 10, 10, 15, 20]);
+    const score = __demoRandInt(Math.floor(total * 0.3), total);
+    const isVerbes = Math.random() < 0.35;
+    const ageMs = __demoRandInt(60_000, 14 * 24 * 60 * 60 * 1000);
+    sessions.push({
+      id: `demo-${i}-${now}`,
+      user_id: `demo-user-${i}`,
+      display_name: __demoPick(DEMO_NAMES),
+      avatar_url: Math.random() < 0.65 ? __demoPick(DEMO_AVATARS) : null,
+      score, total,
+      duration_sec: __demoRandInt(45, 600),
+      mode: isVerbes ? 'verbes' : 'vocab',
+      lang: isVerbes ? 'nl' : 'EN→FR',
+      direction: 'auto',
+      created_at: new Date(now - ageMs).toISOString(),
+      word_ids: [],
+      words: [],
+      quiz_session_comments: [{ count: __demoRandInt(0, 6) }],
+    });
+  }
+  sessions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  return sessions;
+}
+
+function buildDemoReactions(sessions) {
+  const map = {};
+  for (const s of sessions) {
+    map[s.id] = {
+      fire:   __demoRandInt(0, 18),
+      muscle: __demoRandInt(0, 14),
+      clap:   __demoRandInt(0, 22),
+      mine:   new Set(),
+    };
+  }
+  return map;
+}
+
+function buildDemoCommentsForSessions(sessions) {
+  const map = {};
+  for (const s of sessions) {
+    const n = s.quiz_session_comments[0].count;
+    const arr = [];
+    for (let i = 0; i < n; i++) {
+      arr.push({
+        session_id:   s.id,
+        display_name: __demoPick(DEMO_NAMES),
+        avatar_url:   Math.random() < 0.5 ? __demoPick(DEMO_AVATARS) : null,
+        content:      __demoPick(DEMO_COMMENTS),
+        created_at:   new Date(Date.now() - __demoRandInt(60_000, 5 * 24 * 60 * 60 * 1000)).toISOString(),
+      });
+    }
+    map[s.id] = arr;
+  }
+  return map;
+}
+
+function loadMultiDemoFeed() {
+  __multiDemoMode = true;
+  const sessions = generateDemoSessions(100);
+  feedData      = sessions;
+  feedOffset    = sessions.length;
+  feedReactions = buildDemoReactions(sessions);
+  __demoComments = buildDemoCommentsForSessions(sessions);
+
+  const list = document.getElementById('feed-list');
+  list.innerHTML = sessions.map(s => buildFeedItem(s)).join('');
+  document.getElementById('feed-load-more').style.display = 'none';
+  document.getElementById('multi-demo-banner').classList.add('active');
+
+  // Inject fake comments synchronously (skip live DB hydration)
+  for (const s of sessions) {
+    const itemEl = list.querySelector(`.feed-item[data-sid="${s.id}"]`);
+    if (itemEl) renderComments(s.id, __demoComments[s.id] || [], itemEl);
+  }
+
+  // Bind UI handlers
+  list.querySelectorAll('.feed-comment-toggle').forEach(btn => {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => toggleComments(btn.dataset.sid, btn.closest('.feed-item')));
+  });
+  list.querySelectorAll('.feed-react-btn').forEach(btn => {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => toggleReaction(btn.dataset.sid, btn.dataset.type, btn));
+  });
+  list.querySelectorAll('.feed-comment-submit').forEach(btn => {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => submitComment(btn.dataset.sid, btn.closest('.feed-comments')));
+  });
+  list.querySelectorAll('.feed-challenge-btn').forEach(btn => {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => showToast('🧪 Mode démo — Challenge non disponible avec données fictives.'));
+  });
+
+  // Apply reaction counts
+  sessions.forEach(s => {
+    const rx = feedReactions[s.id];
+    ['fire','muscle','clap'].forEach(type => {
+      const cnt = list.querySelector(`.react-count[data-sid="${s.id}"][data-type="${type}"]`);
+      if (cnt) cnt.textContent = rx[type] || 0;
+    });
+  });
+
+  multiLoadMyStats();
+  showToast('🧪 Mode démo activé — 100 joueurs simulés');
+}
+
+function exitMultiDemoFeed() {
+  __multiDemoMode = false;
+  feedData       = [];
+  feedOffset     = 0;
+  feedReactions  = {};
+  __demoComments = {};
+  document.getElementById('multi-demo-banner').classList.remove('active');
+  document.getElementById('feed-list').innerHTML = '';
+  multiLoaded = false;
+  multiInit();
+}
+
+/* Reveal admin-only demo button when profile confirms isAdmin */
+document.addEventListener('lazypo:profile', function (e) {
+  if (!e.detail?.isAdmin) return;
+  document.getElementById('multi-demo-btn')?.classList.add('admin-visible');
+});
+document.addEventListener('DOMContentLoaded', function () {
+  const btn  = document.getElementById('multi-demo-btn');
+  const exit = document.getElementById('multi-demo-exit');
+  if (btn)  btn.addEventListener('click', loadMultiDemoFeed);
+  if (exit) exit.addEventListener('click', exitMultiDemoFeed);
+  // If profile event fired before listener attached, reveal now
+  if (window.LazyAuth?.__profile?.isAdmin) btn?.classList.add('admin-visible');
+});
 
 /* ─────────────────────────────────
    LEADERBOARD
@@ -5136,8 +5986,12 @@ function renderLeaderboard(rows) {
     container.innerHTML = `<div class="lb-no-data">Aucune activité cette semaine.<br><small>Joue un quiz pour apparaître !</small></div>`;
     return;
   }
-  const display = rows.slice(0, 10);
-  container.innerHTML = display.map((r, i) => {
+  const TOP_N = 5;
+  const top   = rows.slice(0, TOP_N);
+  const meIdx = currentUser ? rows.findIndex(r => r.user_id === currentUser.id) : -1;
+  const meOutsideTop = meIdx >= TOP_N;
+
+  const renderRow = (r, i) => {
     const isMe  = currentUser && r.user_id === currentUser.id;
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1);
     return `<div class="lb-row${isMe ? ' lb-me' : ''}"${isMe ? ' id="lb-me-row"' : ''}>
@@ -5148,7 +6002,15 @@ function renderLeaderboard(rows) {
       </div>
       <div class="lb-player-xp">${(r.weekly_xp || 0).toLocaleString()} XP</div>
     </div>`;
-  }).join('');
+  };
+
+  let html = top.map(renderRow).join('');
+  // If the current user is outside the top 5, append their own row with their real rank
+  if (meOutsideTop) {
+    html += `<div class="lb-row-sep" style="height:1px;background:var(--border);margin:6px 0;opacity:.5;"></div>`;
+    html += renderRow(rows[meIdx], meIdx);
+  }
+  container.innerHTML = html;
   // Click on own row → XP breakdown
   const meRow = container.querySelector('#lb-me-row');
   if (meRow) meRow.addEventListener('click', showXpBreakdown);
@@ -5227,9 +6089,11 @@ function renderFeed(sessions, append) {
   if (sids.length > 0) {
     window.sb.from('quiz_session_comments')
       .select('*').in('session_id', sids).order('created_at')
-      .then(({ data: comments }) => {
+      .then(async ({ data: comments }) => {
+        const all = comments || [];
+        await hydrateCommentAvatars(all);
         const bySession = {};
-        for (const c of (comments || [])) {
+        for (const c of all) {
           if (!bySession[c.session_id]) bySession[c.session_id] = [];
           bySession[c.session_id].push(c);
         }
@@ -5248,7 +6112,17 @@ function renderFeed(sessions, append) {
       let wids  = [];
       try { words = JSON.parse(btn.dataset.words || '[]'); } catch(_) {}
       try { wids  = JSON.parse(btn.dataset.wids  || '[]'); } catch(_) {}
-      launchChallengeQuiz(words, wids);
+      const sid = btn.closest('.feed-item')?.dataset.sid;
+      const orig = feedData.find(s => s.id === sid);
+      const meta = orig ? {
+        sessionId:      orig.id,
+        originalName:   orig.display_name || 'Joueur',
+        originalScore:  orig.score,
+        originalTotal:  orig.total,
+        originalAvatar: orig.avatar_url || null,
+        originalMode:   orig.mode || 'vocab',
+      } : null;
+      launchChallengeQuiz(words, wids, meta);
     });
   });
   // Attach reaction listeners
@@ -5400,15 +6274,48 @@ function renderComments(sid, comments, itemEl) {
   }).join('');
 }
 
+/* Profile avatar cache — keyed by user_id, used to hydrate comment avatars
+   for legacy comments inserted without avatar_url. */
+let __profileAvatarCache = {};
+
+async function hydrateCommentAvatars(comments) {
+  if (!comments?.length || !window.sb) return;
+  const need = [...new Set(
+    comments
+      .filter(c => !c.avatar_url && c.user_id && !(c.user_id in __profileAvatarCache))
+      .map(c => c.user_id)
+  )];
+  if (need.length) {
+    try {
+      const { data } = await window.sb.from('profiles')
+        .select('id, avatar_url').in('id', need);
+      for (const p of (data || [])) __profileAvatarCache[p.id] = p.avatar_url || null;
+      for (const uid of need) {
+        if (!(uid in __profileAvatarCache)) __profileAvatarCache[uid] = null;
+      }
+    } catch(_) {}
+  }
+  for (const c of comments) {
+    if (!c.avatar_url && c.user_id && __profileAvatarCache[c.user_id]) {
+      c.avatar_url = __profileAvatarCache[c.user_id];
+    }
+  }
+}
+
 async function submitComment(sid, commentsEl) {
   const input = commentsEl.querySelector('.feed-comment-input');
   const content = input.value.trim();
   if (!content || !currentUser) return;
   const name = await getMultiDisplayName();
-  const { data, error } = await window.sb.from('quiz_session_comments').insert({
-    session_id: sid, user_id: currentUser.id, display_name: name, content
-  }).select().single();
-  if (error) { showToast('Erreur lors de l\'envoi'); return; }
+  const isDemo = String(sid).startsWith('demo-');
+  if (!isDemo) {
+    const { error } = await window.sb.from('quiz_session_comments').insert({
+      session_id: sid, user_id: currentUser.id, display_name: name, content
+    }).select().single();
+    if (error) { showToast('Erreur lors de l\'envoi'); return; }
+    // Prime cache so other render passes can pick up our avatar
+    if (multiAvatarUrl) __profileAvatarCache[currentUser.id] = multiAvatarUrl;
+  }
   input.value = '';
   // Append comment without refetch
   const list = commentsEl.querySelector('.feed-comment-list');
@@ -5448,11 +6355,16 @@ document.getElementById('feed-load-more').addEventListener('click', () => multiL
  * @param {Array} wordIdsFallback - Legacy: array of UUIDs from the original user's vocab.
  *                                  Used only if snapshots aren't available (old sessions).
  */
-function launchChallengeQuiz(wordSnapshots, wordIdsFallback) {
+/* Challenge Back state — set by launchChallengeQuiz, consumed by endSession/showChallengeSummary,
+   cleared by exitChallengeToMulti. Null when not in challenge mode. */
+let challengeContext = null;
+
+function launchChallengeQuiz(wordSnapshots, wordIdsFallback, originalMeta = null) {
   let words = [];
-  if (Array.isArray(wordSnapshots) && wordSnapshots.length) {
+  let resolvedSnapshots = Array.isArray(wordSnapshots) ? wordSnapshots : [];
+  if (resolvedSnapshots.length) {
     // New path : use the snapshot directly — works regardless of who posted
-    words = wordSnapshots.map(w => ({
+    words = resolvedSnapshots.map(w => ({
       // Synthetic word object — no `id` because it doesn't belong to anyone's vocabulary
       id:                 null,
       source_word:        w.source_word,
@@ -5465,11 +6377,19 @@ function launchChallengeQuiz(wordSnapshots, wordIdsFallback) {
     // Legacy path : sessions posted before the snapshot existed.
     // Only works for users who happen to have those exact vocab IDs.
     words = vocab.filter(w => wordIdsFallback.includes(w.id));
+    resolvedSnapshots = words.map(w => ({
+      source_word: w.source_word, target_translation: w.target_translation,
+      language_pair: w.language_pair, example_sentence: w.example_sentence || null,
+      tips: w.tips || null,
+    }));
   }
   if (!words.length) {
     showToast('Mots non disponibles — cette session date d\'avant le fix Challenge Back.');
     return;
   }
+  challengeContext = originalMeta
+    ? { ...originalMeta, words: resolvedSnapshots, published: false }
+    : null;
   sessionAnswers = [];
   sessionStartTime = Date.now();
   // Mark this as a multiplayer party so the summary can offer to add the words
@@ -5498,30 +6418,239 @@ function launchChallengeQuiz(wordSnapshots, wordIdsFallback) {
   document.getElementById('quiz-setup').style.display   = 'none';
   document.getElementById('quiz-active').style.display  = 'block';
   document.getElementById('quiz-summary').style.display = 'none';
+  document.getElementById('quiz-challenge-summary').style.display = 'none';
   showQuestion();
-  showToast('🎯 Challenge lancé !');
+  showToast(originalMeta
+    ? `🎯 Challenge contre ${originalMeta.originalName} lancé !`
+    : '🎯 Challenge lancé !');
 }
+
+/* ─────────────────────────────────
+   CHALLENGE SUMMARY — end-of-game UI
+   Built by endSession (or review-btn-next) when challengeContext is set.
+───────────────────────────────── */
+function showChallengeSummary() {
+  const view = document.getElementById('quiz-challenge-summary');
+  document.getElementById('quiz-active').style.display  = 'none';
+  document.getElementById('quiz-review').style.display  = 'none';
+  document.getElementById('quiz-summary').style.display = 'none';
+  view.style.display = 'block';
+
+  const ctx       = challengeContext || {};
+  const total     = sessionAnswers.length;
+  const correct   = sessionAnswers.filter(a => a.correct).length;
+  const myPct     = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const themPct   = ctx.originalTotal > 0
+    ? Math.round((ctx.originalScore / ctx.originalTotal) * 100) : 0;
+
+  // Banner
+  const name = ctx.originalName || 'Joueur';
+  document.getElementById('qz-ch-orig-name').textContent = name;
+  const avatarSlot = document.getElementById('qz-ch-avatar-slot');
+  avatarSlot.innerHTML = ctx.originalAvatar
+    ? `<img class="qz-ch-avatar" src="${escHtml(ctx.originalAvatar)}" alt="${escHtml(name)}" loading="lazy">`
+    : `<div class="qz-ch-avatar-init">${escHtml((name[0] || '?').toUpperCase())}</div>`;
+
+  // Verdict
+  const verdictEl = document.getElementById('qz-ch-verdict');
+  if (myPct > themPct) {
+    verdictEl.textContent = '🏆 VICTOIRE !';
+    verdictEl.className   = 'qz-ch-verdict win';
+  } else if (myPct < themPct) {
+    verdictEl.textContent = '💪 Défaite — Essaie encore !';
+    verdictEl.className   = 'qz-ch-verdict lose';
+  } else {
+    verdictEl.textContent = '🤝 Égalité parfaite';
+    verdictEl.className   = 'qz-ch-verdict tie';
+  }
+
+  // Scores
+  const pctClass = p => p >= 75 ? 'good' : p >= 50 ? 'mid' : 'bad';
+  document.getElementById('qz-ch-me-score').textContent = `${correct} / ${total}`;
+  const myPctEl = document.getElementById('qz-ch-me-pct');
+  myPctEl.textContent = `${myPct}%`;
+  myPctEl.className   = 'qz-ch-vs-pct ' + pctClass(myPct);
+  document.getElementById('qz-ch-them-who').textContent   = name;
+  document.getElementById('qz-ch-them-score').textContent = `${ctx.originalScore || 0} / ${ctx.originalTotal || 0}`;
+  const themPctEl = document.getElementById('qz-ch-them-pct');
+  themPctEl.textContent = `${themPct}%`;
+  themPctEl.className   = 'qz-ch-vs-pct ' + pctClass(themPct);
+
+  // Word selector — list all challenge words, none checked by default
+  const listEl = document.getElementById('qz-ch-words-list');
+  const words  = Array.isArray(ctx.words) ? ctx.words : [];
+  listEl.innerHTML = words.map((w, idx) => `
+    <label class="qz-ch-word-item" data-idx="${idx}">
+      <input type="checkbox" data-idx="${idx}">
+      <div class="qz-ch-w-pair">
+        <span class="qz-ch-w-src">${escHtml(w.source_word)}</span>
+        <span class="qz-ch-w-arrow">→</span>
+        <span class="qz-ch-w-tgt">${escHtml(w.target_translation)}</span>
+      </div>
+      <span class="qz-ch-w-lang">${escHtml(w.language_pair || '')}</span>
+    </label>`).join('');
+
+  // Reset publish button state
+  const pubBtn = document.getElementById('qz-ch-publish-btn');
+  pubBtn.disabled = !!ctx.published || !ctx.sessionId || String(ctx.sessionId).startsWith('demo-');
+  pubBtn.textContent = ctx.published ? '✓ Publié' : 'Publier mon résultat';
+  if (String(ctx.sessionId || '').startsWith('demo-')) {
+    pubBtn.textContent = 'Publication désactivée (démo)';
+  }
+
+  // Reset selection toggle + add button
+  const addBtn = document.getElementById('qz-ch-add-btn');
+  addBtn.disabled = true;
+  document.getElementById('qz-ch-select-all').textContent = 'Tout sélectionner';
+
+  // Wire up word checkbox interactions (rebind each time — innerHTML wiped)
+  listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      cb.closest('.qz-ch-word-item').classList.toggle('checked', cb.checked);
+      const anyChecked = !!listEl.querySelector('input[type="checkbox"]:checked');
+      addBtn.disabled = !anyChecked;
+    });
+  });
+}
+
+async function publishChallengeResult() {
+  if (!challengeContext || !currentUser) return;
+  const ctx = challengeContext;
+  if (ctx.published) return;
+  if (!ctx.sessionId || String(ctx.sessionId).startsWith('demo-')) {
+    showToast('Publication impossible — session de démo.');
+    return;
+  }
+  const total   = sessionAnswers.length;
+  const correct = sessionAnswers.filter(a => a.correct).length;
+  const myPct   = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const themPct = ctx.originalTotal > 0
+    ? Math.round((ctx.originalScore / ctx.originalTotal) * 100) : 0;
+  const verdict = myPct > themPct ? '🏆 VICTOIRE'
+                : myPct < themPct ? '💪 Défaite'
+                : '🤝 Égalité';
+  const message = `🎯 Challenge relevé : ${correct}/${total} (${myPct}%) — ${verdict}`;
+
+  const pubBtn = document.getElementById('qz-ch-publish-btn');
+  pubBtn.disabled = true;
+  pubBtn.textContent = 'Publication…';
+  const name = await getMultiDisplayName();
+  const { error } = await window.sb.from('quiz_session_comments').insert({
+    session_id:   ctx.sessionId,
+    user_id:      currentUser.id,
+    display_name: name,
+    content:      message,
+  });
+  if (error) {
+    pubBtn.disabled = false;
+    pubBtn.textContent = 'Publier mon résultat';
+    showToast('Erreur lors de la publication');
+    return;
+  }
+  ctx.published = true;
+  pubBtn.textContent = '✓ Publié';
+  multiLoaded = false; // force feed refresh next time
+  showToast('Résultat publié 🎉');
+}
+
+async function addChallengeWordsToVocab() {
+  if (!challengeContext || !currentUser) return;
+  const listEl = document.getElementById('qz-ch-words-list');
+  const checkedIdx = [...listEl.querySelectorAll('input[type="checkbox"]:checked')]
+    .map(cb => parseInt(cb.dataset.idx, 10));
+  if (!checkedIdx.length) { showToast('Aucun mot sélectionné'); return; }
+  const words = challengeContext.words || [];
+  const toInsert = checkedIdx.map(i => words[i]).filter(Boolean);
+
+  const addBtn = document.getElementById('qz-ch-add-btn');
+  addBtn.disabled = true;
+  addBtn.textContent = 'Ajout…';
+
+  let added = 0, dup = 0, err = 0;
+  for (const w of toInsert) {
+    const { error } = await window.sb.from('vocabulary').insert({
+      user_id:            currentUser.id,
+      source_word:        w.source_word,
+      target_translation: w.target_translation,
+      language_pair:      w.language_pair,
+      example_sentence:   w.example_sentence || null,
+      tips:               w.tips || null,
+    });
+    if (!error) { added++; xpTrackWordCreated(); }
+    else if (String(error.message || '').toLowerCase().includes('duplicate') || error.code === '23505') dup++;
+    else err++;
+  }
+  await loadVocab();
+  renderVocab();
+  updateAvailNote();
+
+  let msg = added > 0 ? `${added} mot${added > 1 ? 's' : ''} ajouté${added > 1 ? 's' : ''}` : '';
+  if (dup > 0) msg += `${msg ? ' · ' : ''}${dup} doublon${dup > 1 ? 's' : ''} ignoré${dup > 1 ? 's' : ''}`;
+  if (err > 0) msg += `${msg ? ' · ' : ''}${err} erreur${err > 1 ? 's' : ''}`;
+  showToast(msg || 'Terminé');
+
+  addBtn.textContent = '+ Ajouter au vocabulaire';
+  addBtn.disabled = false;
+  // Uncheck all so the same words can't be re-added by accident
+  listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.qz-ch-word-item').classList.remove('checked');
+  });
+  addBtn.disabled = true;
+}
+
+function exitChallengeToMulti() {
+  challengeContext = null;
+  document.getElementById('quiz-challenge-summary').style.display = 'none';
+  document.getElementById('quiz-active').style.display  = 'none';
+  document.getElementById('quiz-review').style.display  = 'none';
+  document.getElementById('quiz-summary').style.display = 'none';
+  document.getElementById('quiz-setup').style.display   = 'block';
+  switchTab('multi');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('qz-ch-publish-btn')?.addEventListener('click', publishChallengeResult);
+  document.getElementById('qz-ch-add-btn')?.addEventListener('click', addChallengeWordsToVocab);
+  document.getElementById('qz-ch-back-btn')?.addEventListener('click', exitChallengeToMulti);
+  document.getElementById('qz-ch-select-all')?.addEventListener('click', () => {
+    const listEl = document.getElementById('qz-ch-words-list');
+    const boxes  = [...listEl.querySelectorAll('input[type="checkbox"]')];
+    if (!boxes.length) return;
+    const allChecked = boxes.every(cb => cb.checked);
+    boxes.forEach(cb => {
+      cb.checked = !allChecked;
+      cb.closest('.qz-ch-word-item').classList.toggle('checked', cb.checked);
+    });
+    document.getElementById('qz-ch-add-btn').disabled = allChecked;
+    document.getElementById('qz-ch-select-all').textContent =
+      allChecked ? 'Tout sélectionner' : 'Tout désélectionner';
+  });
+});
 
 async function toggleReaction(sid, type, btn) {
   if (!currentUser) { showToast('Connecte-toi pour réagir'); return; }
   if (!feedReactions[sid]) feedReactions[sid] = { fire:0, muscle:0, clap:0, mine: new Set() };
   const rx = feedReactions[sid];
-  const name = await getMultiDisplayName();
+  const isDemo = String(sid).startsWith('demo-');
   if (rx.mine.has(type)) {
-    // Remove
     rx.mine.delete(type);
     rx[type] = Math.max(0, (rx[type] || 1) - 1);
     btn.classList.remove('reacted');
-    await window.sb.from('quiz_session_reactions')
-      .delete().eq('session_id', sid).eq('user_id', currentUser.id).eq('type', type);
+    if (!isDemo) {
+      await window.sb.from('quiz_session_reactions')
+        .delete().eq('session_id', sid).eq('user_id', currentUser.id).eq('type', type);
+    }
   } else {
-    // Add
     rx.mine.add(type);
     rx[type] = (rx[type] || 0) + 1;
     btn.classList.add('reacted');
-    await window.sb.from('quiz_session_reactions').upsert({
-      session_id: sid, user_id: currentUser.id, display_name: name, type,
-    }, { onConflict: 'session_id,user_id,type' });
+    if (!isDemo) {
+      const name = await getMultiDisplayName();
+      await window.sb.from('quiz_session_reactions').upsert({
+        session_id: sid, user_id: currentUser.id, display_name: name, type,
+      }, { onConflict: 'session_id,user_id,type' });
+    }
   }
   const cnt = btn.querySelector('.react-count');
   if (cnt) cnt.textContent = rx[type] || 0;

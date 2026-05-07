@@ -81,13 +81,6 @@
     },
     { divider: true },
     {
-      id: 'account',
-      icon: '👤',
-      label: 'My Account',
-      url: 'account.html',
-      desc: 'Manage your profile, avatar and password.'
-    },
-    {
       id: 'admin',
       icon: '🛡️',
       label: 'Admin',
