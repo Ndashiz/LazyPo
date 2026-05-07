@@ -723,7 +723,7 @@ sequenceDiagram
       <h2>Schéma Entité-Relation</h2>
     </div>
 
-    <p>La base de données comporte <strong>5 tables</strong> dans le schéma public, toutes liées à <code>auth.users</code> (géré par Supabase) avec cascade delete.</p>
+    <p>La base de données comporte <strong>10 tables</strong> dans le schéma public, toutes liées à <code>auth.users</code> (géré par Supabase) avec cascade delete sur les tables propriétaires.</p>
 
     <div class="diagram-wrap">
       <div class="mermaid">
@@ -740,6 +740,7 @@ erDiagram
         text avatar_url
         boolean is_admin
         boolean is_approved
+        text[] allowed_modules
         timestamptz created_at
     }
 
@@ -749,7 +750,6 @@ erDiagram
         text device_info
         timestamptz last_seen
         boolean is_active
-        timestamptz created_at
     }
 
     VOCABULARY {
@@ -759,9 +759,8 @@ erDiagram
         text target_translation
         text language_pair
         text example_sentence
+        text tips
         boolean is_system
-        timestamptz created_at
-        timestamptz updated_at
     }
 
     QUIZ_PROGRESS {
@@ -770,9 +769,51 @@ erDiagram
         uuid word_id FK
         int correct
         int attempts
-        timestamptz last_tested
         float ease_factor
         int interval_days
+    }
+
+    QUIZ_SESSIONS {
+        uuid id PK
+        uuid user_id FK
+        text display_name
+        text avatar_url
+        int score
+        int total
+        text mode
+        text lang
+        jsonb words
+        uuid_array word_ids
+        timestamptz created_at
+    }
+
+    QUIZ_SESSION_COMMENTS {
+        uuid id PK
+        uuid session_id FK
+        uuid user_id FK
+        text display_name
+        text avatar_url
+        text content
+        timestamptz created_at
+    }
+
+    QUIZ_SESSION_REACTIONS {
+        uuid id PK
+        uuid session_id FK
+        uuid user_id FK
+        text type
+        timestamptz created_at
+    }
+
+    VOCAB_SHARES {
+        uuid id PK
+        uuid sender_id FK
+        uuid recipient_id FK
+        text sender_name
+        jsonb payload
+        text status
+        timestamptz created_at
+        timestamptz responded_at
     }
 
     LIVENOTE_DOCS {
@@ -781,8 +822,6 @@ erDiagram
         text title
         text content
         text mode
-        timestamptz created_at
-        timestamptz updated_at
         timestamptz auto_delete_at
     }
 
@@ -790,9 +829,13 @@ erDiagram
     AUTH_USERS ||--o{ USER_SESSIONS : "1-N"
     AUTH_USERS ||--o{ VOCABULARY : "1-N"
     AUTH_USERS ||--o{ QUIZ_PROGRESS : "1-N"
+    AUTH_USERS ||--o{ QUIZ_SESSIONS : "post"
+    AUTH_USERS ||--o{ VOCAB_SHARES : "send/receive"
     VOCABULARY ||--o{ QUIZ_PROGRESS : "1-N"
+    QUIZ_SESSIONS ||--o{ QUIZ_SESSION_COMMENTS : "1-N"
+    QUIZ_SESSIONS ||--o{ QUIZ_SESSION_REACTIONS : "1-N"
       </div>
-      <div class="diagram-caption">Fig. 3 — Diagramme Entité-Relation complet</div>
+      <div class="diagram-caption">Fig. 3 — Diagramme Entité-Relation complet (incluant Multi feed et Vocab Shares)</div>
     </div>
 
     <div class="info-box">
@@ -881,6 +924,74 @@ erDiagram
         <tr><td>auto_delete_at</td><td>timestamptz</td><td>nullable</td><td>Expiration en 24h si activée</td></tr>
       </tbody>
     </table>
+
+    <h3>quiz_sessions <span class="badge badge-blue">Multi feed</span></h3>
+    <p>Snapshot d'une partie de quiz, posté automatiquement par <code>postMultiSession()</code> à la fin d'une session normale (pas en mode Challenge ni Démo).</p>
+    <table class="data-table">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>uuid</td><td>PK</td><td></td></tr>
+        <tr><td>user_id</td><td>uuid</td><td>FK → auth.users</td><td></td></tr>
+        <tr><td>display_name</td><td>text</td><td></td><td>Copie du <code>profiles.username</code> au moment du post</td></tr>
+        <tr><td>avatar_url</td><td>text</td><td></td><td>Copie de l'avatar au moment du post</td></tr>
+        <tr><td>score</td><td>int</td><td></td><td>Bonnes réponses</td></tr>
+        <tr><td>total</td><td>int</td><td></td><td>Total questions</td></tr>
+        <tr><td>duration_sec</td><td>int</td><td></td><td>Durée de la session en secondes</td></tr>
+        <tr><td>mode</td><td>text</td><td></td><td><code>'vocab'</code> | <code>'verbes'</code></td></tr>
+        <tr><td>lang</td><td>text</td><td></td><td>Filtre langue actif (<code>EN→FR</code>, <code>nl</code>, <code>all</code>)</td></tr>
+        <tr><td>direction</td><td>text</td><td>default 'auto'</td><td><code>auto</code> | <code>forward</code> | <code>reverse</code></td></tr>
+        <tr><td>word_ids</td><td>uuid[]</td><td>nullable</td><td>UUIDs propres au vocabulaire de l'auteur (legacy, peu utile cross-user)</td></tr>
+        <tr><td>words</td><td>jsonb</td><td>nullable</td><td>Snapshot des mots <code>[{source_word, target_translation, language_pair, example_sentence, tips}]</code> — permet à <em>Challenge Back</em> de relancer le quiz cross-user</td></tr>
+        <tr><td>created_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h3>quiz_session_comments <span class="badge badge-blue">Multi feed</span></h3>
+    <p>Commentaires postés sous une session du fil d'activité. Aussi utilisé par le bouton <em>Publier mon résultat</em> de Challenge Back qui insère un commentaire formaté sur la session d'origine.</p>
+    <table class="data-table">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>uuid</td><td>PK</td><td></td></tr>
+        <tr><td>session_id</td><td>uuid</td><td>FK → quiz_sessions</td><td></td></tr>
+        <tr><td>user_id</td><td>uuid</td><td>FK → auth.users</td><td></td></tr>
+        <tr><td>display_name</td><td>text</td><td></td><td>Nom affiché (snapshot)</td></tr>
+        <tr><td>avatar_url</td><td>text</td><td>nullable</td><td>Avatar (parfois absent — hydraté depuis <code>profiles</code> au render)</td></tr>
+        <tr><td>content</td><td>text</td><td></td><td>Texte du commentaire (max ~200 chars)</td></tr>
+        <tr><td>created_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h3>quiz_session_reactions <span class="badge badge-blue">Multi feed</span></h3>
+    <p>Réactions emoji (🔥/💪/👏) sur une session. Une seule réaction par <code>(session_id, user_id, type)</code>.</p>
+    <table class="data-table">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>uuid</td><td>PK</td><td></td></tr>
+        <tr><td>session_id</td><td>uuid</td><td>FK → quiz_sessions</td><td></td></tr>
+        <tr><td>user_id</td><td>uuid</td><td>FK → auth.users</td><td></td></tr>
+        <tr><td>display_name</td><td>text</td><td></td><td></td></tr>
+        <tr><td>type</td><td>text</td><td>check (fire|muscle|clap)</td><td>Emoji de réaction</td></tr>
+        <tr><td>created_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
+      </tbody>
+    </table>
+    <p><strong>Contrainte unique :</strong> <code>(session_id, user_id, type)</code> — upsert utilisé pour toggle.</p>
+
+    <h3>vocab_shares <span class="badge badge-purple">Vocab Share</span></h3>
+    <p>Envoi direct de listes de vocabulaire entre membres LazyPO. Le destinataire voit un popup à la prochaine ouverture de <code>quiz.html</code>.</p>
+    <table class="data-table">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>uuid</td><td>PK · gen_random_uuid()</td><td></td></tr>
+        <tr><td>sender_id</td><td>uuid</td><td>FK → auth.users (cascade)</td><td></td></tr>
+        <tr><td>recipient_id</td><td>uuid</td><td>FK → auth.users (cascade)</td><td></td></tr>
+        <tr><td>sender_name</td><td>text</td><td>not null</td><td>Snapshot du nom (au cas où le profil change après envoi)</td></tr>
+        <tr><td>payload</td><td>jsonb</td><td>not null</td><td><code>{ v: 1, from, words: [{s, t, l, e?, p?}] }</code> — clés courtes pour minimiser la taille</td></tr>
+        <tr><td>status</td><td>text</td><td>check (pending|accepted|declined)</td><td>Default <code>'pending'</code></td></tr>
+        <tr><td>created_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
+        <tr><td>responded_at</td><td>timestamptz</td><td>nullable</td><td>Auto-rempli par trigger au passage hors <code>'pending'</code></td></tr>
+      </tbody>
+    </table>
+    <p><strong>Contrainte :</strong> <code>sender_id ≠ recipient_id</code> (no self-share). <strong>Index :</strong> <code>(recipient_id, status, created_at desc)</code> pour le polling rapide côté destinataire.</p>
   </section>
 
   <!-- ══════════════════════════════════════════
@@ -910,10 +1021,15 @@ flowchart LR
     <table class="data-table">
       <thead><tr><th>Table</th><th>Policy</th><th>Règle</th></tr></thead>
       <tbody>
-        <tr><td>profiles</td><td>own_profile</td><td><code>auth.uid() = id</code></td></tr>
+        <tr><td>profiles</td><td>own_profile</td><td><code>auth.uid() = id</code> (lecture cross-user limitée à <code>username, avatar_url</code>)</td></tr>
         <tr><td>user_sessions</td><td>own_sessions</td><td><code>auth.uid() = user_id</code></td></tr>
         <tr><td>vocabulary</td><td>own_vocabulary</td><td><code>auth.uid() = user_id</code></td></tr>
         <tr><td>quiz_progress</td><td>own_progress</td><td><code>auth.uid() = user_id</code></td></tr>
+        <tr><td>quiz_sessions</td><td>read_authenticated · insert_own</td><td>Lecture authentifiée (fil public), insert <code>auth.uid() = user_id</code></td></tr>
+        <tr><td>quiz_session_comments</td><td>read_authenticated · insert_own</td><td>Lecture authentifiée, insert <code>auth.uid() = user_id</code></td></tr>
+        <tr><td>quiz_session_reactions</td><td>read_authenticated · upsert_own</td><td>Lecture authentifiée, upsert <code>auth.uid() = user_id</code></td></tr>
+        <tr><td>vocab_shares</td><td>sender_insert · sender_select · recipient_select · recipient_update</td>
+            <td>Sender peut <code>INSERT</code> + <code>SELECT</code> ses envois. Recipient peut <code>SELECT</code> + <code>UPDATE</code> (accept/decline) ce qui lui est destiné.</td></tr>
         <tr><td>livenote_docs</td><td>public_read</td><td>Lecture publique, écriture authentifiée</td></tr>
       </tbody>
     </table>
@@ -1158,6 +1274,104 @@ flowchart LR
         <tr><td>Import</td><td>Automatiquement <code>is_system: true</code></td><td>Ajout manuel via formulaire</td></tr>
       </tbody>
     </table>
+
+    <h3>Onglet Multi — Fil d'activité communautaire</h3>
+    <p>L'onglet 👥 Multi affiche un fil temps-réel des sessions postées par les autres joueurs, alimenté par <code>quiz_sessions</code> + <code>quiz_session_comments</code> + <code>quiz_session_reactions</code>. Chaque session affiche : avatar/nom, mode (Vocabulaire / Verbes), score %, réactions emoji et thread de commentaires.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Sous-feature</th><th>Comportement</th></tr></thead>
+      <tbody>
+        <tr><td>Auto-post</td><td><code>postMultiSession()</code> à la fin d'une session non-challenge ; insère un snapshot complet (incl. <code>words[]</code>) pour Challenge Back cross-user.</td></tr>
+        <tr><td>Hydratation avatars commentaires</td><td><code>hydrateCommentAvatars()</code> batch-fetch <code>profiles.avatar_url</code> pour les commentaires anciens dont la colonne <code>avatar_url</code> était NULL. Cache <code>__profileAvatarCache</code> pour éviter les requêtes répétées.</td></tr>
+        <tr><td>Top 5 leaderboard</td><td><code>renderLeaderboard()</code> limite à 5 lignes ; si l'utilisateur courant est hors-podium, sa ligne est ajoutée séparément avec son vrai rang.</td></tr>
+        <tr><td>Mode démo admin</td><td>Bouton <code>#multi-demo-btn</code> révélé via <code>lazypo:profile</code> event (admin only). Génère 100 sessions fictives en mémoire avec IDs préfixés <code>demo-*</code> ; guards dans <code>toggleReaction</code> + <code>submitComment</code> empêchent toute écriture DB. Bannière + bouton « Quitter le mode démo ».</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Challenge Back — Re-jouer le quiz d'un autre joueur</h3>
+    <p>Bouton 🎯 Challenge Back disponible sur chaque session du feed (à condition qu'elle ait un <code>words[]</code> snapshot ou des <code>word_ids</code>). Lance le quiz avec exactement les mêmes mots, puis affiche un écran de fin spécifique.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    CB["🎯 Click Challenge Back"] --> META["Lit feedData[sid]\n→ originalMeta"]
+    META --> LAUNCH["launchChallengeQuiz(words, ids, meta)"]
+    LAUNCH --> CTX["Set challengeContext\n{ sessionId, name, score, total, avatar }"]
+    CTX --> PLAY["Quiz s'exécute"]
+    PLAY --> END["endSession()"]
+    END --> SKIP["Skip postMultiSession\n(évite duplication feed)"]
+    SKIP --> SUMMARY["showChallengeSummary()"]
+
+    SUMMARY --> CARD1["Bannière VS\nme score vs them score"]
+    SUMMARY --> CARD2["Verdict\n🏆 Victoire / 💪 Défaite / 🤝 Égalité"]
+    SUMMARY --> CARD3["📢 Publier\n→ commentaire sur session d'origine"]
+    SUMMARY --> CARD4["📚 Sélecteur de mots\nchoix manuel à ajouter au vocab"]
+    SUMMARY --> CARD5["← Retour au Multi\nclear context, switchTab('multi')"]
+
+    style CTX fill:#1e2a3f,stroke:#a78bfa
+    style SUMMARY fill:#1e3a5f,stroke:#3b82f6
+    style CARD3 fill:#0f2a1a,stroke:#34d399
+    style CARD4 fill:#0f2a1a,stroke:#34d399
+      </div>
+      <div class="diagram-caption">Fig. 9b — Flux Challenge Back end-to-end</div>
+    </div>
+
+    <h3>Vocab Share — Partage de listes de vocabulaire</h3>
+    <p>Bouton 🔗 Partager ma liste dans la barre d'outils du Vocabulary tab. Deux mécanismes coexistent :</p>
+
+    <table class="data-table">
+      <thead><tr><th>Mécanisme</th><th>Description</th><th>Backend</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>🔗 Lien</td>
+          <td>Encode <code>{v, from, words[]}</code> en base64 dans l'URL hash (<code>quiz.html#import=...</code>). Auto-trim si la base64 dépasse <code>SHARE_URL_SAFE_BYTES</code> (30 KB).</td>
+          <td><span class="badge badge-muted">Aucun — auto-porteur</span></td>
+        </tr>
+        <tr>
+          <td>📤 Direct member</td>
+          <td>Dropdown des autres membres LazyPO (dérivé des <code>quiz_sessions</code> récentes), insert dans <code>vocab_shares</code> avec status <code>'pending'</code>.</td>
+          <td><span class="badge badge-blue">vocab_shares table</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>Le modal Share dispose d'un <strong>filtre langue</strong> (Toutes / EN→FR / NL→FR), de boutons explicites <strong>Tout sélectionner</strong> / <strong>Tout désélectionner</strong> qui respectent le filtre actif, et n'a <em>aucune limite hardcodée</em> sur le nombre de mots.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant S as 👤 Sender
+    participant SApp as Sender App
+    participant DB as Supabase
+    participant RApp as Recipient App
+    participant R as 👤 Recipient
+
+    S->>SApp: Clic 🔗 Partager · sélectionne mots · 📤 Envoyer à un membre
+    SApp->>DB: INSERT vocab_shares { sender, recipient, payload, status: 'pending' }
+    DB-->>SApp: ✓ inserted
+    SApp-->>S: Toast "📤 Liste envoyée à {Recipient}"
+
+    Note over R,RApp: Plus tard…
+    R->>RApp: Ouvre quiz.html (auth résolue)
+    RApp->>RApp: lazypo:profile fired
+    RApp->>DB: SELECT * FROM vocab_shares WHERE recipient_id=me AND status='pending'
+    DB-->>RApp: row(s) found
+    RApp-->>R: 📚 Popup "A player has shared vocabulary with you"
+
+    alt Accept
+        R->>RApp: Clic Accept
+        RApp->>DB: UPDATE status='accepted'
+        RApp-->>R: Ouvre modal d'import (checkboxes)
+        R->>RApp: Sélectionne mots · + Ajouter au vocabulaire
+        RApp->>DB: INSERT INTO vocabulary (batch)
+    else Decline
+        R->>RApp: Clic Decline
+        RApp->>DB: UPDATE status='declined'
+        RApp->>DB: re-poll for other pending
+    end
+      </div>
+      <div class="diagram-caption">Fig. 9c — Flux Vocab Share direct (sender → recipient popup)</div>
+    </div>
   </section>
 
   <!-- ══════════════════════════════════════════
@@ -1492,9 +1706,50 @@ graph TB
 
   <hr class="sep">
 
+  <!-- ══════════════════════════════════════════
+       18. CHANGELOG
+  ══════════════════════════════════════════ -->
+  <section class="section" id="changelog">
+    <div class="section-header">
+      <div class="section-num">18</div>
+      <h2>★ Dernières modifs</h2>
+    </div>
+
+    <p>Changements significatifs des dernières releases — pour le détail complet voir <code>git log</code> ou les PR mergées sur <code>main</code>.</p>
+
+    <h3>Mai 2026 · PR #84 — Vocab Share rework</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li><strong>Filtre par langue</strong> dans le modal Share (pills Toutes / EN→FR / NL→FR).</li>
+      <li><strong>Tout sélectionner / Tout désélectionner</strong> explicites, respectent le filtre langue actif.</li>
+      <li><strong>Suppression de la limite SHARE_MAX_WORDS=200</strong> ; auto-trim si l'URL dépasse 30 KB avec warning.</li>
+      <li><strong>Envoi direct à un membre</strong> via la nouvelle table <code>vocab_shares</code> (RLS sender insert+select / recipient select+update). Dropdown alimenté par les <code>quiz_sessions</code>.</li>
+      <li><strong>Popup destinataire</strong> en anglais : <em>« A player has shared vocabulary with you »</em>, déclenché au <code>lazypo:profile</code> event.</li>
+      <li>Schéma SQL : <a href="../vocab_shares_schema.sql" target="_blank"><code>vocab_shares_schema.sql</code></a> (à exécuter dans Supabase SQL Editor avant que la feature ne fonctionne).</li>
+    </ul>
+
+    <h3>Mai 2026 · PR #83 — Multi tab + Challenge Back + URL share</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li><strong>Mode démo admin</strong> sur l'onglet Multi (100 sessions fictives, IDs <code>demo-*</code>, aucune écriture DB).</li>
+      <li><strong>Challenge Back end-game</strong> : écran VS dédié avec verdict 🏆/💪/🤝, bouton « Publier mon résultat » (commentaire sur la session d'origine), sélecteur de mots à ajouter au vocab, retour Multi.</li>
+      <li><strong>Hydratation des avatars</strong> de commentaires depuis <code>profiles</code> (pour les anciens commentaires sans <code>avatar_url</code>).</li>
+      <li><strong>Top 5 leaderboard</strong> (au lieu de top 10) avec ligne « moi » hors-podium si nécessaire.</li>
+      <li><strong>Partage par lien URL</strong> (<code>quiz.html#import=&lt;base64&gt;</code>) avec modal d'import auto-ouverte.</li>
+      <li><strong>Sidebar dedup</strong> : suppression de l'item « My Account » (le widget user en bas l'expose déjà via dropdown).</li>
+    </ul>
+
+    <h3>Avril 2026 · PR #79 / #78 / #77 — Avatar pipeline</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li>Détection vraie de l'inaccessibilité d'un avatar (<code>Image()</code> probe au lieu de <code>fetch HEAD</code>).</li>
+      <li>Pipeline d'upload entièrement revu (noms uniques, vérification end-to-end).</li>
+      <li>Fix profile photo affichage.</li>
+    </ul>
+  </section>
+
+  <hr class="sep">
+
   <!-- ─── Footer ─── -->
   <div style="text-align:center; color: var(--muted); font-size: 13px; font-family: 'DM Mono', monospace; padding-top: 16px;">
-    LazyPO · Documentation Technique · Avril 2026
+    LazyPO · Documentation Technique · Mai 2026
   </div>
 
 </main>
