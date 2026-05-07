@@ -1537,16 +1537,70 @@ tr.row-selected { background: rgba(59,130,246,.05); }
 .qz-share-close:hover { color: var(--text); border-color: var(--accent); }
 
 .qz-share-toolbar {
-  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
   font-size: 12px; color: var(--muted);
 }
-.qz-share-toggle-all {
+.qz-share-mini-btn {
   display: inline-flex; gap: 5px; padding: 5px 12px; border-radius: 8px;
   background: var(--surface2); border: 1px solid var(--border2);
   color: var(--text); font-size: 12px; cursor: pointer; font-family: inherit;
+  transition: border-color .15s, background .15s;
 }
-.qz-share-toggle-all:hover { border-color: var(--accent); }
-.qz-share-count { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+.qz-share-mini-btn:hover { border-color: var(--accent); }
+.qz-share-mini-btn:disabled { opacity: .45; cursor: not-allowed; }
+.qz-share-count {
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  color: var(--muted); margin-left: auto;
+}
+
+.qz-share-filter {
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  font-size: 12px; color: var(--muted);
+}
+.qz-share-filter-label {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  letter-spacing: .04em; color: var(--muted); margin-right: 4px;
+}
+.qz-share-pill {
+  padding: 5px 12px; border-radius: 100px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); font-size: 12px; cursor: pointer;
+  font-family: inherit; transition: all .15s;
+}
+.qz-share-pill:hover { border-color: var(--accent); }
+.qz-share-pill.active {
+  background: rgba(59,130,246,.14); border-color: rgba(96,165,250,.5);
+  color: var(--accent2);
+}
+
+.qz-share-warn {
+  display: none; align-items: center; gap: 8px; padding: 8px 12px;
+  border-radius: 8px; font-size: 12px;
+  background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.25);
+  color: #fbbf24;
+}
+.qz-share-warn.visible { display: flex; }
+
+.qz-member-area {
+  display: none; flex-direction: column; gap: 8px;
+  padding: 12px; border-radius: 10px;
+  background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.2);
+}
+.qz-member-area.visible { display: flex; }
+.qz-member-area-label {
+  font-size: 12px; font-weight: 600; color: #c4b5fd;
+  font-family: 'DM Mono', monospace; letter-spacing: .04em;
+}
+.qz-member-select {
+  width: 100%; padding: 9px 12px; border-radius: 9px;
+  background: var(--surface); border: 1px solid var(--border2);
+  color: var(--text); font-size: 13px; font-family: inherit;
+  cursor: pointer;
+}
+.qz-member-select:focus { outline: none; border-color: var(--accent); }
+.qz-member-empty {
+  font-size: 12px; color: var(--muted); font-style: italic;
+}
 
 .qz-share-list {
   display: flex; flex-direction: column; gap: 5px;
@@ -1623,6 +1677,60 @@ tr.row-selected { background: rgba(59,130,246,.05); }
   background: rgba(167,139,250,.14); border: 1px solid rgba(167,139,250,.3);
   color: #c4b5fd; font-family: 'DM Mono', monospace;
   margin-left: 8px;
+}
+
+/* Incoming-share popup (recipient sees this when someone sent them vocab) */
+.qz-incoming-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(5px);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.qz-incoming-overlay.open { display: flex; }
+.qz-incoming-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 28px 26px;
+  max-width: 460px; width: 100%;
+  display: flex; flex-direction: column; gap: 18px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0,0,0,.65);
+  animation: qzShareIn .25s ease;
+}
+.qz-incoming-icon {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(139,92,246,.25), rgba(59,130,246,.18));
+  border: 1px solid rgba(167,139,250,.35);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; margin: 0 auto;
+}
+.qz-incoming-title {
+  font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.35;
+}
+.qz-incoming-sub {
+  font-size: 13.5px; color: var(--muted); line-height: 1.6;
+}
+.qz-incoming-sub strong { color: var(--text); font-weight: 600; }
+.qz-incoming-btns {
+  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 4px;
+}
+.qz-incoming-decline {
+  padding: 10px 22px; border-radius: 10px; cursor: pointer;
+  background: transparent; border: 1px solid var(--border2);
+  color: var(--text); font-size: 14px; font-weight: 500; font-family: inherit;
+  transition: border-color .15s;
+}
+.qz-incoming-decline:hover { border-color: #f87171; color: #f87171; }
+.qz-incoming-accept {
+  padding: 10px 22px; border-radius: 10px; cursor: pointer;
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  color: #fff; border: none;
+  font-size: 14px; font-weight: 700; font-family: inherit;
+  transition: opacity .15s;
+}
+.qz-incoming-accept:hover { opacity: .92; }
+.qz-incoming-extra {
+  font-size: 11px; color: var(--muted); margin-top: 2px;
+  font-family: 'DM Mono', monospace;
 }
 
 /* Row highlighting for failed / weak words */
@@ -2158,28 +2266,63 @@ tr.row-selected { background: rgba(59,130,246,.05); }
       <span class="excel-hint">L'export inclut le scoring SM-2 · L'import met à jour mots &amp; scores</span>
     </div>
 
-    <!-- Share modal — generate a sharable link from selected vocab words -->
+    <!-- Share modal — link OR direct send to a LazyPO member -->
     <div class="qz-share-overlay" id="vocab-share-overlay" role="dialog" aria-labelledby="vocab-share-title">
       <div class="qz-share-card">
         <div class="qz-share-hdr">
           <div>
             <div class="qz-share-title" id="vocab-share-title">🔗 Partager ma liste</div>
-            <div class="qz-share-sub">Coche les mots à partager. Un lien sera généré que tu peux envoyer à un autre joueur.</div>
+            <div class="qz-share-sub">Filtre par langue, sélectionne les mots, puis génère un lien ou envoie-le directement à un joueur.</div>
           </div>
           <button class="qz-share-close" id="vocab-share-close" type="button" aria-label="Fermer">✕</button>
         </div>
-        <div class="qz-share-toolbar">
-          <button class="qz-share-toggle-all" id="vocab-share-toggle-all" type="button">Tout décocher</button>
-          <span class="qz-share-count" id="vocab-share-count">0 / 0 mots sélectionnés</span>
+        <div class="qz-share-filter">
+          <span class="qz-share-filter-label">Langue :</span>
+          <button class="qz-share-pill active" data-share-lang="all"     type="button">Toutes</button>
+          <button class="qz-share-pill"        data-share-lang="EN→FR"   type="button">EN→FR</button>
+          <button class="qz-share-pill"        data-share-lang="NL"      type="button">NL→FR</button>
         </div>
+        <div class="qz-share-toolbar">
+          <button class="qz-share-mini-btn" id="vocab-share-select-all"   type="button">Tout sélectionner</button>
+          <button class="qz-share-mini-btn" id="vocab-share-deselect-all" type="button">Tout désélectionner</button>
+          <span class="qz-share-count" id="vocab-share-count">0 / 0 sélectionnés</span>
+        </div>
+        <div class="qz-share-warn" id="vocab-share-warn"></div>
         <div class="qz-share-list" id="vocab-share-list"></div>
+        <div class="qz-member-area" id="vocab-share-member-area">
+          <span class="qz-member-area-label">📤 Envoyer à un membre LazyPO</span>
+          <select class="qz-member-select" id="vocab-share-member-select">
+            <option value="">— Choisis un joueur —</option>
+          </select>
+          <div class="qz-member-empty" id="vocab-share-member-empty" style="display:none;">
+            Aucun autre joueur disponible (les membres apparaissent dès qu'ils ont joué une partie publique).
+          </div>
+        </div>
         <div class="qz-share-link-area" id="vocab-share-link-area">
           <input type="text" class="qz-share-link-input" id="vocab-share-url" readonly>
           <button class="qz-share-link-copy" id="vocab-share-copy" type="button">📋 Copier</button>
         </div>
         <div class="qz-share-btns">
-          <button class="qz-share-btn-cancel" id="vocab-share-cancel" type="button">Fermer</button>
-          <button class="qz-share-btn-primary" id="vocab-share-generate" type="button">Générer le lien</button>
+          <button class="qz-share-btn-cancel"  id="vocab-share-cancel"      type="button">Fermer</button>
+          <button class="qz-share-btn-primary" id="vocab-share-send-member" type="button">📤 Envoyer à un membre</button>
+          <button class="qz-share-btn-primary" id="vocab-share-generate"    type="button">🔗 Générer un lien</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Incoming share popup — shown to the recipient when a vocab share is pending -->
+    <div class="qz-incoming-overlay" id="vocab-incoming-overlay" role="dialog" aria-labelledby="vocab-incoming-title">
+      <div class="qz-incoming-card">
+        <div class="qz-incoming-icon">📚</div>
+        <div class="qz-incoming-title" id="vocab-incoming-title">A player has shared vocabulary with you</div>
+        <div class="qz-incoming-sub">
+          <strong id="vocab-incoming-sender">Someone</strong> sent you a list of <strong id="vocab-incoming-count">—</strong>.
+          Do you want to accept it?
+        </div>
+        <div class="qz-incoming-extra" id="vocab-incoming-extra"></div>
+        <div class="qz-incoming-btns">
+          <button class="qz-incoming-decline" id="vocab-incoming-decline" type="button">Decline</button>
+          <button class="qz-incoming-accept"  id="vocab-incoming-accept"  type="button">Accept</button>
         </div>
       </div>
     </div>
@@ -3438,9 +3581,11 @@ function submitAddWord() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SHARE / IMPORT VOCABULARY — link-based, no DB writes for sender.
-   Sender: select words → encode as base64 in URL hash → copy.
-   Receiver: open the URL → modal previews words → choose & add.
+   SHARE / IMPORT VOCABULARY
+   Two paths:
+     (1) URL link (cross-platform, no DB on send)
+     (2) Direct send to a LazyPO member (DB-backed via vocab_shares;
+         recipient sees a popup on next quiz.html visit).
 ═══════════════════════════════════════════════════════════ */
 
 function shareEncode(obj) {
@@ -3451,14 +3596,47 @@ function shareDecode(b64) {
   catch { return null; }
 }
 
-const SHARE_MAX_WORDS = 200;
+/* Practical encoded-URL ceiling: most browsers handle 32KB+ but SMS/QR/some
+   chat apps truncate around this point. Above the threshold we auto-trim
+   the selection from the bottom and warn — rather than refusing entirely. */
+const SHARE_URL_SAFE_BYTES = 30000;
+
+let __shareLangFilter = 'all'; // 'all' | 'EN→FR' | 'NL'
+let __shareableMembers = null; // cache of {user_id, display_name}[]
+
+function shareLangMatch(w, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'EN→FR') return w.language_pair === 'EN→FR';
+  if (filter === 'NL')    return w.language_pair === 'NL→FR' || w.language_pair === 'nl-fr';
+  return true;
+}
 
 function openShareModal() {
   if (!vocab.length) { showToast('Ta liste est vide — ajoute des mots d\'abord.'); return; }
-  const overlay = document.getElementById('vocab-share-overlay');
-  const list    = document.getElementById('vocab-share-list');
-  list.innerHTML = vocab.map((w, idx) => `
-    <label class="qz-share-item checked" data-idx="${idx}">
+  __shareLangFilter = 'all';
+  document.querySelectorAll('#vocab-share-overlay .qz-share-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.shareLang === 'all');
+  });
+  renderShareList();
+  document.getElementById('vocab-share-link-area').style.display = 'none';
+  document.getElementById('vocab-share-url').value = '';
+  document.getElementById('vocab-share-generate').style.display    = 'inline-flex';
+  document.getElementById('vocab-share-send-member').style.display = 'inline-flex';
+  document.getElementById('vocab-share-warn').classList.remove('visible');
+  document.getElementById('vocab-share-member-area').classList.remove('visible');
+  document.getElementById('vocab-share-overlay').classList.add('open');
+}
+
+function closeShareModal() {
+  document.getElementById('vocab-share-overlay').classList.remove('open');
+}
+
+function renderShareList() {
+  const list = document.getElementById('vocab-share-list');
+  list.innerHTML = vocab.map((w, idx) => {
+    const visible = shareLangMatch(w, __shareLangFilter);
+    return `
+    <label class="qz-share-item checked" data-idx="${idx}" style="${visible ? '' : 'display:none;'}">
       <input type="checkbox" data-idx="${idx}" checked>
       <div class="qz-share-pair">
         <span class="qz-share-src">${escHtml(w.source_word)}</span>
@@ -3466,59 +3644,90 @@ function openShareModal() {
         <span class="qz-share-tgt">${escHtml(w.target_translation)}</span>
       </div>
       <span class="qz-share-lang">${escHtml(w.language_pair || '')}</span>
-    </label>`).join('');
-  document.getElementById('vocab-share-link-area').style.display = 'none';
-  document.getElementById('vocab-share-url').value = '';
-  document.getElementById('vocab-share-generate').style.display = 'inline-flex';
-  document.getElementById('vocab-share-generate').textContent = 'Générer le lien';
-  document.getElementById('vocab-share-toggle-all').textContent = 'Tout décocher';
+    </label>`;
+  }).join('');
   updateShareCount();
-  overlay.classList.add('open');
 }
 
-function closeShareModal() {
-  document.getElementById('vocab-share-overlay').classList.remove('open');
+function setShareLangFilter(lang) {
+  __shareLangFilter = lang;
+  document.querySelectorAll('#vocab-share-overlay .qz-share-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.shareLang === lang);
+  });
+  document.querySelectorAll('#vocab-share-list .qz-share-item').forEach(item => {
+    const idx = parseInt(item.dataset.idx, 10);
+    const w = vocab[idx];
+    item.style.display = shareLangMatch(w, lang) ? '' : 'none';
+  });
+  updateShareCount();
+}
+
+function getShareCheckedIdx() {
+  return [...document.querySelectorAll('#vocab-share-list .qz-share-item')]
+    .filter(item => item.style.display !== 'none')
+    .filter(item => item.querySelector('input').checked)
+    .map(item => parseInt(item.dataset.idx, 10));
 }
 
 function updateShareCount() {
-  const list  = document.getElementById('vocab-share-list');
-  const total = list.querySelectorAll('input[type="checkbox"]').length;
-  const cnt   = list.querySelectorAll('input[type="checkbox"]:checked').length;
-  document.getElementById('vocab-share-count').textContent =
-    `${cnt} / ${total} mots sélectionnés${cnt > SHARE_MAX_WORDS ? ` · max ${SHARE_MAX_WORDS}` : ''}`;
-  document.getElementById('vocab-share-generate').disabled = cnt === 0;
+  const list = document.getElementById('vocab-share-list');
+  const visible = [...list.querySelectorAll('.qz-share-item')].filter(it => it.style.display !== 'none');
+  const total   = visible.length;
+  const cnt     = visible.filter(it => it.querySelector('input').checked).length;
+  document.getElementById('vocab-share-count').textContent = `${cnt} / ${total} sélectionnés`;
+  const disable = cnt === 0;
+  document.getElementById('vocab-share-generate').disabled    = disable;
+  document.getElementById('vocab-share-send-member').disabled = disable;
+}
+
+function buildSharePayload(checkedIdx) {
+  const words = checkedIdx.map(i => {
+    const w = vocab[i];
+    const o = { s: w.source_word, t: w.target_translation, l: w.language_pair };
+    if (w.example_sentence) o.e = w.example_sentence;
+    if (w.tips)             o.p = w.tips;
+    return o;
+  });
+  return { v: 1, from: multiDisplayName || 'Un joueur LazyPO', words };
+}
+
+function showShareWarn(msg) {
+  const el = document.getElementById('vocab-share-warn');
+  el.textContent = '⚠️ ' + msg;
+  el.classList.add('visible');
+}
+function hideShareWarn() { document.getElementById('vocab-share-warn').classList.remove('visible'); }
+
+function encodeWithTrim(checkedIdx) {
+  let kept    = checkedIdx.slice();
+  let payload = buildSharePayload(kept);
+  let encoded = shareEncode(payload);
+  let dropped = 0;
+  while (encoded.length > SHARE_URL_SAFE_BYTES && kept.length > 1) {
+    kept.pop();
+    dropped++;
+    payload = buildSharePayload(kept);
+    encoded = shareEncode(payload);
+  }
+  return { encoded, kept, dropped };
 }
 
 function generateShareLink() {
-  const list = document.getElementById('vocab-share-list');
-  const checkedIdx = [...list.querySelectorAll('input[type="checkbox"]:checked')]
-    .map(cb => parseInt(cb.dataset.idx, 10));
+  hideShareWarn();
+  const checkedIdx = getShareCheckedIdx();
   if (!checkedIdx.length) return;
-  if (checkedIdx.length > SHARE_MAX_WORDS) {
-    showToast(`Trop de mots — limite à ${SHARE_MAX_WORDS} par partage.`);
-    return;
-  }
-  const words = checkedIdx.map(i => {
-    const w = vocab[i];
-    const obj = { s: w.source_word, t: w.target_translation, l: w.language_pair };
-    if (w.example_sentence) obj.e = w.example_sentence;
-    if (w.tips)             obj.p = w.tips;
-    return obj;
-  });
-  const payload = {
-    v:    1,
-    from: multiDisplayName || 'Un joueur LazyPO',
-    words,
-  };
-  const encoded = shareEncode(payload);
+  const { encoded, dropped } = encodeWithTrim(checkedIdx);
   const url = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') +
               'quiz.html#import=' + encoded;
   document.getElementById('vocab-share-url').value = url;
   document.getElementById('vocab-share-link-area').style.display = 'flex';
-  document.getElementById('vocab-share-generate').style.display = 'none';
-  // Auto-select the input for easy manual copy
-  const input = document.getElementById('vocab-share-url');
-  setTimeout(() => input.select(), 60);
+  document.getElementById('vocab-share-generate').style.display    = 'none';
+  document.getElementById('vocab-share-send-member').style.display = 'none';
+  document.getElementById('vocab-share-member-area').classList.remove('visible');
+  if (dropped > 0) {
+    showShareWarn(`Sélection trop grande pour un lien — ${dropped} mot${dropped > 1 ? 's' : ''} retiré${dropped > 1 ? 's' : ''} pour rester sous la taille max d'URL. Pour tout envoyer, utilise plutôt « Envoyer à un membre ».`);
+  }
+  setTimeout(() => document.getElementById('vocab-share-url').select(), 60);
 }
 
 async function copyShareLink() {
@@ -3532,17 +3741,142 @@ async function copyShareLink() {
   }
 }
 
+/* ── Direct send to a LazyPO member (DB-backed) ── */
+async function loadShareableMembers() {
+  if (__shareableMembers) return __shareableMembers;
+  if (!currentUser || !window.sb) return [];
+  const { data, error } = await window.sb
+    .from('quiz_sessions')
+    .select('user_id, display_name')
+    .neq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (error) return [];
+  const seen = new Map();
+  for (const r of (data || [])) {
+    if (!seen.has(r.user_id)) seen.set(r.user_id, r.display_name || 'Joueur');
+  }
+  __shareableMembers = [...seen.entries()]
+    .map(([user_id, display_name]) => ({ user_id, display_name }))
+    .sort((a, b) => a.display_name.localeCompare(b.display_name));
+  return __shareableMembers;
+}
+
+async function showMemberPicker() {
+  hideShareWarn();
+  const area   = document.getElementById('vocab-share-member-area');
+  const select = document.getElementById('vocab-share-member-select');
+  const empty  = document.getElementById('vocab-share-member-empty');
+  area.classList.add('visible');
+  select.innerHTML = '<option value="">— Chargement… —</option>';
+  empty.style.display  = 'none';
+  select.style.display = '';
+  const members = await loadShareableMembers();
+  if (!members.length) {
+    empty.style.display  = '';
+    select.style.display = 'none';
+    return;
+  }
+  select.innerHTML = '<option value="">— Choisis un joueur —</option>' +
+    members.map(m => `<option value="${escHtml(m.user_id)}">${escHtml(m.display_name)}</option>`).join('');
+  select.disabled = false;
+  select.value = '';
+  select.onchange = async () => {
+    const recipientId = select.value;
+    if (!recipientId) return;
+    const member = members.find(m => m.user_id === recipientId);
+    await sendShareToMember(recipientId, member?.display_name || 'Joueur');
+  };
+}
+
+async function sendShareToMember(recipientId, recipientName) {
+  if (!currentUser) { showToast('Connecte-toi pour envoyer.'); return; }
+  const checkedIdx = getShareCheckedIdx();
+  if (!checkedIdx.length) { showToast('Sélectionne au moins un mot.'); return; }
+  const select = document.getElementById('vocab-share-member-select');
+  select.disabled = true;
+  const senderName = await getMultiDisplayName();
+  const payload = buildSharePayload(checkedIdx);
+  payload.from = senderName || 'Un joueur LazyPO';
+  const { error } = await window.sb.from('vocab_shares').insert({
+    sender_id:    currentUser.id,
+    recipient_id: recipientId,
+    sender_name:  payload.from,
+    payload,
+  });
+  if (error) {
+    select.disabled = false;
+    select.value = '';
+    showToast('Erreur d\'envoi : ' + (error.message || 'inconnue'));
+    return;
+  }
+  showToast(`📤 Liste envoyée à ${recipientName} !`);
+  closeShareModal();
+}
+
 /* ── Receiver side ── */
-function detectShareImport() {
+
+/* Hash-based import (legacy URL flow) */
+function detectShareImportFromHash() {
   const m = (window.location.hash || '').match(/import=([A-Za-z0-9+/=_-]+)/);
-  if (!m) return;
+  if (!m) return false;
   const payload = shareDecode(m[1]);
   if (!payload || !Array.isArray(payload.words) || !payload.words.length) {
     showToast('Lien de partage invalide.');
     history.replaceState(null, '', window.location.pathname);
-    return;
+    return false;
   }
   openImportModal(payload);
+  return true;
+}
+
+/* DB-based pending shares popup */
+async function checkIncomingShares() {
+  if (!currentUser || !window.sb) return;
+  const { data, error } = await window.sb
+    .from('vocab_shares')
+    .select('id, sender_name, payload, created_at')
+    .eq('recipient_id', currentUser.id)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true })
+    .limit(1);
+  if (error || !data || !data.length) return;
+  showIncomingPopup(data[0]);
+}
+
+function showIncomingPopup(share) {
+  const overlay = document.getElementById('vocab-incoming-overlay');
+  const wordCount = Array.isArray(share.payload?.words) ? share.payload.words.length : 0;
+  document.getElementById('vocab-incoming-sender').textContent = share.sender_name || 'A player';
+  document.getElementById('vocab-incoming-count').textContent  =
+    `${wordCount} word${wordCount !== 1 ? 's' : ''}`;
+  document.getElementById('vocab-incoming-extra').textContent =
+    `Sent ${new Date(share.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`;
+  overlay.dataset.shareId = share.id;
+  overlay.dataset.payload = JSON.stringify(share.payload);
+  overlay.classList.add('open');
+}
+
+async function acceptIncomingShare() {
+  const overlay = document.getElementById('vocab-incoming-overlay');
+  const shareId = overlay.dataset.shareId;
+  const payload = JSON.parse(overlay.dataset.payload || '{}');
+  overlay.classList.remove('open');
+  await window.sb.from('vocab_shares')
+    .update({ status: 'accepted' })
+    .eq('id', shareId);
+  openImportModal(payload);
+}
+
+async function declineIncomingShare() {
+  const overlay = document.getElementById('vocab-incoming-overlay');
+  const shareId = overlay.dataset.shareId;
+  overlay.classList.remove('open');
+  await window.sb.from('vocab_shares')
+    .update({ status: 'declined' })
+    .eq('id', shareId);
+  showToast('Share declined.');
+  setTimeout(checkIncomingShares, 300);
 }
 
 function openImportModal(payload) {
@@ -3569,8 +3903,9 @@ function openImportModal(payload) {
 
 function closeImportModal() {
   document.getElementById('vocab-import-overlay').classList.remove('open');
-  // Clean URL so a refresh doesn't re-open the modal
   history.replaceState(null, '', window.location.pathname);
+  // Surface any other still-pending share from the DB
+  setTimeout(checkIncomingShares, 300);
 }
 
 function updateImportCount() {
@@ -3625,10 +3960,12 @@ async function applyShareImport() {
 
 /* ── Wire up share/import handlers (DOM ready) ── */
 document.addEventListener('DOMContentLoaded', () => {
+  // Share modal
   document.getElementById('btn-share-vocab')?.addEventListener('click', openShareModal);
   document.getElementById('vocab-share-close')?.addEventListener('click', closeShareModal);
   document.getElementById('vocab-share-cancel')?.addEventListener('click', closeShareModal);
   document.getElementById('vocab-share-generate')?.addEventListener('click', generateShareLink);
+  document.getElementById('vocab-share-send-member')?.addEventListener('click', showMemberPicker);
   document.getElementById('vocab-share-copy')?.addEventListener('click', copyShareLink);
   document.getElementById('vocab-share-overlay')?.addEventListener('click', e => {
     if (e.target.id === 'vocab-share-overlay') closeShareModal();
@@ -3639,18 +3976,31 @@ document.addEventListener('DOMContentLoaded', () => {
       updateShareCount();
     }
   });
-  document.getElementById('vocab-share-toggle-all')?.addEventListener('click', () => {
-    const boxes = [...document.querySelectorAll('#vocab-share-list input[type="checkbox"]')];
-    const allChecked = boxes.length > 0 && boxes.every(cb => cb.checked);
-    boxes.forEach(cb => {
-      cb.checked = !allChecked;
-      cb.closest('.qz-share-item').classList.toggle('checked', cb.checked);
-    });
-    document.getElementById('vocab-share-toggle-all').textContent =
-      allChecked ? 'Tout cocher' : 'Tout décocher';
+  document.getElementById('vocab-share-select-all')?.addEventListener('click', () => {
+    [...document.querySelectorAll('#vocab-share-list .qz-share-item')]
+      .filter(it => it.style.display !== 'none')
+      .forEach(it => {
+        const cb = it.querySelector('input');
+        cb.checked = true;
+        it.classList.add('checked');
+      });
     updateShareCount();
   });
+  document.getElementById('vocab-share-deselect-all')?.addEventListener('click', () => {
+    [...document.querySelectorAll('#vocab-share-list .qz-share-item')]
+      .filter(it => it.style.display !== 'none')
+      .forEach(it => {
+        const cb = it.querySelector('input');
+        cb.checked = false;
+        it.classList.remove('checked');
+      });
+    updateShareCount();
+  });
+  document.querySelectorAll('#vocab-share-overlay .qz-share-pill').forEach(pill => {
+    pill.addEventListener('click', () => setShareLangFilter(pill.dataset.shareLang));
+  });
 
+  // Import modal
   document.getElementById('vocab-import-cancel')?.addEventListener('click', closeImportModal);
   document.getElementById('vocab-import-close')?.addEventListener('click', closeImportModal);
   document.getElementById('vocab-import-apply')?.addEventListener('click', applyShareImport);
@@ -3675,17 +4025,24 @@ document.addEventListener('DOMContentLoaded', () => {
     updateImportCount();
   });
 
-  // Esc key closes any open share/import modal
+  // Incoming-share popup (recipient receives a vocab list from another player)
+  document.getElementById('vocab-incoming-accept')?.addEventListener('click', acceptIncomingShare);
+  document.getElementById('vocab-incoming-decline')?.addEventListener('click', declineIncomingShare);
+
+  // Esc closes share/import modals (incoming popup is intentionally modal)
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     if (document.getElementById('vocab-share-overlay')?.classList.contains('open')) closeShareModal();
     if (document.getElementById('vocab-import-overlay')?.classList.contains('open')) closeImportModal();
   });
 
-  // Auto-open import modal if URL contains a #import=<base64> share payload.
-  // Runs independently of auth so the modal can preview shared words even
-  // before the user is authenticated; the "Apply" action enforces auth itself.
-  detectShareImport();
+  // URL hash-based import (legacy / cross-platform link share)
+  detectShareImportFromHash();
+});
+
+// Surface DB-based pending shares once the auth profile is ready
+document.addEventListener('lazypo:profile', () => {
+  setTimeout(checkIncomingShares, 1500);
 });
 
 function getFilteredVocab() {
