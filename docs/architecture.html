@@ -2389,6 +2389,19 @@ graph TB
 
     <p>Changements significatifs des dernières releases — pour le détail complet voir <code>git log</code> ou les PR mergées sur <code>main</code>.</p>
 
+    <h3>Août 2026 — 🚩 Quiz : flagger un mot depuis la liste de vocabulaire</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li>Le flag n'était posable qu'en fin de session, sur l'écran Error Review. Un bouton 🚩 dans la
+          colonne Actions le rend disponible <strong>hors session</strong>, en relisant simplement sa liste.</li>
+      <li><strong>Éditeur en ligne</strong> (<code>renderFlagRow()</code>) : la ligne est remplacée sur
+          place par les motifs + la note + <code>Flag it</code> / <code>Remove flag</code>, sur le modèle
+          de <code>renderEditRow()</code>. <code>renderVocab()</code> lit <code>flaggingId</code>, donc
+          l'éditeur survit à un re-rendu et une seule ligne est ouverte à la fois.</li>
+      <li><strong><code>reviewSaveWord()</code> renommée <code>saveWordPatch()</code></strong> — elle
+          n'appartient plus à la review. Même écriture des deux côtés, mais la liste étant visible on
+          re-rend tout de suite au lieu de différer via <code>vocabDirty</code>.</li>
+    </ul>
+
     <h3>Août 2026 — 🔢 Quiz : un numéro permanent par mot de vocabulaire</h3>
     <ul style="padding-left: 24px; margin-bottom: 18px;">
       <li><strong>Colonne <code>#</code></strong> en tête de la table Vocabulary, pour repérer où on
@@ -2423,7 +2436,7 @@ graph TB
       <li><strong>Le score n'est jamais recalculé</strong> — décision assumée. La réponse reste comptée
           fausse et <code>quiz_progress</code> n'est pas retouché ; la correction ne vaut que pour les
           sessions suivantes. Le toast le dit. Le flag ne touche ni au score ni au SRS.</li>
-      <li><strong>Nouvelle fonction <code>reviewSaveWord()</code></strong>, délibérément pas
+      <li><strong>Nouvelle fonction <code>saveWordPatch()</code></strong>, délibérément pas
           <code>updateWord()</code> : celle-ci enchaîne <code>loadVocab()</code> (repagination complète)
           puis <code>renderVocab()</code> sur un onglet caché. Un flag <code>vocabDirty</code> diffère le
           rechargement à <code>showSummary()</code> ou au retour sur l'onglet Vocabulary — une seule fois.</li>

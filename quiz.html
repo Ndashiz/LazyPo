@@ -1117,6 +1117,23 @@ body { padding-left: 64px; }
 }
 .flag-badge { margin-left: 6px; font-size: 12px; cursor: help; }
 
+/* Flag depuis la liste de vocabulaire — ligne remplacée sur place */
+.icon-btn.btn-flag { opacity: .45; }
+.icon-btn.btn-flag:hover { opacity: 1; }
+.icon-btn.btn-flag.flagged { opacity: 1; background: rgba(245,158,11,.14); }
+.qz-table tr.flagging-row td { background: rgba(245,158,11,.05); }
+.vf-wrap {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 2px 0;
+}
+.vf-word { font-weight: 600; font-size: 13px; white-space: nowrap; }
+.vf-reasons { flex-wrap: wrap; }
+.vf-reasons .qz-pill { font-size: 12px; padding: 4px 8px; }
+/* La note absorbe la place restante mais cède avant que ✕ ne saute à la ligne */
+.vf-note { flex: 1 1 110px; min-width: 90px; padding: 6px 10px; font-size: 13px; }
+.vf-wrap .btn-primary,
+.vf-wrap .btn-secondary,
+.vf-wrap .btn-ghost { padding: 6px 12px; font-size: 12px; }
+
 @media (max-width: 520px) {
   .review-compare { grid-template-columns: 1fr; }
   .review-arrow { display: none; }
@@ -3220,10 +3237,12 @@ const FLAG_LABELS = {
    une seule fois (retour sur l'onglet vocabulaire ou fin de session). */
 let vocabDirty = false;
 
-/* Écriture ciblée depuis l'Error Review — délibérément pas updateWord(), qui
-   enchaîne loadVocab() (repagination complète) puis renderVocab() sur un onglet
-   caché. Renvoie true si la ligne a bien été écrite. */
-async function reviewSaveWord(id, patch) {
+/* Écriture ciblée d'un patch sur un mot — délibérément pas updateWord(), qui
+   enchaîne loadVocab() (repagination complète) puis renderVocab(). Partagée par
+   l'Error Review (où recharger serait un aller-retour réseau inutile sur un
+   onglet caché) et par le flag depuis la liste de vocabulaire, qui se contente
+   de re-rendre. Renvoie true si la ligne a bien été écrite. */
+async function saveWordPatch(id, patch) {
   const { data, error } = await window.sb
     .from('vocabulary')
     .update({ ...patch, updated_at: new Date().toISOString() })
@@ -3612,6 +3631,8 @@ let systemFilter    = 'include'; // 'include' | 'exclude' | 'only'  (quiz)
 let searchQuery     = '';
 let sortMode        = 'newest';
 let editingId       = null;
+let flaggingId      = null;    // ligne dont l'éditeur de flag est ouvert (lu par renderVocab)
+let vfReason        = 'wrong_translation';
 let vocabPage       = 0;
 const VOCAB_PER_PAGE = 20;
 
@@ -3840,9 +3861,12 @@ function renderVocab() {
     return;
   }
 
-  tbody.innerHTML = list.map(word => renderVocabRow(word)).join('');
+  tbody.innerHTML = list.map(word =>
+    word.id === flaggingId ? renderFlagRow(word) : renderVocabRow(word)
+  ).join('');
   updateBulkBar();
   attachRowListeners();
+  attachFlagListeners();   // no-op tant qu'aucune ligne n'est en flag
   document.getElementById('vocab-pagination').innerHTML = '';
 }
 
@@ -3900,7 +3924,33 @@ function renderVocabRow(word) {
     </td>
     <td>
       <button class="icon-btn btn-edit" data-id="${word.id}" title="Edit" aria-label="Edit word">✏️</button>
+      <button class="icon-btn btn-flag${word.flagged_at ? ' flagged' : ''}" data-id="${word.id}"
+              title="${word.flagged_at ? escHtml(flagTitle) : 'Signaler ce mot'}" aria-label="Flag word">🚩</button>
       <button class="icon-btn danger btn-delete" data-id="${word.id}" title="Delete" aria-label="Delete word">🗑️</button>
+    </td>
+  </tr>`;
+}
+
+/* Éditeur de flag en ligne, sur le modèle de renderEditRow : la ligne est
+   remplacée sur place, pas de modale (la page tourne en iframe chez Jarvis). */
+function renderFlagRow(word) {
+  const flagged  = !!word.flagged_at;
+  const selected = word.flag_reason || 'wrong_translation';
+  const pills = Object.entries(FLAG_LABELS).map(([v, label]) =>
+    `<button class="qz-pill${v === selected ? ' active' : ''}" data-vf-reason="${v}">${escHtml(label)}</button>`
+  ).join('');
+  return `<tr data-id="${word.id}" class="flagging-row">
+    <td class="num-col">${vocabNum[word.id] || '—'}</td>
+    <td colspan="7">
+      <div class="vf-wrap">
+        <span class="vf-word">🚩 ${escHtml(word.source_word)}</span>
+        <div class="qz-pill-group vf-reasons">${pills}</div>
+        <input class="review-input vf-note" id="vf-note" maxlength="200"
+               placeholder="Note (facultatif)…" value="${escHtml(word.flag_note || '')}">
+        <button class="btn-primary vf-save" data-id="${word.id}">${flagged ? 'Update' : 'Flag it'}</button>
+        ${flagged ? `<button class="btn-ghost danger vf-remove" data-id="${word.id}">Remove flag</button>` : ''}
+        <button class="btn-secondary vf-cancel" title="Annuler">✕</button>
+      </div>
     </td>
   </tr>`;
 }
@@ -3938,8 +3988,66 @@ function attachRowListeners() {
   document.querySelectorAll('.btn-edit').forEach(btn => {
     btn.addEventListener('click', () => startEdit(btn.dataset.id));
   });
+  document.querySelectorAll('.btn-flag').forEach(btn => {
+    btn.addEventListener('click', () => startFlag(btn.dataset.id));
+  });
   document.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', () => deleteWord(btn.dataset.id));
+  });
+}
+
+/* ── Flag depuis la liste de vocabulaire ──────────────────────────
+   Même écriture que depuis l'Error Review (saveWordPatch), mais ici la liste
+   est visible : on re-rend tout de suite au lieu de différer.
+   flaggingId / vfReason sont déclarés avec l'état vocabulaire plus haut. */
+
+function startFlag(id) {
+  const word = vocab.find(w => w.id === id);
+  if (!word) return;
+  editingId  = null;                              // jamais édition et flag à la fois
+  flaggingId = (flaggingId === id) ? null : id;   // re-clic sur 🚩 = refermer
+  if (flaggingId) vfReason = word.flag_reason || 'wrong_translation';
+  renderVocab();                                  // renderVocab lit flaggingId
+  document.getElementById('vf-note')?.focus();
+}
+
+function attachFlagListeners() {
+  document.querySelectorAll('.flagging-row [data-vf-reason]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.flagging-row [data-vf-reason]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      vfReason = btn.dataset.vfReason;
+    });
+  });
+
+  const close = () => { flaggingId = null; renderVocab(); };
+
+  document.querySelector('.vf-save')?.addEventListener('click', async e => {
+    const id   = e.target.dataset.id;
+    const note = (document.getElementById('vf-note')?.value || '').trim().slice(0, 200);
+    const ok = await saveWordPatch(id, {
+      flagged_at:  new Date().toISOString(),
+      flag_reason: vfReason,
+      flag_note:   note || null,
+    });
+    if (!ok) return;
+    close();
+    showToast('Mot signalé');
+  });
+
+  document.querySelector('.vf-remove')?.addEventListener('click', async e => {
+    const ok = await saveWordPatch(e.target.dataset.id,
+      { flagged_at: null, flag_reason: null, flag_note: null });
+    if (!ok) return;
+    close();
+    showToast('Flag retiré');
+  });
+
+  document.querySelector('.vf-cancel')?.addEventListener('click', close);
+
+  document.getElementById('vf-note')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); document.querySelector('.vf-save')?.click(); }
+    if (e.key === 'Escape') { e.preventDefault(); close(); }
   });
 }
 
@@ -4726,7 +4834,7 @@ async function reviewCommitEdit() {
   const example = document.getElementById('review-edit-example').value.trim();
   if (!source || !target) { showToast('Source and translation are required'); return; }
 
-  const ok = await reviewSaveWord(word.id, {
+  const ok = await saveWordPatch(word.id, {
     source_word:        source,
     target_translation: target,
     example_sentence:   example || null,
@@ -4794,7 +4902,7 @@ async function reviewCommitFlag() {
   const word = reviewCurrentWord();
   if (!word || !word.id) return;
   const note = document.getElementById('review-flag-note').value.trim().slice(0, 200);
-  const ok = await reviewSaveWord(word.id, {
+  const ok = await saveWordPatch(word.id, {
     flagged_at:  new Date().toISOString(),
     flag_reason: reviewFlagReason,
     flag_note:   note || null,
@@ -4810,7 +4918,7 @@ document.getElementById('review-flag-cancel').addEventListener('click', reviewCl
 document.getElementById('review-flag-remove').addEventListener('click', async () => {
   const word = reviewCurrentWord();
   if (!word || !word.id) return;
-  const ok = await reviewSaveWord(word.id, { flagged_at: null, flag_reason: null, flag_note: null });
+  const ok = await saveWordPatch(word.id, { flagged_at: null, flag_reason: null, flag_note: null });
   if (!ok) return;
   showReviewItem();
   showToast('Flag retiré');

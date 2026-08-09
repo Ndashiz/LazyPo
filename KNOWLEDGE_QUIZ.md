@@ -227,9 +227,9 @@ quand on ne sait pas.
 
 ### Contraintes d'implémentation
 
-- **`reviewSaveWord(id, patch)`, pas `updateWord()`** : cette dernière enchaîne `loadVocab()`
+- **`saveWordPatch(id, patch)`, pas `updateWord()`** : cette dernière enchaîne `loadVocab()`
   (repagination complète du vocabulaire) puis `renderVocab()` sur un onglet caché. En pleine
-  review c'est un aller-retour réseau inutile. `reviewSaveWord` pose `vocabDirty = true` et
+  review c'est un aller-retour réseau inutile. `saveWordPatch` pose `vocabDirty = true` et
   `flushVocabDirty()` recharge **une seule fois**, plus tard : au retour sur l'onglet vocabulaire
   ou dans `showSummary()`.
 - **Mutation en place**, jamais de réassignation : `vocab[]`, `quizQueue[].word`,
@@ -255,6 +255,20 @@ jamais revu.
 
 Re-cliquer sur **🚩 Flagged** rouvre le panneau prérempli avec `Update flag` et `Remove flag` —
 confirmation par second clic, jamais de `confirm()` (on est en iframe).
+
+### Flagger depuis la liste de vocabulaire
+
+Le même geste est disponible hors session, via le bouton 🚩 de la colonne Actions. La ligne est
+**remplacée sur place** par un éditeur (motifs + note + `Flag it` / `Remove flag` / `✕`), sur le
+modèle de `renderEditRow()` — pas de modale.
+
+- `renderVocab()` lit `flaggingId` et rend `renderFlagRow()` pour cette ligne : l'éditeur survit à
+  un re-rendu, et une seule ligne peut être ouverte à la fois. Re-cliquer sur 🚩 referme.
+- Même écriture que depuis la review (`saveWordPatch`), mais la liste étant visible on
+  **re-rend tout de suite** au lieu de différer via `vocabDirty`.
+- `Enter` enregistre, `Escape` annule. Un refus RLS laisse l'éditeur ouvert.
+- Ouvrir un éditeur de flag annule une édition de mot en cours (`editingId = null`) — jamais les
+  deux à la fois.
 
 ---
 
@@ -282,8 +296,10 @@ let vocabDirty = false      // mot corrigé/flaggé en review → recharger plus
 | `endSession()` | Stats, post au fil, review/résumé. |
 | `buildQuizQueue()` | Filtre + shuffle du vocabulaire. |
 | `recordAnswer(wordId, isCorrect)` | Upsert `quiz_progress` (logique SM-2). |
-| `reviewSaveWord(id, patch)` | Écriture ciblée depuis l'Error Review — mute le mot en place, marque `vocabDirty`, **ne recharge pas** le vocabulaire (§7bis). |
+| `saveWordPatch(id, patch)` | Écriture ciblée d'un patch sur un mot — mute l'objet en place, marque `vocabDirty`, **ne recharge pas** le vocabulaire. Partagée par la review et le flag depuis la liste (§7bis). |
 | `flushVocabDirty()` | Repagination différée, une seule fois, hors review. |
+| `startFlag(id)` / `renderFlagRow(word)` | Éditeur de flag en ligne dans la liste de vocabulaire (§7bis). |
+| `computeVocabNumbers()` | Numéro permanent de chaque mot = rang de création (§7). |
 | `postMultiSession()` | INSERT dans `quiz_sessions`. |
 | `launchChallengeQuiz()` | Mise en place du Challenge Back. |
 | `publishChallengeResult()` | Publie le score en commentaire. |
