@@ -182,13 +182,29 @@ Implémentation : `launchChallengeQuiz(wordSnapshots, wordIdsFallback, originalM
 
 ## 7. Flux UI/UX
 
-**Setup quiz** : paire de langue → direction → nombre de questions (5/10/20/50) → filtres (système, ratés/fragiles) → Start.
+**Setup quiz** : paire de langue → direction → filtres (système, ratés/fragiles) → **plage de mots** → nombre de questions (5/10/20/50) → Start.
+
+> **Plage de mots** — deux champs `du n° … au n° …` qui restreignent la session à un intervalle de
+> numéros permanents (« je révise du mot 1 au 250 »). Les deux bornes sont facultatives : vide =
+> pas de borne, `Tout` remet à zéro. Une plage inversée n'est pas corrigée en douce — elle affiche
+> « plage vide » et `Start` se désactive tout seul (0 mot disponible). Le filtre s'applique dans
+> `filterVocabForQuiz()`, donc il vaut aussi pour la file réellement tirée par `buildQuizQueue()`.
+> `loadVocab()` appelle `computeVocabNumbers()` pour que les numéros existent même si l'onglet
+> Vocabulary n'a jamais été ouvert.
 
 **Quiz actif** : timer 30 s par question, exemple + tip optionnels, saisie + Enter/Check, feedback ✅/❌, auto-advance, compteur de streak.
 
 **Fin de session** : Review des erreurs (si présentes) → résumé (score, %, temps, badge streak) → panneau d'ajout (si Challenge Back) → auto-post au fil (sauf mode Challenge).
 
-**Vocabulary** : formulaire d'ajout rapide, import/export Excel, actions bulk, table triable (n°, mot, traduction, langue, taux, niveau), filtres.
+**Vocabulary** : formulaire d'ajout rapide, import/export Excel, actions bulk, table triable **au clic sur n'importe quel en-tête**, filtres.
+
+> **Tri au clic** (`sortCol` / `sortDir`, `SORT_ACCESSORS`, `sortVocabList()`) — comme dans Excel :
+> un clic trie, un second inverse le sens. Les colonnes numériques (`#`, taux) partent en
+> décroissant, les colonnes texte en alphabétique. **Les cellules vides restent toujours en bas**,
+> quel que soit le sens : inverser un tri pour faire remonter 400 tirets ne sert personne. Un mot
+> sans tentative n'a pas un taux de 0 % mais *pas de taux* — il compte comme vide.
+> L'ancien `<select id="vocab-sort">` était en `display:none` et sans handler : les en-têtes
+> portaient déjà `class="sortable"` mais ne réagissaient à rien. Les deux ont été remplacés.
 
 > **Colonne `#`** — numéro **permanent** du mot, calculé par `computeVocabNumbers()` comme son
 > rang de création (le plus ancien = 1), pas comme sa position dans la liste affichée. Trier,
@@ -299,7 +315,9 @@ let vocabDirty = false      // mot corrigé/flaggé en review → recharger plus
 | `saveWordPatch(id, patch)` | Écriture ciblée d'un patch sur un mot — mute l'objet en place, marque `vocabDirty`, **ne recharge pas** le vocabulaire. Partagée par la review et le flag depuis la liste (§7bis). |
 | `flushVocabDirty()` | Repagination différée, une seule fois, hors review. |
 | `startFlag(id)` / `renderFlagRow(word)` | Éditeur de flag en ligne dans la liste de vocabulaire (§7bis). |
-| `computeVocabNumbers()` | Numéro permanent de chaque mot = rang de création (§7). |
+| `computeVocabNumbers()` | Numéro permanent de chaque mot = rang de création (§7). Appelée par `loadVocab()`. |
+| `sortVocabList(list)` | Tri de la liste selon `sortCol` / `sortDir`, vides en bas (§7). |
+| `filterVocabForQuiz(filter)` | Filtres du quiz : langue, système, **plage de numéros** (§7). |
 | `postMultiSession()` | INSERT dans `quiz_sessions`. |
 | `launchChallengeQuiz()` | Mise en place du Challenge Back. |
 | `publishChallengeResult()` | Publie le score en commentaire. |

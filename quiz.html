@@ -1117,6 +1117,17 @@ body { padding-left: 64px; }
 }
 .flag-badge { margin-left: 6px; font-size: 12px; cursor: help; }
 
+/* Plage de mots dans le setup du quiz */
+.qz-range-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.qz-range-lab { font-size: 13px; color: var(--muted); }
+.qz-range-input {
+  width: 88px; padding: 8px 10px;
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px;
+  color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
+  outline: none; transition: border-color .15s;
+}
+.qz-range-input:focus { border-color: var(--accent); }
+
 /* Flag depuis la liste de vocabulaire — ligne remplacée sur place */
 .icon-btn.btn-flag { opacity: .45; }
 .icon-btn.btn-flag:hover { opacity: 1; }
@@ -1349,7 +1360,12 @@ body { padding-left: 64px; }
   user-select: none;
 }
 .qz-table th.sortable:hover { color: var(--text); }
-.sort-icon { margin-left: 4px; opacity: .5; }
+.qz-table th.sorted { color: var(--text); }
+.sort-icon { margin-left: 4px; opacity: .25; font-size: 11px; }
+.qz-table th.sortable:hover .sort-icon { opacity: .6; }
+.sort-icon::after      { content: '↕'; }
+.sort-icon.asc,
+.sort-icon.desc        { opacity: 1; color: var(--accent); }
 .sort-icon.asc::after  { content: '↑'; }
 .sort-icon.desc::after { content: '↓'; }
 
@@ -2174,12 +2190,6 @@ tr.row-selected { background: rgba(59,130,246,.05); }
     </div>
 
     <!-- Filter bar -->
-    <select id="vocab-sort" class="qz-sort-select" style="display:none" aria-label="Sort vocabulary">
-      <option value="newest">Newest first</option>
-      <option value="oldest">Oldest first</option>
-      <option value="az">A → Z</option>
-      <option value="hardest">Hardest first</option>
-    </select>
     <div class="qz-filter-bar">
       <div class="qz-search-wrap">
         <span class="qz-search-icon">🔍</span>
@@ -2226,13 +2236,13 @@ tr.row-selected { background: rgba(59,130,246,.05); }
       <table class="qz-table" id="vocab-table" aria-label="Vocabulary list">
         <thead>
           <tr>
-            <th class="num-col" title="Numéro permanent — ne bouge pas quand on trie ou filtre">#</th>
-            <th class="sortable" data-sort="az">Source word ↕</th>
-            <th>Translation ↕</th>
-            <th>Language</th>
-            <th>Example</th>
-            <th>Tips</th>
-            <th class="sortable" data-sort="hardest">Success rate ↕</th>
+            <th class="num-col sortable" data-sort="num" title="Numéro permanent — ne bouge pas quand on trie ou filtre">#<span class="sort-icon"></span></th>
+            <th class="sortable" data-sort="source">Source word<span class="sort-icon"></span></th>
+            <th class="sortable" data-sort="target">Translation<span class="sort-icon"></span></th>
+            <th class="sortable" data-sort="lang">Language<span class="sort-icon"></span></th>
+            <th class="sortable" data-sort="example">Example<span class="sort-icon"></span></th>
+            <th class="sortable" data-sort="tips">Tips<span class="sort-icon"></span></th>
+            <th class="sortable" data-sort="rate">Success rate<span class="sort-icon"></span></th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -2298,6 +2308,19 @@ tr.row-selected { background: rgba(59,130,246,.05); }
             <button class="qz-pill"        data-system="exclude">🚫 Exclure</button>
             <button class="qz-pill"        data-system="only">🤖 Uniquement</button>
           </div>
+        </div>
+
+        <!-- Plage de mots — numéros de la colonne # de l'onglet Vocabulary -->
+        <div class="qz-option-group">
+          <div class="qz-option-label">Plage de mots</div>
+          <div class="qz-range-row">
+            <span class="qz-range-lab">du n°</span>
+            <input type="number" id="range-from" class="qz-range-input" min="1" step="1" placeholder="1" inputmode="numeric">
+            <span class="qz-range-lab">au n°</span>
+            <input type="number" id="range-to" class="qz-range-input" min="1" step="1" placeholder="—" inputmode="numeric">
+            <button class="qz-pill" id="range-reset" type="button">Tout</button>
+          </div>
+          <p class="qz-avail-note" id="range-note"></p>
         </div>
 
         <!-- Count -->
@@ -3195,6 +3218,9 @@ async function loadVocab() {
     from += PAGE;
   }
   vocab = all;
+  // Les numéros doivent être prêts même si l'onglet Vocabulary n'a jamais été
+  // ouvert : le setup du quiz s'en sert pour la plage de mots.
+  computeVocabNumbers();
 }
 
 async function addWord(obj) {
@@ -3629,7 +3655,8 @@ let levelFilter     = 'all';   // 'all' | 'beginner' | 'intermediate' | 'advance
 let flagFilter      = 'all';   // 'all' | 'flagged'
 let systemFilter    = 'include'; // 'include' | 'exclude' | 'only'  (quiz)
 let searchQuery     = '';
-let sortMode        = 'newest';
+let sortCol         = 'num';   // colonne de tri (clé de SORT_ACCESSORS)
+let sortDir         = 'desc';  // 'asc' | 'desc' — n° décroissant = plus récents en haut
 let editingId       = null;
 let flaggingId      = null;    // ligne dont l'éditeur de flag est ouvert (lu par renderVocab)
 let vfReason        = 'wrong_translation';
@@ -3688,12 +3715,6 @@ document.querySelectorAll('[data-flag-filter]').forEach(btn => {
     vocabPage = 0;
     renderVocab();
   });
-});
-
-/* Sort */
-document.getElementById('vocab-sort').addEventListener('change', e => {
-  sortMode = e.target.value;
-  renderVocab();
 });
 
 /* Print */
@@ -3800,15 +3821,61 @@ function getFilteredVocab() {
     w.source_word.toLowerCase().includes(searchQuery) ||
     w.target_translation.toLowerCase().includes(searchQuery)
   );
-  if (sortMode === 'oldest') {
-    list.sort((a, b) => new Date(a.created_at||0) - new Date(b.created_at||0));
-  } else if (sortMode === 'az') {
-    list.sort((a, b) => a.source_word.localeCompare(b.source_word));
-  } else if (sortMode === 'hardest') {
-    list.sort((a, b) => rateOf(a.id) - rateOf(b.id));
-  }
-  return list;
+  return sortVocabList(list);
 }
+
+/* Tri au clic sur l'en-tête, à la Excel. Valeur triée par colonne — `null`
+   signifie « cellule vide » et reste en bas quel que soit le sens. */
+const SORT_ACCESSORS = {
+  num:     w => vocabNum[w.id] || null,
+  source:  w => (w.source_word || '').toLowerCase() || null,
+  target:  w => (w.target_translation || '').toLowerCase() || null,
+  lang:    w => (w.language_pair || '').toLowerCase().startsWith('en') ? 'EN' : 'NL',
+  example: w => (w.example_sentence || '').toLowerCase() || null,
+  tips:    w => (w.tips || '').toLowerCase() || null,
+  rate:    w => { const r = rateOf(w.id); return r < 0 ? null : r; },
+};
+
+function sortVocabList(list) {
+  const get = SORT_ACCESSORS[sortCol] || SORT_ACCESSORS.num;
+  const dir = sortDir === 'asc' ? 1 : -1;
+  return list.sort((a, b) => {
+    const va = get(a), vb = get(b);
+    // Vides toujours en bas, comme un tri Excel : les inverser ne sert personne
+    if (va === null || vb === null) {
+      if (va === vb) return 0;
+      return va === null ? 1 : -1;
+    }
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+    return String(va).localeCompare(String(vb), 'fr') * dir;
+  });
+}
+
+function renderSortIndicators() {
+  document.querySelectorAll('#vocab-table th.sortable').forEach(th => {
+    const active = th.dataset.sort === sortCol;
+    th.classList.toggle('sorted', active);
+    th.setAttribute('aria-sort', active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.className = 'sort-icon' + (active ? ' ' + sortDir : '');
+  });
+}
+
+document.querySelectorAll('#vocab-table th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.sort;
+    if (sortCol === col) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortCol = col;
+      // Un numéro ou un taux se lit d'abord du plus grand au plus petit,
+      // du texte dans l'ordre alphabétique.
+      sortDir = (col === 'num' || col === 'rate') ? 'desc' : 'asc';
+    }
+    vocabPage = 0;
+    renderVocab();
+  });
+});
 
 function rateOf(wordId) {
   return wordRate(progress[wordId]); // fenêtre glissante (fallback lifetime)
@@ -3864,6 +3931,7 @@ function renderVocab() {
   tbody.innerHTML = list.map(word =>
     word.id === flaggingId ? renderFlagRow(word) : renderVocabRow(word)
   ).join('');
+  renderSortIndicators();
   updateBulkBar();
   attachRowListeners();
   attachFlagListeners();   // no-op tant qu'aucune ligne n'est en flag
@@ -4108,6 +4176,49 @@ function attachEditListeners() {
 let selectedIds = new Set();
 
 let quizFilter  = 'all';
+let rangeFrom   = null;   // n° de début, null = pas de borne
+let rangeTo     = null;   // n° de fin,   null = pas de borne
+
+/* Plage de mots — lit les numéros permanents de l'onglet Vocabulary */
+function readRangeInputs() {
+  const parse = el => {
+    const v = parseInt(el.value, 10);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  };
+  rangeFrom = parse(document.getElementById('range-from'));
+  rangeTo   = parse(document.getElementById('range-to'));
+}
+
+function updateRangeNote() {
+  const note = document.getElementById('range-note');
+  if (!note) return;
+  const total = vocab.length;
+  if (rangeFrom === null && rangeTo === null) {
+    note.textContent = total
+      ? `Tout le vocabulaire (n° 1 à ${total}). Les numéros sont ceux de la colonne # de l'onglet Vocabulary.`
+      : 'Les numéros sont ceux de la colonne # de l\'onglet Vocabulary.';
+    return;
+  }
+  const lo = rangeFrom ?? 1;
+  const hi = rangeTo   ?? total;
+  note.textContent = (lo > hi)
+    ? `Plage vide — le n° de début (${lo}) est supérieur au n° de fin (${hi}).`
+    : `Mots n° ${lo} à ${hi}.`;
+}
+
+['range-from', 'range-to'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    readRangeInputs();
+    updateAvailNote();   // appelle updateRangeNote()
+  });
+});
+
+document.getElementById('range-reset')?.addEventListener('click', () => {
+  document.getElementById('range-from').value = '';
+  document.getElementById('range-to').value   = '';
+  rangeFrom = rangeTo = null;
+  updateAvailNote();
+});
 let quizCount   = 10;
 
 /* System pills */
@@ -4160,6 +4271,10 @@ document.querySelectorAll('#count-btns .qz-count-btn').forEach(btn => {
 });
 
 function updateAvailNote() {
+  const toEl = document.getElementById('range-to');
+  if (toEl) toEl.placeholder = vocab.length ? String(vocab.length) : '—';
+  updateRangeNote();
+
   const filtered = filterVocabForQuiz(quizFilter);
   const avail    = filtered.length;
   const startBtn = document.getElementById('btn-start-quiz');
@@ -4216,6 +4331,14 @@ function filterVocabForQuiz(filter) {
   // System filter
   if (systemFilter === 'exclude') list = list.filter(w => !w.is_system);
   if (systemFilter === 'only')    list = list.filter(w =>  w.is_system);
+
+  // Plage de numéros — « je révise du mot 1 au 250 ». Les numéros sont ceux de
+  // computeVocabNumbers() (rang de création), pas des positions d'affichage.
+  if (rangeFrom !== null || rangeTo !== null) {
+    const lo = rangeFrom ?? 1;
+    const hi = rangeTo   ?? Infinity;
+    list = list.filter(w => { const n = vocabNum[w.id]; return n >= lo && n <= hi; });
+  }
 
   return list;
 }

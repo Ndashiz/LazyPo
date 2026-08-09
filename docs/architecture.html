@@ -2389,6 +2389,26 @@ graph TB
 
     <p>Changements significatifs des dernières releases — pour le détail complet voir <code>git log</code> ou les PR mergées sur <code>main</code>.</p>
 
+    <h3>Août 2026 — ↕️ Quiz : tri au clic sur les colonnes, et plage de mots à réviser</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li><strong>Tri au clic sur n'importe quel en-tête</strong> de la table Vocabulary, à la Excel :
+          un clic trie, un second inverse. Les en-têtes portaient déjà <code>class="sortable"</code>
+          mais <strong>aucun handler n'était branché</strong>, et le <code>&lt;select id="vocab-sort"&gt;</code>
+          était en <code>display:none</code> — cliquer ne faisait donc rien. Les deux sont remplacés par
+          <code>sortCol</code> / <code>sortDir</code> + <code>SORT_ACCESSORS</code>.</li>
+      <li><strong>Les cellules vides restent en bas</strong> quel que soit le sens du tri. Inverser un
+          tri pour faire remonter 400 tirets ne sert personne. Un mot jamais testé n'a pas un taux de
+          0 % mais <em>pas de taux</em> : il compte comme vide, pas comme le plus mauvais.</li>
+      <li><strong>Plage de mots dans le setup du quiz</strong> — <em>du n° X au n° Y</em>, en s'appuyant sur
+          les numéros permanents. « Je révise du mot 1 au 250 » sans toucher aux filtres existants.
+          Bornes facultatives des deux côtés ; une plage inversée n'est pas corrigée en douce, elle
+          affiche « plage vide » et <code>Start</code> se désactive.</li>
+      <li>Le filtre vit dans <code>filterVocabForQuiz()</code>, donc il s'applique aussi à la file
+          réellement tirée par <code>buildQuizQueue()</code>, pas seulement au compteur affiché.
+          <code>loadVocab()</code> appelle désormais <code>computeVocabNumbers()</code> : les numéros
+          doivent exister même si l'onglet Vocabulary n'a jamais été ouvert.</li>
+    </ul>
+
     <h3>Août 2026 — 🚩 Quiz : flagger un mot depuis la liste de vocabulaire</h3>
     <ul style="padding-left: 24px; margin-bottom: 18px;">
       <li>Le flag n'était posable qu'en fin de session, sur l'écran Error Review. Un bouton 🚩 dans la
