@@ -419,6 +419,14 @@ body { padding-left: 64px; }
 .qz-table tr:last-child td { border-bottom: none; }
 .qz-table tr:hover td { background: rgba(255,255,255,.02); }
 
+/* Numéro permanent du mot — discret, jamais au détriment du mot lui-même */
+.qz-table th.num-col,
+.qz-table td.num-col {
+  width: 46px; text-align: right; padding-right: 14px;
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  color: var(--muted); font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
 .qz-table td.source-word { font-weight: 600; }
 
 .qz-table td.example {
@@ -1836,8 +1844,9 @@ tr.row-selected { background: rgba(59,130,246,.05); }
   .qz-add-row .qz-input { width: 100%; }
   .qz-lang-toggle { align-self: flex-start; }
   .qz-table { font-size: 13px; }
-  .qz-table th:nth-child(4),
-  .qz-table td:nth-child(4) { display: none; }
+  /* Masque « Example » — 5e colonne depuis l'ajout de « # » en tête */
+  .qz-table th:nth-child(5),
+  .qz-table td:nth-child(5) { display: none; }
   .qz-question-word { font-size: 30px; }
   .qz-setup-card, .qz-question-card { padding: 24px 18px; }
 }
@@ -2200,6 +2209,7 @@ tr.row-selected { background: rgba(59,130,246,.05); }
       <table class="qz-table" id="vocab-table" aria-label="Vocabulary list">
         <thead>
           <tr>
+            <th class="num-col" title="Numéro permanent — ne bouge pas quand on trie ou filtre">#</th>
             <th class="sortable" data-sort="az">Source word ↕</th>
             <th>Translation ↕</th>
             <th>Language</th>
@@ -3667,6 +3677,7 @@ document.getElementById('vocab-sort').addEventListener('change', e => {
 
 /* Print */
 document.getElementById('btn-print-vocab').addEventListener('click', () => {
+  computeVocabNumbers();
   const list = getFilteredVocab();
   const filterLabel = perfFilter === 'failed' ? ' — ❌ Mots ratés'
     : perfFilter === 'weak' ? ' — ⚠️ Mots fragiles' : '';
@@ -3680,6 +3691,7 @@ document.getElementById('btn-print-vocab').addEventListener('click', () => {
     const rateCls = r < 0 ? 'pr-rate-none' : r < 0.5 ? 'pr-rate-fail' : r < 0.75 ? 'pr-rate-weak' : 'pr-rate-ok';
     const rowCls  = r >= 0 && r < 0.5 ? 'pr-failed' : r >= 0.5 && r < 0.75 ? 'pr-weak' : '';
     return `<tr class="${rowCls}">
+      <td>${vocabNum[w.id] || '—'}</td>
       <td>${escHtml(w.source_word)}</td>
       <td>${escHtml(w.target_translation)}</td>
       <td>${escHtml(w.language_pair)}</td>
@@ -3695,7 +3707,7 @@ document.getElementById('btn-print-vocab').addEventListener('click', () => {
     <h2>📚 Vocabulaire LazyPO${filterLabel}${langLabel}</h2>
     <div class="print-subtitle">${list.length} mot${list.length !== 1 ? 's' : ''} · Imprimé le ${now}</div>
     <table>
-      <thead><tr><th>Mot</th><th>Traduction</th><th>Langue</th><th>Exemple</th></tr></thead>
+      <thead><tr><th>#</th><th>Mot</th><th>Traduction</th><th>Langue</th><th>Exemple</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   document.body.appendChild(area);
@@ -3781,7 +3793,26 @@ function rateOf(wordId) {
   return wordRate(progress[wordId]); // fenêtre glissante (fallback lifetime)
 }
 
+/* Numéro permanent d'un mot = son rang de création, le plus ancien = 1.
+   Volontairement PAS la position dans la liste affichée : trier, filtrer ou
+   ajouter un mot changerait tous les numéros, et le numéro ne servirait plus
+   à retrouver où on s'était arrêté. Un nouveau mot prend le numéro suivant
+   sans décaler les autres. */
+let vocabNum = {};
+function computeVocabNumbers() {
+  vocabNum = {};
+  [...vocab]
+    .sort((a, b) => {
+      const d = new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      // Départage par id : un import en masse partage la même timestamp et
+      // Postgres ne garantit pas l'ordre des ex æquo d'une requête à l'autre.
+      return d !== 0 ? d : String(a.id).localeCompare(String(b.id));
+    })
+    .forEach((w, i) => { vocabNum[w.id] = i + 1; });
+}
+
 function renderVocab() {
+  computeVocabNumbers();
   const list  = getFilteredVocab();
   const tbody = document.getElementById('vocab-tbody');
   const total = vocab.length;
@@ -3790,7 +3821,7 @@ function renderVocab() {
     (fil < total) ? `${fil} / ${total} mots` : `${total} mot${total !== 1 ? 's' : ''}`;
 
   if (!vocab.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="8"><div class="qz-empty">
       <div class="qz-empty-icon">📚</div>
       <h3>No words yet</h3>
       <p>Add your first vocabulary word using the form above.<br>Start with something simple!</p>
@@ -3800,7 +3831,7 @@ function renderVocab() {
   }
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="qz-empty">
+    tbody.innerHTML = `<tr><td colspan="8"><div class="qz-empty">
       <div class="qz-empty-icon">🔍</div>
       <h3>No matches</h3>
       <p>Try adjusting your search or filter.</p>
@@ -3855,6 +3886,7 @@ function renderVocabRow(word) {
     ? ` <span class="flag-badge" title="${escHtml(flagTitle)}">🚩</span>`
     : '';
   return `<tr data-id="${word.id}">
+    <td class="num-col">${vocabNum[word.id] || '—'}</td>
     <td class="source-word">${escHtml(word.source_word)}${flag}</td>
     <td>${escHtml(word.target_translation)}</td>
     <td><span class="lang-badge ${isNL ? 'lang-nl' : 'lang-en'}">${isNL ? 'NL' : 'EN'}</span></td>
@@ -3875,6 +3907,7 @@ function renderVocabRow(word) {
 
 function renderEditRow(word) {
   return `<tr data-id="${word.id}" class="editing-row">
+    <td class="num-col">${vocabNum[word.id] || '—'}</td>
     <td><input class="edit-input" id="ei-source" value="${escHtml(word.source_word)}"></td>
     <td><input class="edit-input" id="ei-target" value="${escHtml(word.target_translation)}"></td>
     <td>

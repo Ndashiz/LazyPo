@@ -2389,6 +2389,23 @@ graph TB
 
     <p>Changements significatifs des dernières releases — pour le détail complet voir <code>git log</code> ou les PR mergées sur <code>main</code>.</p>
 
+    <h3>Août 2026 — 🔢 Quiz : un numéro permanent par mot de vocabulaire</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li><strong>Colonne <code>#</code></strong> en tête de la table Vocabulary, pour repérer où on
+          s'est arrêté en relisant sa liste.</li>
+      <li><strong>Rang de création, pas position d'affichage</strong> (<code>computeVocabNumbers()</code>) :
+          le plus ancien mot est le n° 1. Trier, filtrer ou ajouter un mot ne renumérote rien — un
+          nouveau mot prend le numéro suivant. Numéroter la position dans la liste aurait tout décalé
+          au premier ajout (le tri par défaut est <code>created_at</code> décroissant), et le numéro
+          n'aurait plus rien repéré du tout. Supprimer un mot décale les suivants : seul cas où un
+          numéro bouge.</li>
+      <li><strong>Ex æquo départagés par <code>id</code></strong> — l'import des 1000 mots NL partage
+          une seule <code>created_at</code> et Postgres ne garantit pas l'ordre des ex æquo d'une
+          requête à l'autre. Sans ce départage, les numéros changeraient à chaque rechargement.</li>
+      <li>Rien de stocké en base : le numéro est dérivé de <code>created_at</code>, aucune migration.
+          Il apparaît aussi sur la liste imprimée.</li>
+    </ul>
+
     <h3>Août 2026 — 🔍 Quiz : corriger ou flagger un mot depuis l'Error Review</h3>
     <ul style="padding-left: 24px; margin-bottom: 18px;">
       <li><strong>Le problème.</strong> L'écran de review montrait <em>❌ ta réponse</em> vs <em>✅ la bonne</em>

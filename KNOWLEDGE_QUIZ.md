@@ -188,7 +188,14 @@ Implémentation : `launchChallengeQuiz(wordSnapshots, wordIdsFallback, originalM
 
 **Fin de session** : Review des erreurs (si présentes) → résumé (score, %, temps, badge streak) → panneau d'ajout (si Challenge Back) → auto-post au fil (sauf mode Challenge).
 
-**Vocabulary** : formulaire d'ajout rapide, import/export Excel, actions bulk, table triable (mot, traduction, langue, taux, niveau), filtres.
+**Vocabulary** : formulaire d'ajout rapide, import/export Excel, actions bulk, table triable (n°, mot, traduction, langue, taux, niveau), filtres.
+
+> **Colonne `#`** — numéro **permanent** du mot, calculé par `computeVocabNumbers()` comme son
+> rang de création (le plus ancien = 1), pas comme sa position dans la liste affichée. Trier,
+> filtrer ou ajouter un mot ne renumérote rien : un nouveau mot prend le numéro suivant. C'est
+> ce qui permet de noter où on s'est arrêté et de le retrouver. Départage des ex æquo par `id`,
+> sinon un import en masse (même `created_at` sur 1000 lignes) donnerait un ordre différent à
+> chaque requête. Supprimer un mot décale les suivants — seul cas où un numéro bouge.
 
 **Progress** : carte streak, stats (mots totaux, maîtrisés, taux), donut système/user, barres EN↔NL, heatmap 28 jours.
 
