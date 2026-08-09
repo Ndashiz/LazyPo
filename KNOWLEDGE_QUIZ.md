@@ -1,6 +1,8 @@
 # Knowledge Quiz — Documentation
 
-> Entraîneur de vocabulaire **EN→FR** et **NL→FR** (+ verbes irréguliers néerlandais), avec répétition espacée, gamification XP, et fil multijoueur.
+> Entraîneur de vocabulaire **EN→FR** et **NL→FR**, **grammaire néerlandaise** (23 chapitres) et verbes irréguliers, avec répétition espacée, gamification XP, et fil multijoueur.
+>
+> Le module est aussi **embarqué en iframe dans Jarvis** (`jarvis.ndashiz.be`) — voir §13.
 
 ---
 
@@ -8,8 +10,8 @@
 
 | Fichier | Rôle |
 |---------|------|
-| `quiz.html` (~313 KB) | SPA complète : UI, logique, styles, état. C'est le cœur de la feature. |
-| `worker/src/worker.js` | Worker Cloudflare — vérification JWT, garde l'accès à `/pro/quiz.html`. |
+| `quiz.html` (~332 KB) | SPA complète : UI, logique, styles, état, **et les 23 chapitres de grammaire** (données inline). C'est le cœur de la feature. |
+| `worker/src/worker.js` | Worker Cloudflare — sécurité/CSP. ⚠️ `/pro/quiz.html` est **explicitement public** (voir §9). |
 | `session.js` | Détection d'activité / déconnexion après 2h d'inactivité. |
 | `demo.js` | Génération de données de démo. |
 | `vocab_import_onboarding.js` | Flux de premier import avec détection de doublons. |
@@ -25,15 +27,17 @@ Dépendances chargées par `quiz.html` : `session.js`, `demo.js`, `vocab_import_
 
 ## 2. Vue d'ensemble
 
-Le Knowledge Quiz est un entraîneur de vocabulaire bilingue avec 4 onglets dans `quiz.html` :
+Le Knowledge Quiz est un entraîneur bilingue avec **5 onglets** dans `quiz.html` :
 
 1. **🧠 Quiz** — moteur de quiz à répétition espacée (SM-2).
 2. **📚 Vocabulary** — gestion du vocabulaire perso + mots système, import/export Excel.
 3. **📊 Progress** — stats, heatmap, graphiques, détail XP.
 4. **🌍 Multi** — fil social, classement, Challenge Back, réactions.
-5. **🔤 Verbes NL** — entraîneur de conjugaison des verbes néerlandais (intégré au même fichier).
+5. **📖 Grammaire** — 23 chapitres de grammaire NL : théorie + exercices notés (voir §12).
 
-Caractéristiques clés : répétition espacée adaptative, fil multijoueur avec Challenge Back, gamification XP + streak, classement all-time, import/export Excel, partage de vocabulaire entre utilisateurs.
+Les **verbes irréguliers NL** ne sont plus un onglet : ils sont devenus le chapitre 23 du module Grammaire (`isVerbesModule` → `grShowVerbesEmbed()`), qui réutilise l'entraîneur de conjugaison existant.
+
+Caractéristiques clés : répétition espacée adaptative, fil multijoueur avec Challenge Back, gamification XP + streak, classement all-time, import/export Excel, partage de vocabulaire entre utilisateurs, cours de grammaire noté.
 
 ---
 
@@ -47,7 +51,8 @@ Caractéristiques clés : répétition espacée adaptative, fil multijoueur avec
 - `language_pair` ('EN→FR' ou 'NL→FR', legacy 'nl-fr')
 - `example_sentence`, `tips` (optionnels)
 - `is_system` (bool) — marque le vocabulaire fourni par le système
-- RLS `own_vocabulary`
+- `flagged_at`, `flag_reason`, `flag_note` — signalement d'une mauvaise question depuis l'Error Review (voir §7bis). `flag_reason` ∈ `wrong_translation` | `typo` | `bad_example` | `other`. Colonnes portées par la ligne elle-même : **un seul flag actif par mot, pas d'historique**.
+- RLS `own_vocabulary` — couvre déjà les colonnes de flag, pas de policy supplémentaire
 
 **`quiz_progress`** — répétition espacée SM-2
 - `word_id`, `correct`, `attempts`, `last_tested`
@@ -57,7 +62,8 @@ Caractéristiques clés : répétition espacée adaptative, fil multijoueur avec
 
 **`quiz_sessions`** — fil social / multi
 - `display_name`, `avatar_url`, `score`, `total`, `duration_sec`
-- `mode` ('vocab' | 'verbes'), `lang`, `direction` ('forward' | 'reverse' | 'auto')
+- `mode` ('vocab' | 'verbes' | **'grammar'**), `lang`, `direction` ('forward' | 'reverse' | 'auto')
+- `theme` — pour les sessions grammaire, l'id du chapitre (`lang` porte la même valeur)
 - `words` (jsonb) — snapshot des mots joués → permet le Challenge Back **cross-user** (les IDs diffèrent d'un user à l'autre)
 - `word_ids` (jsonb, déprécié au profit de `words`)
 
@@ -68,6 +74,13 @@ Caractéristiques clés : répétition espacée adaptative, fil multijoueur avec
 **`user_xp`** — XP & streak
 - `total_xp` (cumul, jamais décrémenté), `current_streak_days`, `last_active_date`
 - `last_reconciled_date`, `today_new_words`, `awarded_streak_milestones` (int[]), `mastered_word_ids` (uuid[])
+- `mastered_module_ids` (text[]) — chapitres de grammaire déjà récompensés (anti double-crédit)
+
+**`grammar_progress`** — progression par chapitre de grammaire
+- clé `(user_id, module_id)` (upsert `onConflict: 'user_id,module_id'`)
+- `attempts`, `best_score`, `last_tested`
+- `scores_history` (int[]) — **10 derniers scores en %**, fenêtre glissante
+- `status` — `'todo'` | `'in_progress'` | `'mastered'` ; **maîtrisé dès que la moyenne des scores de la fenêtre ≥ 80 %**
 
 **`xp_daily_log`** — historique XP par jour
 - `(user_id, date)`, `xp_earned`, `breakdown` (jsonb par règle) → alimente la heatmap.
@@ -127,11 +140,14 @@ Caractéristiques clés : répétition espacée adaptative, fil multijoueur avec
 | Quiz long | 15 / session | ≥20 questions dans une session |
 | Maîtrise d'un mot | 10 / mot (cap 50/j) | Taux ≥80 % (≥3 tentatives) |
 | Récupération | 15 / mot | Mot faible repassé >75 % |
-| Diversité modes | 10 | Joué 'vocab' ET 'verbes' aujourd'hui |
+| Diversité modes | 10 | Joué 'vocab' ET ('verbes' OU **'grammar'**) aujourd'hui |
 | Diversité directions | 10 | Forward ET reverse (vocab) aujourd'hui |
 | 1er commentaire social | 5 | 1er commentaire sur la session d'un autre |
+| **Maîtrise d'un chapitre** | **40 / chapitre** | Chapitre de grammaire passé en `mastered` — **hors réconciliation**, crédité immédiatement (voir ci-dessous) |
 
 Sources de vérité : `user_xp.total_xp` (cumul) et `xp_daily_log` (détail par jour).
+
+> ⚠️ La maîtrise d'un chapitre de grammaire est le **seul XP attribué en direct** (`grAwardMasteryXp()` : `UPDATE user_xp` immédiat), pas via `runXpReconciliation()`. Il n'apparaît donc **pas** dans `xp_daily_log` et ne remonte pas dans la heatmap ni dans le détail XP par jour — seulement dans `total_xp`. L'anti-double-crédit repose sur `user_xp.mastered_module_ids`.
 
 ### Classement
 - All-time par `total_xp`, départage par % moyen (`totalScore/totalPossible`).
@@ -180,6 +196,61 @@ Implémentation : `launchChallengeQuiz(wordSnapshots, wordIdsFallback, originalM
 
 ---
 
+## 7bis. Corriger ou flagger un mot depuis l'Error Review
+
+Deux gestes disponibles **uniquement sur l'écran Error Review** (`#quiz-review`), pas sur le
+feedback immédiat pendant le quiz. Ils répondent au même moment de doute — « cette correction est
+fausse » — selon qu'on sait ou non par quoi la remplacer : **corriger** quand on sait, **flagger**
+quand on ne sait pas.
+
+| Geste | Bouton | Écrit |
+|---|---|---|
+| Corriger le mot | ✏️ Fix this word | `source_word`, `target_translation`, `example_sentence` |
+| Signaler la question | 🚩 Flag | `flagged_at`, `flag_reason`, `flag_note` |
+
+### Ce qui ne bouge pas
+
+- **Le score n'est jamais recalculé.** Corriger un mot met à jour le vocabulaire pour les
+  prochaines sessions ; la réponse reste comptée fausse et `quiz_progress` n'est pas retouché. Le
+  toast le dit explicitement.
+- **Le flag ne touche ni au score ni au SRS**, et n'exclut pas le mot du tirage.
+- `reviewIndex` ne bouge pas : les panneaux se déplient **en place**, sous la comparaison
+  ❌/✅. Jamais de modale — l'écran tourne en iframe chez Jarvis, une modale centrée sur le
+  viewport se placerait de travers.
+
+### Contraintes d'implémentation
+
+- **`reviewSaveWord(id, patch)`, pas `updateWord()`** : cette dernière enchaîne `loadVocab()`
+  (repagination complète du vocabulaire) puis `renderVocab()` sur un onglet caché. En pleine
+  review c'est un aller-retour réseau inutile. `reviewSaveWord` pose `vocabDirty = true` et
+  `flushVocabDirty()` recharge **une seule fois**, plus tard : au retour sur l'onglet vocabulaire
+  ou dans `showSummary()`.
+- **Mutation en place**, jamais de réassignation : `vocab[]`, `quizQueue[].word`,
+  `reviewQueue[].word` et `sessionAnswers[].word` pointent vers le même objet. Un `Object.assign`
+  les met tous à jour d'un coup ; réassigner en laisserait la moitié périmés.
+- **`.select()` obligatoire après l'`update`** : sans lui, un refus RLS (0 ligne, 0 erreur)
+  ressemble à un succès. Le garde 0-ligne renvoie le toast
+  « Modification bloquée — vérifie les RLS policies Supabase ».
+- **`word.id` peut être `null`** (Challenge Back : snapshot cross-user). Les deux boutons sont
+  alors masqués, pas désactivés.
+- **Clavier** : `Enter` enregistre, `Escape` annule. `stopPropagation()` sur les champs pour qu'un
+  `Enter` en pleine correction ne puisse jamais faire avancer le quiz.
+- **Mode `cloze`** : la phrase à trou est figée sur la réponse au moment du tirage. Après édition
+  de l'exemple elle est reconstruite via `buildClozeItem()`, sinon l'écran afficherait l'ancienne.
+- **Migration pas encore passée** : l'erreur Supabase sur colonne inconnue produit le toast
+  « Flag indisponible — la migration SQL n'est pas encore passée », pas une exception.
+
+### Retrouver un mot flaggé
+
+Un badge 🚩 s'affiche sur la ligne dans l'onglet Vocabulary (titre = motif + note), et le groupe
+de pilules **🚩 Flagged** filtre la liste. Sans ça le flag serait un trou noir : posé une fois,
+jamais revu.
+
+Re-cliquer sur **🚩 Flagged** rouvre le panneau prérempli avec `Update flag` et `Remove flag` —
+confirmation par second clic, jamais de `confirm()` (on est en iframe).
+
+---
+
 ## 8. État & fonctions clés
 
 ```javascript
@@ -192,6 +263,7 @@ let quizMode = 'auto'       // forward | reverse | auto
 let sessionAnswers = []     // { word, correct, skipped, givenAnswer, direction }
 let challengeContext = null // défini quand Challenge Back actif
 let quizTimer = null        // intervalle du compte à rebours 30 s
+let vocabDirty = false      // mot corrigé/flaggé en review → recharger plus tard (§7bis)
 ```
 
 | Fonction | Rôle |
@@ -203,12 +275,18 @@ let quizTimer = null        // intervalle du compte à rebours 30 s
 | `endSession()` | Stats, post au fil, review/résumé. |
 | `buildQuizQueue()` | Filtre + shuffle du vocabulaire. |
 | `recordAnswer(wordId, isCorrect)` | Upsert `quiz_progress` (logique SM-2). |
+| `reviewSaveWord(id, patch)` | Écriture ciblée depuis l'Error Review — mute le mot en place, marque `vocabDirty`, **ne recharge pas** le vocabulaire (§7bis). |
+| `flushVocabDirty()` | Repagination différée, une seule fois, hors review. |
 | `postMultiSession()` | INSERT dans `quiz_sessions`. |
 | `launchChallengeQuiz()` | Mise en place du Challenge Back. |
 | `publishChallengeResult()` | Publie le score en commentaire. |
 | `runXpReconciliation()` | Évaluation/attribution XP quotidienne. |
 | `multiLoadFeed()` | Fetch paginé du fil + hydratation réactions. |
 | `multiLoadLeaderboard()` | Agrégation `user_xp` + `quiz_sessions`. |
+| `grLoadProgress(userId)` | Charge `grammar_progress` dans `grProgress{}`. |
+| `grSaveProgress(moduleId, correct, total)` | Upsert progression, calcule `status`/`trend`, poste la session, déclenche l'XP. |
+| `grCheck(input, expected)` | Correction grammaire (normalisation stricte, alternatives `/`). |
+| `grAwardMasteryXp(moduleId)` | +40 XP à la 1re maîtrise d'un chapitre. |
 
 ### Import/Export Excel
 - **Export** (`XLSX.js`) : colonnes source, target, langue, exemples, tips, correct, attempts, ease_factor, last_tested.
@@ -218,9 +296,16 @@ let quizTimer = null        // intervalle du compte à rebours 30 s
 
 ## 9. Authentification & permissions
 
-- Accès à `/pro/quiz.html` gardé par le Worker Cloudflare (`worker.js`) — validation JWT, JWKS cachée 1h, redirection vers `/login` si invalide.
+> ⚠️ **`/pro/quiz.html` n'est plus gardé par le Worker.** La page est listée dans `PUBLIC_PAGES` (`worker/src/worker.js`) et servie **sans** vérification de JWT.
+>
+> Raison : la page est encadrée en iframe par Jarvis, qui peut ne pas porter le cookie au premier chargement. Un 302 aurait navigué **l'iframe** vers `login.html`. Le HTML part donc ungated et `quiz.html` applique sa propre garde en place (§13).
+>
+> **Conséquence** : ne jamais mettre de donnée sensible dans le markup de `quiz.html`. La vraie frontière est la **RLS Supabase**, pas le Worker.
+
+- Le Worker continue d'injecter les en-têtes de sécurité + la CSP sur la réponse (dont `frame-ancestors 'self' https://jarvis.ndashiz.be`).
 - Module `quiz` dans `allowed_modules` (défaut pour nouveaux users).
 - Supabase Auth (email/mot de passe ou OAuth). RLS : chaque user ne lit/écrit que ses propres données.
+- Toutes les libs sont **vendorisées** (`supabase.min.js`, `xlsx.min.js`…) : la CSP est `script-src 'self'`, un CDN serait bloqué en prod.
 
 ---
 
@@ -237,20 +322,121 @@ let quizTimer = null        // intervalle du compte à rebours 30 s
 
 ```
 quiz.html (SPA, vanilla JS, CSS variables, sans framework)
- ├─ 4 onglets : Quiz | Vocab | Progress | Multi (+ Verbes NL)
- ├─ État : vocab[], progress{}, session
+ ├─ 5 onglets : Quiz | Vocab | Progress | Multi | Grammaire
+ │                                                └─ ch.23 → entraîneur verbes NL
+ ├─ État : vocab[], progress{}, grProgress{}, session
  └─ Intégrations : Supabase, XLSX.js, Pravatar
         │
-Supabase ── Auth · 9 tables + RLS · Storage (avatars)
+Supabase ── Auth · 10 tables + RLS · Storage (avatars)
         │
-Cloudflare Worker ── JWT · cache JWKS 1h · redirect /login
+Cloudflare Worker ── CSP + headers · quiz.html NON gardé (PUBLIC_PAGES)
+        │
+        └─ embed : <iframe> depuis jarvis.ndashiz.be (same-site, cross-origin)
+                   session Supabase dédiée `sb-lazypo-embed-auth-token`
 ```
 
 ---
 
-## 12. Historique git (thèmes principaux)
+## 12. Module Grammaire
+
+Onglet **📖 Grammaire** — cours de néerlandais noté, entièrement inline dans `quiz.html` (`var TOPICS = [...]`, ~900 lignes de données).
+
+### Structure
+
+23 chapitres, chacun `{ id, title, subtitle, theory (HTML), exercises: [{p, a, h?}] }` :
+
+| # | Chapitre | # | Chapitre |
+|---|----------|---|----------|
+| 1 | Pluriel des noms | 13 | Conditionnel passé (VVTkT) |
+| 2 | Pronoms personnels | 14 | La phrase simple |
+| 3 | L'adjectif (règle du -e) | 15 | La négation (niet vs geen) |
+| 4 | Degrés de comparaison | 16 | La phrase complexe |
+| 5 | Hebben & Zijn | 17 | La proposition relative |
+| 6 | Présent (OTT) | 18 | La proposition infinitive |
+| 7 | Prétérit (OVT) | 19 | Kunnen |
+| 8 | Passé composé (VTT) | 20 | Moeten |
+| 9 | Plus-que-parfait | 21 | Phrases interrogatives |
+| 10 | Futur simple (OTkT) | 22 | Prépositions |
+| 11 | Futur antérieur (VTkT) | 23 | **Verbes irréguliers** (embarque l'entraîneur de conjugaison) |
+| 12 | Conditionnel présent (OVkT) | | |
+
+Les 22 premières théories sont alignées sur le PDF du cours (`eaba158`).
+
+### UI — 2 panneaux
+
+1. **Grille de cartes** — une carte par chapitre, badge de statut (`todo` / `in_progress` / `mastered`), meilleur score, barre de progression globale « N / 23 modules maîtrisés ».
+2. **Détail** — théorie (`t.theory`, HTML riche) puis exercices notés.
+
+### Correction — `grCheck()` / `grNorm()`
+
+Normalisation : trim, minuscules, espaces multiples réduits, apostrophes typographiques unifiées (`'` → `'`), point final ignoré. Réponses alternatives séparées par `/`. Plus strict que le quiz vocabulaire : **pas** de tolérance aux accents ni de distance de typo.
+
+### Notation & progression — `grSaveProgress()`
+
+- Score en % → poussé dans `scores_history` (10 derniers).
+- `status = 'mastered'` dès que la **moyenne** de la fenêtre ≥ 80 % (pas le meilleur score).
+- `best_score` = max historique ; `trend` = delta avec la tentative précédente.
+- Chaque session poste dans `quiz_sessions` avec `mode: 'grammar'` → **visible dans le fil Multi**.
+- Première maîtrise → +40 XP immédiats (§5).
+
+---
+
+## 13. Embed Jarvis
+
+`quiz.html` est encadré en iframe par le front Jarvis (`jarvis.ndashiz.be` → `ndashiz.be/pro/quiz.html`) : **cross-origin mais same-site**, donc les deux partagent la partition de stockage.
+
+### Détection
+
+```js
+try { if (window.top !== window.self) document.documentElement.classList.add('qz-embed'); }
+catch(_) { document.documentElement.classList.add('qz-embed'); }
+```
+
+Le `catch` compte comme embed : un `window.top` qui throw signifie justement qu'on est encadré cross-origin.
+
+### Ce que fait le mode embed
+
+| Aspect | Comportement |
+|---|---|
+| Chrome LazyPO | Sidebar, burger, overlay et barre Focus FM masqués (`html.qz-embed`) ; titre de page masqué (Jarvis a déjà sa topbar) |
+| Session Supabase | **Client dédié** : `auth.js` crée le client avec `storageKey: 'sb-lazypo-embed-auth-token'` |
+| Cookie de gate | **Jamais écrit ni effacé** en embed (`if (!IS_EMBED)`) |
+| Timeout d'inactivité | `session.js` désactivé — la session embed survit |
+| Sign-out LazyPO | Sans effet sur l'embed (scope `local`, storage key différente) |
+| Pas de session | Carte de login **dans l'iframe** (`#qz-embed-gate`), jamais de navigation vers `login.html` |
+
+### Invariant
+
+> Tout code qui appelle `LazyAuth.requireAuth()` doit d'abord `await window.__qzEmbedAuth`. Sinon il court-circuite la garde, voit une session `null`, et **fait sortir l'iframe vers `login.html`** — précisément le bug corrigé par `cef5166` / `3eba74b`.
+
+L'isolation de session (`b83a4ac`) fait qu'on ne se logge **qu'une fois** : le refresh token de l'embed vit dans sa propre storage key et n'est plus détruit par la politique d'inactivité ni par les sign-out de LazyPO.
+
+Côté Worker : `frame-ancestors 'self' https://jarvis.ndashiz.be`, `X-Frame-Options` **supprimé** (XFO ne sait pas exprimer « ce sous-domaine-là »), et `/pro/quiz.html` dans `PUBLIC_PAGES` (§9).
+
+---
+
+## 14. Historique git (thèmes principaux)
 
 Commits notables (récent → ancien) :
+
+**Embed Jarvis (juillet 2026)**
+
+- `b83a4ac` fix(quiz/embed) : isolation de la session embed — se logger une seule fois
+- `3eba74b` fix(quiz/embed) : garde d'auth en place — l'iframe ne sort plus vers login.html
+- `cef5166` fix(quiz/embed) : carte de login inline au lieu d'une redirection
+- `e7729b2` fix(quiz) : autoriser le framing depuis jarvis.ndashiz.be (cross-origin, same-site)
+- `999440d` feat(quiz) : autoriser l'embed iframe same-origin depuis Jarvis
+- `8abda52` / `629f154` fix(csp) : restaurer les libs vendorisées — les CDN sont bloqués par la CSP du Worker
+
+**Module Grammaire (juillet 2026)**
+
+- `eaba158` feat(grammar) : les 22 théories alignées sur le PDF du cours
+- `8744422` feat(grammar) : TOPICS étendu à 23 chapitres (syllabus PDF)
+- `c235f2f` feat(grammar) : module grammaire unifié — cartes, quiz, XP, multi-feed
+- `7c96214` fix(grammar) : ne plus fermer le cours/quiz au retour d'onglet
+- `f6fed22` / `7d2d863` fix(grammar) : `getSession` au lieu de `getUser` (timeout 30 s / SIGNED_OUT parasite)
+
+**Antérieur**
 
 - `b541521` fix(quiz/multi) : sync cross-user du fil + leaderboard
 - `f56c9b0` Merge PR #92 : fix quiz review cleanup

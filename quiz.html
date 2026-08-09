@@ -128,6 +128,11 @@ create policy "own_vocabulary" on public.vocabulary
 -- Migration (run once if table already exists):
 -- alter table public.vocabulary add column if not exists is_system boolean default false;
 -- alter table public.vocabulary add column if not exists tips text;
+-- Flag d'un mot depuis l'Error Review — flag_reason ∈ {wrong_translation, typo, bad_example, other}
+-- alter table public.vocabulary add column if not exists flagged_at  timestamptz;
+-- alter table public.vocabulary add column if not exists flag_reason text;
+-- alter table public.vocabulary add column if not exists flag_note   text;
+-- (pas de nouvelle policy : own_vocabulary couvre déjà ces colonnes)
 
 -- Table 2: quiz_progress
 create table public.quiz_progress (
@@ -1048,10 +1053,69 @@ body { padding-left: 64px; }
 .review-actions {
   display: flex; justify-content: space-between; align-items: center;
 }
+
+/* Error Review — corriger / flagger le mot sans quitter l'écran.
+   Panneaux dépliés en place, jamais une modale : la page tourne en iframe
+   chez Jarvis, une modale centrée sur le viewport se placerait de travers. */
+.review-tools {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.btn-ghost {
+  padding: 7px 14px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, background .15s, border-color .15s;
+}
+.btn-ghost:hover { color: var(--text); background: var(--surface2); }
+.btn-ghost.flagged {
+  color: var(--warning);
+  border-color: rgba(245,158,11,.4);
+  background: rgba(245,158,11,.08);
+}
+.btn-ghost.danger:hover { color: var(--danger); border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.08); }
+.review-panel {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 14px; margin-bottom: 20px;
+}
+.review-panel-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin-bottom: 6px;
+}
+.review-panel-label + input { margin-bottom: 12px; }
+.review-panel-opt { text-transform: none; letter-spacing: 0; opacity: .7; font-weight: 500; }
+.review-input {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--surface); border: 1px solid var(--border2); border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  outline: none;
+  transition: border-color .15s;
+}
+.review-input:focus { border-color: var(--accent); }
+#review-flag-reasons { flex-wrap: wrap; margin-bottom: 12px; }
+.review-panel-actions {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px;
+}
+.review-panel-hint {
+  margin-top: 10px; font-size: 11.5px; line-height: 1.5; color: var(--muted);
+}
+.flag-badge { margin-left: 6px; font-size: 12px; cursor: help; }
+
 @media (max-width: 520px) {
   .review-compare { grid-template-columns: 1fr; }
   .review-arrow { display: none; }
   .review-word-box { font-size: 22px; padding: 18px; }
+  /* 375px : les actions de review restent sur une ligne lisible */
+  .review-tools .btn-ghost { flex: 1 1 auto; text-align: center; }
+  .review-panel-actions > button { flex: 1 1 auto; }
 }
 
 /* ══════════════════════════════════════
@@ -2106,6 +2170,10 @@ tr.row-selected { background: rgba(59,130,246,.05); }
         <button class="qz-pill" data-level-filter="intermediate">Intermediate</button>
         <button class="qz-pill" data-level-filter="advanced">Advanced</button>
       </div>
+      <div class="qz-pill-group" role="group" aria-label="Flag filter">
+        <button class="qz-pill active" data-flag-filter="all">All</button>
+        <button class="qz-pill" data-flag-filter="flagged">🚩 Flagged</button>
+      </div>
       <span class="qz-word-count" id="word-count">0 words</span>
     </div>
 
@@ -2297,6 +2365,45 @@ tr.row-selected { background: rgba(59,130,246,.05); }
             <div class="review-answer-box right" id="review-correct">—</div>
           </div>
         </div>
+
+        <!-- Corriger / flagger le mot en place. Masqué pour les mots de
+             Challenge Back (snapshot cross-user, pas d'id à mettre à jour). -->
+        <div class="review-tools" id="review-tools">
+          <button class="btn-ghost" id="review-btn-edit">✏️ Fix this word</button>
+          <button class="btn-ghost" id="review-btn-flag">🚩 Flag</button>
+        </div>
+
+        <div class="review-panel" id="review-edit-panel" style="display:none;">
+          <div class="review-panel-label">Word</div>
+          <input class="review-input" id="review-edit-source" autocomplete="off">
+          <div class="review-panel-label">Translation</div>
+          <input class="review-input" id="review-edit-target" autocomplete="off">
+          <div class="review-panel-label">Example sentence <span class="review-panel-opt">(optional)</span></div>
+          <input class="review-input" id="review-edit-example" autocomplete="off">
+          <div class="review-panel-actions">
+            <button class="btn-primary"   id="review-edit-save"   style="padding:8px 16px;font-size:13px;">Save</button>
+            <button class="btn-secondary" id="review-edit-cancel" style="padding:8px 14px;font-size:13px;">Cancel</button>
+          </div>
+          <div class="review-panel-hint">Updates your vocabulary for next time — this session's score stays as it is.</div>
+        </div>
+
+        <div class="review-panel" id="review-flag-panel" style="display:none;">
+          <div class="review-panel-label">What's wrong with this question?</div>
+          <div class="qz-pill-group" id="review-flag-reasons" role="group" aria-label="Flag reason">
+            <button class="qz-pill active" data-flag-reason="wrong_translation">Wrong translation</button>
+            <button class="qz-pill"        data-flag-reason="typo">Typo / spelling</button>
+            <button class="qz-pill"        data-flag-reason="bad_example">Bad example sentence</button>
+            <button class="qz-pill"        data-flag-reason="other">Something else</button>
+          </div>
+          <div class="review-panel-label">Note <span class="review-panel-opt">(optional)</span></div>
+          <input class="review-input" id="review-flag-note" maxlength="200" autocomplete="off" placeholder="What should be fixed?">
+          <div class="review-panel-actions">
+            <button class="btn-primary" id="review-flag-save"   style="padding:8px 16px;font-size:13px;">Flag it</button>
+            <button class="btn-ghost danger" id="review-flag-remove" style="display:none;">Remove flag</button>
+            <button class="btn-secondary" id="review-flag-cancel" style="padding:8px 14px;font-size:13px;">Cancel</button>
+          </div>
+        </div>
+
         <div class="review-actions">
           <button class="btn-secondary" id="review-btn-prev">← Previous</button>
           <button class="btn-primary"   id="review-btn-next">Next →</button>
@@ -3092,6 +3199,64 @@ async function updateWord(id, obj) {
   showToast('Word updated');
 }
 
+const FLAG_LABELS = {
+  wrong_translation: 'Wrong translation',
+  typo:              'Typo / spelling',
+  bad_example:       'Bad example sentence',
+  other:             'Something else',
+};
+
+/* Vocabulaire modifié depuis l'Error Review : la liste est rechargée plus tard,
+   une seule fois (retour sur l'onglet vocabulaire ou fin de session). */
+let vocabDirty = false;
+
+/* Écriture ciblée depuis l'Error Review — délibérément pas updateWord(), qui
+   enchaîne loadVocab() (repagination complète) puis renderVocab() sur un onglet
+   caché. Renvoie true si la ligne a bien été écrite. */
+async function reviewSaveWord(id, patch) {
+  const { data, error } = await window.sb
+    .from('vocabulary')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', currentUser.id)
+    .select('id');
+  if (error) {
+    // Colonnes de flag pas encore migrées : message lisible, pas une exception
+    const msg = /flag(ged_at|_reason|_note)/i.test(error.message || '')
+      ? 'Flag indisponible — la migration SQL n\'est pas encore passée'
+      : 'Erreur : ' + (error.message || 'update failed');
+    showToast(msg);
+    return false;
+  }
+  // Sans .select(), un refus RLS ressemble à un succès (0 ligne, 0 erreur)
+  if (!data || data.length === 0) {
+    showToast('Modification bloquée — vérifie les RLS policies Supabase');
+    return false;
+  }
+  // vocab[], quizQueue[].word, reviewQueue[].word et sessionAnswers[].word
+  // pointent vers le même objet : muter en place les met tous à jour d'un coup,
+  // réassigner en laisserait la moitié périmés.
+  new Set([
+    vocab.find(w => w && w.id === id),
+    ...reviewQueue.map(a => a.word),
+    ...sessionAnswers.map(a => a.word),
+    ...quizQueue.map(q => q.word),
+  ]).forEach(w => { if (w && w.id === id) Object.assign(w, patch); });
+  vocabDirty = true;
+  return true;
+}
+
+/* Repagination différée : appelée une seule fois, hors review.
+   Le rendu passe même si le refetch échoue — vocab[] a déjà été muté en place,
+   la correction doit rester visible. */
+async function flushVocabDirty() {
+  if (!vocabDirty) return;
+  vocabDirty = false;
+  try { await loadVocab(); }
+  catch (_) { showToast('Vocabulaire non rechargé — la correction est bien enregistrée'); }
+  renderVocab();
+}
+
 async function deleteWord(id) {
   if (!confirm('Delete this word? Its progress will also be removed.')) return;
   const { error } = await window.sb
@@ -3349,13 +3514,18 @@ function trackNewWordIntro() {
 function stripArticles(s) {
   return (s || '').replace(/^(le |la |les |l'|l’|un |une |des |de |het |een |the |an |a )/i, '').trim();
 }
-/* Forme canonique : minuscules, sans accents, sans article, espaces normalisés */
+/* Retire le marqueur d'infinitif anglais « to » : « to bridge the gap » → « bridge the gap » */
+/* (?=\S) évite de casser une réponse réduite à « to » ; \s+ évite « today », « total »… */
+function stripInfinitiveTo(s) {
+  return (s || '').replace(/^to\s+(?=\S)/i, '').trim();
+}
+/* Forme canonique : minuscules, sans accents, sans article ni « to », espaces normalisés */
 function normalizeAnswer(s) {
   let t = (s || '').toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // é → e, ï → i…
     .replace(/[’]/g, "'")
     .replace(/\s+/g, ' ');
-  return stripArticles(t);
+  return stripArticles(stripInfinitiveTo(t));
 }
 
 let recentColMissing = false; // colonne `recent` absente (migration pas encore appliquée)
@@ -3427,6 +3597,7 @@ let filterLang      = 'all';
 let sourceFilter    = 'all';   // 'all' | 'user' | 'system'
 let perfFilter      = 'all';   // kept for compatibility
 let levelFilter     = 'all';   // 'all' | 'beginner' | 'intermediate' | 'advanced'
+let flagFilter      = 'all';   // 'all' | 'flagged'
 let systemFilter    = 'include'; // 'include' | 'exclude' | 'only'  (quiz)
 let searchQuery     = '';
 let sortMode        = 'newest';
@@ -3472,6 +3643,17 @@ document.querySelectorAll('[data-level-filter]').forEach(btn => {
     document.querySelectorAll('[data-level-filter]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     levelFilter = btn.dataset.levelFilter;
+    vocabPage = 0;
+    renderVocab();
+  });
+});
+
+/* Flag filter — sinon un mot flaggé ne se retrouve plus dans la liste */
+document.querySelectorAll('[data-flag-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-flag-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    flagFilter = btn.dataset.flagFilter;
     vocabPage = 0;
     renderVocab();
   });
@@ -3577,6 +3759,7 @@ function getFilteredVocab() {
   else if (filterLang === 'NL') list = list.filter(w => w.language_pair === 'NL→FR' || w.language_pair === 'nl-fr');
   if (sourceFilter === 'user')   list = list.filter(w => !w.is_system);
   if (sourceFilter === 'system') list = list.filter(w =>  w.is_system);
+  if (flagFilter === 'flagged')  list = list.filter(w =>  w.flagged_at);
   if (levelFilter === 'beginner')     list = list.filter(w => { const r = rateOf(w.id); return r < 0 || r < 0.5; });
   if (levelFilter === 'intermediate') list = list.filter(w => { const r = rateOf(w.id); return r >= 0.5 && r < 0.8; });
   if (levelFilter === 'advanced')     list = list.filter(w => { const r = rateOf(w.id); return r >= 0.8; });
@@ -3665,8 +3848,14 @@ function renderVocabRow(word) {
   const tip     = word.tips
     ? `<span title="${escHtml(word.tips)}">${escHtml(word.tips.length > 28 ? word.tips.slice(0,28)+'…' : word.tips)}</span>`
     : '<span style="opacity:.3">—</span>';
+  const flagTitle = word.flagged_at
+    ? (FLAG_LABELS[word.flag_reason] || 'Flagged') + (word.flag_note ? ' — ' + word.flag_note : '')
+    : '';
+  const flag = word.flagged_at
+    ? ` <span class="flag-badge" title="${escHtml(flagTitle)}">🚩</span>`
+    : '';
   return `<tr data-id="${word.id}">
-    <td class="source-word">${escHtml(word.source_word)}</td>
+    <td class="source-word">${escHtml(word.source_word)}${flag}</td>
     <td>${escHtml(word.target_translation)}</td>
     <td><span class="lang-badge ${isNL ? 'lang-nl' : 'lang-en'}">${isNL ? 'NL' : 'EN'}</span></td>
     <td class="example" title="${escHtml(word.example_sentence||'')}">${ex}</td>
@@ -4450,7 +4639,149 @@ function showReviewItem() {
   prevBtn.style.visibility = reviewIndex > 0 ? 'visible' : 'hidden';
   document.getElementById('review-btn-next').textContent =
     reviewIndex === total - 1 ? 'See Results →' : 'Next →';
+
+  reviewClosePanels();
+  reviewSyncTools();
 }
+
+/* ── Corriger / flagger le mot courant, sans quitter la review ─────
+   Aucune navigation, reviewIndex ne bouge pas, la session n'est pas relancée. */
+
+let reviewFlagReason = 'wrong_translation';
+
+function reviewCurrentWord() {
+  const a = reviewQueue[reviewIndex];
+  return a ? a.word : null;
+}
+
+function reviewClosePanels() {
+  document.getElementById('review-edit-panel').style.display = 'none';
+  document.getElementById('review-flag-panel').style.display = 'none';
+}
+
+function reviewSyncTools() {
+  const word    = reviewCurrentWord();
+  const tools   = document.getElementById('review-tools');
+  const flagBtn = document.getElementById('review-btn-flag');
+  // Mots de Challenge Back : snapshot cross-user sans id, rien à mettre à jour
+  if (!word || !word.id) { tools.style.display = 'none'; return; }
+  tools.style.display = 'flex';
+  const flagged = !!word.flagged_at;
+  flagBtn.textContent = flagged ? '🚩 Flagged' : '🚩 Flag';
+  flagBtn.classList.toggle('flagged', flagged);
+}
+
+document.getElementById('review-btn-edit').addEventListener('click', () => {
+  const word  = reviewCurrentWord();
+  if (!word || !word.id) return;
+  const panel = document.getElementById('review-edit-panel');
+  const open  = panel.style.display === 'none';
+  document.getElementById('review-flag-panel').style.display = 'none'; // jamais les deux
+  panel.style.display = open ? 'block' : 'none';
+  if (!open) return;
+  document.getElementById('review-edit-source').value  = word.source_word || '';
+  document.getElementById('review-edit-target').value  = word.target_translation || '';
+  document.getElementById('review-edit-example').value = word.example_sentence || '';
+  document.getElementById('review-edit-source').focus();
+});
+
+async function reviewCommitEdit() {
+  const word = reviewCurrentWord();
+  if (!word || !word.id) return;
+  const source  = document.getElementById('review-edit-source').value.trim();
+  const target  = document.getElementById('review-edit-target').value.trim();
+  const example = document.getElementById('review-edit-example').value.trim();
+  if (!source || !target) { showToast('Source and translation are required'); return; }
+
+  const ok = await reviewSaveWord(word.id, {
+    source_word:        source,
+    target_translation: target,
+    example_sentence:   example || null,
+  });
+  if (!ok) return;
+
+  // La phrase à trou est figée sur la réponse au moment du tirage : la
+  // reconstruire si la source ou l'exemple vient de bouger.
+  const a = reviewQueue[reviewIndex];
+  if (a && a.direction === 'cloze') {
+    const rebuilt = buildClozeItem(word);
+    if (rebuilt) { a.question = rebuilt.question; a.answer = rebuilt.answer; }
+  }
+
+  showReviewItem();  // rafraîchit #review-asked / #review-correct et referme le panneau
+  showToast('Mot corrigé — le score de cette session n\'est pas recalculé.');
+}
+
+document.getElementById('review-edit-save').addEventListener('click', reviewCommitEdit);
+document.getElementById('review-edit-cancel').addEventListener('click', reviewClosePanels);
+
+/* Enter = Save, Escape = Cancel. stopPropagation() pour qu'un Enter en pleine
+   correction ne puisse jamais faire avancer le quiz. */
+['review-edit-source', 'review-edit-target', 'review-edit-example', 'review-flag-note']
+  .forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== 'Escape') return;
+      e.stopPropagation();
+      e.preventDefault();
+      if (e.key === 'Escape') { reviewClosePanels(); return; }
+      if (id === 'review-flag-note') reviewCommitFlag();
+      else                           reviewCommitEdit();
+    });
+  });
+
+document.getElementById('review-btn-flag').addEventListener('click', () => {
+  const word  = reviewCurrentWord();
+  if (!word || !word.id) return;
+  const panel = document.getElementById('review-flag-panel');
+  const open  = panel.style.display === 'none';
+  document.getElementById('review-edit-panel').style.display = 'none';
+  panel.style.display = open ? 'block' : 'none';
+  if (!open) return;
+
+  const flagged = !!word.flagged_at;
+  reviewFlagReason = word.flag_reason || 'wrong_translation';
+  document.querySelectorAll('#review-flag-reasons .qz-pill').forEach(b => {
+    b.classList.toggle('active', b.dataset.flagReason === reviewFlagReason);
+  });
+  document.getElementById('review-flag-note').value      = word.flag_note || '';
+  document.getElementById('review-flag-save').textContent = flagged ? 'Update flag' : 'Flag it';
+  // Retrait du flag : confirmation par second clic, pas de confirm() — on est en iframe
+  document.getElementById('review-flag-remove').style.display = flagged ? 'inline-flex' : 'none';
+});
+
+document.querySelectorAll('#review-flag-reasons .qz-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#review-flag-reasons .qz-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    reviewFlagReason = btn.dataset.flagReason;
+  });
+});
+
+async function reviewCommitFlag() {
+  const word = reviewCurrentWord();
+  if (!word || !word.id) return;
+  const note = document.getElementById('review-flag-note').value.trim().slice(0, 200);
+  const ok = await reviewSaveWord(word.id, {
+    flagged_at:  new Date().toISOString(),
+    flag_reason: reviewFlagReason,
+    flag_note:   note || null,
+  });
+  if (!ok) return;
+  showReviewItem();
+  showToast('Question flaggée — ni le score ni le SRS ne changent.');
+}
+
+document.getElementById('review-flag-save').addEventListener('click', reviewCommitFlag);
+document.getElementById('review-flag-cancel').addEventListener('click', reviewClosePanels);
+
+document.getElementById('review-flag-remove').addEventListener('click', async () => {
+  const word = reviewCurrentWord();
+  if (!word || !word.id) return;
+  const ok = await reviewSaveWord(word.id, { flagged_at: null, flag_reason: null, flag_note: null });
+  if (!ok) return;
+  showReviewItem();
+  showToast('Flag retiré');
+});
 
 document.getElementById('review-btn-next').addEventListener('click', () => {
   reviewIndex++;
@@ -4520,6 +4851,8 @@ function showSummary() {
 
   // refresh progress data for rendering
   loadProgress().then(() => { renderProgress(); renderGameStats(); });
+  // Mot corrigé/flaggé pendant la review → une seule repagination, ici, hors review
+  flushVocabDirty();
 }
 
 document.getElementById('btn-try-again').addEventListener('click', () => {
@@ -4680,7 +5013,8 @@ function switchTab(tabId) {
     loadProgress().then(() => renderProgress());
   }
   if (tabId === 'vocab') {
-    renderVocab();
+    // Une correction faite en review n'a pas rechargé la liste — c'est ici
+    if (vocabDirty) flushVocabDirty(); else renderVocab();
   }
   if (tabId === 'quiz') {
     updateAvailNote();

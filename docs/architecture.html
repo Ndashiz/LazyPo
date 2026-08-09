@@ -584,6 +584,7 @@
   <a href="#auth">Authentification</a>
   <a href="#worker-gate">Cloudflare Worker (gate)</a>
   <a href="#threat-model">Threat model</a>
+  <a href="#embed">Embed Jarvis (iframe)</a>
 
   <div class="toc-section">Fonctionnalités</div>
   <a href="#spa">Navigation SPA</a>
@@ -601,6 +602,7 @@
   <a href="#apis">APIs externes</a>
   <a href="#localstorage">localStorage Map</a>
   <a href="#changelog">★ Dernières modifs</a>
+  <a href="#auto-commits">Derniers commits</a>
 </nav>
 
 <!-- ══════════════════════════════════════════
@@ -610,7 +612,7 @@
 
   <!-- ─── HERO ─── -->
   <div class="hero" id="top">
-    <div class="hero-eyebrow">v2.2 · Juin 2026 · /pro migration + assets self-hosted</div>
+    <div class="hero-eyebrow">v2.3 · Août 2026 · embed Jarvis + module Grammaire</div>
     <h1>Architecture<br>Technique <span>LazyPO</span></h1>
     <p class="hero-desc">Documentation complète de l'architecture applicative — base de données, flux de communication, modules partagés, et intégrations externes.</p>
     <div class="hero-meta">
@@ -663,16 +665,18 @@ graph TB
             P1["🏠 index.html"]
             P2["✉️ lazypo_generator.html"]
             P3["📋 sprintplanner.html"]
-            P4["🔍 jirarepo.html"]
+            P4["🎫 jira.html\njirarepo · dashboard · gantt"]
             P5["📝 livenote.html"]
             P6["🧠 quiz.html"]
             P7["👤 account.html"]
+            P8["🎞️ gif_repo.html"]
+            P9["💡 feedback.html"]
         end
     end
 
     subgraph EDGE["☁️ Cloudflare Edge"]
         direction TB
-        CFW["Worker auth-gate\nndashiz.be/pro/*\nverify JWT ES256"]
+        CFW["Worker auth-gate\nndashiz.be/pro/*\nverify JWT ES256/HS256\n+ CSP & security headers"]
         CFDNS["DNS proxy + HSTS\n+ Bot Fight Mode"]
     end
 
@@ -1068,10 +1072,17 @@ erDiagram
         <tr><td>language_pair</td><td>text</td><td>default 'EN→FR'</td><td><code>EN→FR</code>, <code>NL→FR</code>, <code>nl-fr</code></td></tr>
         <tr><td>example_sentence</td><td>text</td><td></td><td>Phrase d'exemple dans la langue source</td></tr>
         <tr><td>is_system</td><td>boolean</td><td>default false</td><td>Mots importés (protégés) vs mots utilisateur</td></tr>
+        <tr><td>flagged_at</td><td>timestamptz</td><td></td><td>Question signalée depuis l'Error Review — <code>null</code> = pas de flag</td></tr>
+        <tr><td>flag_reason</td><td>text</td><td></td><td><code>wrong_translation</code>, <code>typo</code>, <code>bad_example</code>, <code>other</code></td></tr>
+        <tr><td>flag_note</td><td>text</td><td></td><td>Note libre, tronquée à 200 caractères côté client</td></tr>
         <tr><td>created_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
         <tr><td>updated_at</td><td>timestamptz</td><td>default now()</td><td></td></tr>
       </tbody>
     </table>
+    <p>Les trois colonnes de flag sont portées par la ligne de vocabulaire elle-même : <strong>un seul
+       flag actif par mot, pas d'historique</strong>. La policy <code>own_vocabulary</code> les couvre déjà —
+       aucune policy supplémentaire. Migration <strong>à lancer à la main</strong> (voir le bloc de schéma
+       commenté en tête de <code>quiz.html</code>).</p>
 
     <h3>quiz_progress</h3>
     <table class="data-table">
@@ -1171,6 +1182,22 @@ erDiagram
       </tbody>
     </table>
     <p><strong>Contrainte :</strong> <code>sender_id ≠ recipient_id</code> (no self-share). <strong>Index :</strong> <code>(recipient_id, status, created_at desc)</code> pour le polling rapide côté destinataire.</p>
+
+    <h3>grammar_progress <span class="badge badge-green">Grammaire</span></h3>
+    <p>Progression par chapitre du module Grammaire de <code>quiz.html</code> (23 chapitres, données inline dans la page). Une ligne par <code>(user, chapitre)</code>.</p>
+    <table class="data-table">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>user_id</td><td>uuid</td><td>FK → auth.users</td><td>Clé composite avec <code>module_id</code></td></tr>
+        <tr><td>module_id</td><td>text</td><td>upsert <code>onConflict: 'user_id,module_id'</code></td><td>Id du chapitre (<code>pluriel</code>, <code>negation</code>…)</td></tr>
+        <tr><td>attempts</td><td>int</td><td></td><td>Incrémenté à chaque série d'exercices</td></tr>
+        <tr><td>best_score</td><td>int</td><td></td><td>Meilleur % historique</td></tr>
+        <tr><td>scores_history</td><td>int[]</td><td>fenêtre glissante</td><td><strong>10 derniers scores en %</strong></td></tr>
+        <tr><td>status</td><td>text</td><td>todo · in_progress · mastered</td><td><code>mastered</code> dès que la <strong>moyenne</strong> de la fenêtre ≥ 80 % (pas le meilleur score)</td></tr>
+        <tr><td>last_tested</td><td>timestamptz</td><td></td><td></td></tr>
+      </tbody>
+    </table>
+    <p>Chaque série poste aussi une ligne dans <code>quiz_sessions</code> avec <code>mode: 'grammar'</code> (donc visible dans le fil Multi), et la première maîtrise crédite <strong>+40 XP</strong> en direct — anti-double-crédit via <code>user_xp.mastered_module_ids</code> (text[]).</p>
   </section>
 
   <!-- ══════════════════════════════════════════
@@ -1204,6 +1231,7 @@ flowchart LR
         <tr><td>user_sessions</td><td>own_sessions</td><td><code>auth.uid() = user_id</code></td></tr>
         <tr><td>vocabulary</td><td>own_vocabulary</td><td><code>auth.uid() = user_id</code></td></tr>
         <tr><td>quiz_progress</td><td>own_progress</td><td><code>auth.uid() = user_id</code></td></tr>
+        <tr><td>grammar_progress</td><td>own_progress</td><td><code>auth.uid() = user_id</code></td></tr>
         <tr><td>quiz_sessions</td><td>read_authenticated · insert_own</td><td>Lecture authentifiée (fil public), insert <code>auth.uid() = user_id</code></td></tr>
         <tr><td>quiz_session_comments</td><td>read_authenticated · insert_own</td><td>Lecture authentifiée, insert <code>auth.uid() = user_id</code></td></tr>
         <tr><td>quiz_session_reactions</td><td>read_authenticated · upsert_own</td><td>Lecture authentifiée, upsert <code>auth.uid() = user_id</code></td></tr>
@@ -1276,7 +1304,7 @@ flowchart TD
 
     <p>LazyPO est hébergé sur <strong>GitHub Pages</strong> (statique, pas de serveur applicatif). Avant Mai 2026, l'authentification était <em>100% côté client</em> — le HTML protégé était téléchargeable par n'importe qui via <code>curl</code>, le contrôle d'accès reposait uniquement sur du JavaScript qui s'exécutait après livraison.</p>
 
-    <p>Depuis <a href="https://github.com/Ndashiz/lazypo/pull/112" target="_blank">PR #112</a>, un <strong>Cloudflare Worker</strong> intercepte chaque requête à <code>ndashiz.be/pro/*</code> et valide un cookie de session <em>avant</em> que le HTML soit livré. Le contenu protégé n'est jamais servi à un visiteur non authentifié.</p>
+    <p>Depuis <a href="https://github.com/Ndashiz/pro/pull/112" target="_blank">PR #112</a>, un <strong>Cloudflare Worker</strong> intercepte chaque requête à <code>ndashiz.be/pro/*</code> et valide un cookie de session <em>avant</em> que le HTML soit livré. Le contenu protégé n'est jamais servi à un visiteur non authentifié.</p>
 
     <h3>Vue d'ensemble — defense in depth</h3>
 
@@ -1499,7 +1527,7 @@ sequenceDiagram
       <h2>Cloudflare Worker — gate serveur</h2>
     </div>
 
-    <p>Le Worker (<a href="https://github.com/Ndashiz/lazypo/blob/main/worker/src/worker.js" target="_blank"><code>worker/src/worker.js</code></a>) est déployé sur la route <code>ndashiz.be/pro/*</code>. Pour chaque requête, il décide en quelques ms si la requête passe au cache Cloudflare/origine ou si elle est rejetée vers <code>login.html</code>.</p>
+    <p>Le Worker (<a href="https://github.com/Ndashiz/pro/blob/main/worker/src/worker.js" target="_blank"><code>worker/src/worker.js</code></a>) est déployé sur la route <code>ndashiz.be/pro/*</code>. Pour chaque requête, il décide en quelques ms si la requête passe au cache Cloudflare/origine ou si elle est rejetée vers <code>login.html</code>.</p>
 
     <h3>Logique de décision</h3>
 
@@ -1534,13 +1562,67 @@ flowchart TD
       <div class="diagram-caption">Fig. 10 — Algorithme du Worker. <strong>Fail-closed</strong> sur toute exception (catch global redirige vers login).</div>
     </div>
 
+    <h3>Algorithmes de signature acceptés</h3>
+
+    <p>Le Worker accepte <strong>deux</strong> algorithmes et rejette tous les autres :</p>
+
+    <ul style="padding-left:24px; margin-bottom:14px;">
+      <li><strong>ES256</strong> (défaut Supabase actuel) — ECDSA P-256 / SHA-256, vérifié contre le JWKS du projet. C'est le chemin nominal.</li>
+      <li><strong>HS256</strong> (legacy, fallback) — HMAC-SHA256 contre le secret Worker <code>SUPABASE_JWT_SECRET</code>. Si le secret n'est pas configuré, un token HS256 est refusé (et loggé).</li>
+    </ul>
+
+    <p>Tout autre <code>alg</code> — <code>none</code> compris — est rejeté avant toute opération crypto. Si vous migrez l'algorithme de signature du projet Supabase, les deux branches sont à revoir.</p>
+
+    <h3>Paths publics</h3>
+
+    <p>Passent sans vérification de JWT (mais reçoivent quand même les en-têtes de sécurité) :</p>
+
+    <ul style="padding-left:24px; margin-bottom:14px;">
+      <li><strong>Assets statiques</strong> — <code>.js</code> <code>.css</code> <code>.svg</code> <code>.ico</code> <code>.png</code> <code>.jpg</code> <code>.jpeg</code> <code>.gif</code> <code>.webp</code> <code>.woff/.woff2</code> <code>.ttf</code> <code>.map</code> <code>.txt</code></li>
+      <li><strong>Pages publiques</strong> — <code>/pro/login.html</code>, <code>/pro/email_confirm.html</code>, <code>/pro/spotify-callback.html</code></li>
+      <li><strong><code>/pro/quiz.html</code></strong> — voir l'encadré ci-dessous</li>
+      <li><strong>Préfixes</strong> — <code>/pro/.well-known/</code></li>
+    </ul>
+
+    <div class="warn-box">
+      <strong>⚠️ <code>/pro/quiz.html</code> est volontairement non gardé.</strong>
+      La page est encadrée en iframe par le front Jarvis, qui peut ne pas porter le cookie au tout premier chargement — un 302 aurait navigué <em>l'iframe elle-même</em> vers la page de login, remplaçant le module embarqué par le LazyPO complet. Le HTML part donc ungated et <code>quiz.html</code> applique sa propre garde en place (voir <a href="#embed">§8D</a>).
+      <br><br>
+      Corollaire à ne jamais oublier : <strong>rien de sensible ne doit vivre dans le markup de <code>quiz.html</code></strong>. Toutes les données viennent de Supabase, où la <strong>RLS est la vraie frontière</strong>.
+    </div>
+
+    <h3>En-têtes de sécurité &amp; CSP</h3>
+
+    <p>GitHub Pages ne sait pas poser d'en-têtes : le Worker est le <strong>seul</strong> endroit d'où ils peuvent venir. Ils sont ajoutés à toute réponse proxifiée.</p>
+
+    <table class="data-table">
+      <thead><tr><th>En-tête</th><th>Valeur</th></tr></thead>
+      <tbody>
+        <tr><td><code>X-Content-Type-Options</code></td><td><code>nosniff</code></td></tr>
+        <tr><td><code>Referrer-Policy</code></td><td><code>strict-origin-when-cross-origin</code></td></tr>
+        <tr><td><code>Permissions-Policy</code></td><td><code>camera=(), microphone=(), geolocation=()</code></td></tr>
+        <tr><td><code>Strict-Transport-Security</code></td><td><code>max-age=31536000</code></td></tr>
+        <tr><td><code>Content-Security-Policy</code></td><td>uniquement sur les réponses <code>text/html</code> (évite de casser le parsing MIME des JS/CSS)</td></tr>
+        <tr><td><code>X-Frame-Options</code></td><td><strong>supprimé</strong> — voir ci-dessous</td></tr>
+      </tbody>
+    </table>
+
+    <p>La CSP est <code>default-src 'self'</code>, avec <code>script-src 'self' 'unsafe-inline' https://sdk.scdn.co</code>, Supabase autorisé sur <code>connect-src</code>/<code>img-src</code> (+ <code>wss:</code> pour le realtime) et Spotify sur <code>connect-src</code>.</p>
+
+    <div class="warn-box">
+      <strong><code>script-src 'self'</code> ⇒ aucun CDN.</strong>
+      Toute lib tierce doit être <strong>vendorisée</strong> dans le repo. Un <code>&lt;script src="https://cdn…"&gt;</code> fonctionne en local (pas de Worker, donc pas de CSP) et est <strong>bloqué en prod</strong>. Des merges ont déjà réintroduit des CDN deux fois (<code>629f154</code>, <code>8abda52</code>).
+    </div>
+
+    <p><code>frame-ancestors</code> vaut <code>'self' https://jarvis.ndashiz.be</code>. <code>X-Frame-Options</code> est explicitement <strong>supprimé</strong> plutôt que posé : XFO ne sait pas exprimer « autorise ce sous-domaine-là » (<code>jarvis.ndashiz.be</code> est cross-origin mais same-site), et un <code>SAMEORIGIN</code> ferait bloquer l'embed par certains navigateurs alors même que la CSP l'autorise. La protection anti-clickjacking reste assurée par <code>frame-ancestors</code> — toutes les autres origines restent bloquées.</p>
+
     <h3>Caches</h3>
 
     <p>Deux couches de cache pour minimiser la charge :</p>
 
     <ul style="padding-left:24px; margin-bottom:14px;">
       <li><strong>JWKS cache (1h)</strong> — la liste des clés publiques de Supabase est récupérée une fois par heure, stockée dans <code>caches.default</code> au PoP. Un kid manquant déclenche un refresh immédiat (gère la rotation).</li>
-      <li><strong>Token verdict cache (60s)</strong> — pour chaque JWT vu, on cache le verdict (200 ok ou 401 bad) pendant 60s. Un user qui charge 20 ressources avec le même JWT = 1 vérification crypto + 19 cache hits.</li>
+      <li><strong>Token verdict cache (60s)</strong> — pour chaque JWT vu, on cache le verdict (200 ok ou 401 bad) pendant 60s. Un user qui charge 20 ressources avec le même JWT = 1 vérification crypto + 19 cache hits. Contrepartie : un token révoqué en amont peut rester accepté jusqu'à une minute.</li>
     </ul>
 
     <h3>Coût</h3>
@@ -1549,7 +1631,7 @@ flowchart TD
 
     <h3>Déploiement</h3>
 
-    <p>Voir <a href="https://github.com/Ndashiz/lazypo/blob/main/worker/README.md" target="_blank"><code>worker/README.md</code></a>. Commandes en bref :</p>
+    <p>Voir <a href="https://github.com/Ndashiz/pro/blob/main/worker/README.md" target="_blank"><code>worker/README.md</code></a>. Commandes en bref :</p>
 
     <pre style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:14px; overflow-x:auto; font-family:'DM Mono',monospace; font-size:13px;"><code>cd worker
 npm install -g wrangler   # une fois
@@ -1624,7 +1706,75 @@ wrangler deploy           # après chaque changement de worker.js</code></pre>
       <li><strong>Latence de révocation cross-device</strong> — sign out sur appareil A, le JWT reste valide sur appareil B jusqu'à <code>exp</code> (~1h). Acceptable pour notre modèle de menace.</li>
       <li><strong>Module gate client-only</strong> — un user authentifié peut DevTools-supprimer le lock overlay et voir une page d'un module auquel il n'a pas accès. La <em>donnée</em> reste protégée par RLS Supabase ; seules les coques HTML sont visibles.</li>
       <li><strong>Sécurité de Cloudflare elle-même</strong> — toute compromission du compte CF ou de la zone <code>ndashiz.be</code> permettrait de retirer le Worker. Mitigation : 2FA obligatoire sur le compte CF.</li>
+      <li><strong><code>quiz.html</code> servi ungated</strong> — exception assumée pour l'embed Jarvis (<a href="#embed">§8D</a>). Le markup ne contient aucune donnée ; la RLS reste la frontière.</li>
     </ul>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       8D. EMBED JARVIS
+  ══════════════════════════════════════════ -->
+  <section class="section" id="embed">
+    <div class="section-header">
+      <div class="section-num">8D</div>
+      <h2>Embed Jarvis — quiz.html en iframe</h2>
+    </div>
+
+    <p>Le Knowledge Quiz est un <strong>composant partagé</strong> : la même page <code>ndashiz.be/pro/quiz.html</code> sert d'onglet LazyPO <em>et</em> de module natif dans le front Jarvis (<code>jarvis.ndashiz.be</code>), encadrée en iframe.</p>
+
+    <p>Les deux domaines sont <strong>cross-origin mais same-site</strong> (sous-domaines de <code>ndashiz.be</code>) : ils partagent donc la même partition de stockage, ce qui rend l'authentification dans l'iframe possible.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    classDef ok fill:#1a2a1a,stroke:#34d399,color:#e8e8e8
+    classDef step fill:#1a1a1a,stroke:#374151,color:#e8e8e8
+    classDef decision fill:#1e3a5f,stroke:#3b82f6,color:#e8e8e8
+
+    A[jarvis.ndashiz.be<br>front Jarvis]:::step -->|iframe src| B[ndashiz.be/pro/quiz.html]:::step
+    B --> C{Worker : path public ?}:::decision
+    C -->|quiz.html ∈ PUBLIC_PAGES| D[200 HTML ungated<br>+ CSP frame-ancestors]:::ok
+    D --> E{window.top !== window.self ?}:::decision
+    E -->|oui| F[classe qz-embed<br>chrome LazyPO masqué]:::step
+    F --> G{Session sur storageKey<br>sb-lazypo-embed-auth-token ?}:::decision
+    G -->|non| H[Carte de login INLINE<br>dans l'iframe]:::step
+    G -->|oui| I[Quiz rendu]:::ok
+    H -->|login OK| I
+      </div>
+      <div class="diagram-caption">Fig. 10b — Chargement du quiz embarqué. Aucune étape ne navigue l'iframe : la garde d'auth se joue <strong>en place</strong>.</div>
+    </div>
+
+    <h3>Les trois pièces</h3>
+
+    <ul style="padding-left:24px; margin-bottom:14px;">
+      <li><strong>CSP</strong> — <code>frame-ancestors 'self' https://jarvis.ndashiz.be</code>, et le Worker <em>supprime</em> <code>X-Frame-Options</code> (XFO ne sait pas exprimer « ce sous-domaine-là »). Voir <a href="#worker-gate">§8B</a>.</li>
+      <li><strong><code>/pro/quiz.html</code> dans <code>PUBLIC_PAGES</code></strong> — sinon le 302 du gate ferait sortir l'iframe vers <code>login.html</code>.</li>
+      <li><strong>Session Supabase dédiée</strong> — quand la page est encadrée, <code>auth.js</code> instancie le client avec <code>storageKey: 'sb-lazypo-embed-auth-token'</code>.</li>
+    </ul>
+
+    <h3>Ce que change le mode embed</h3>
+
+    <table class="data-table">
+      <thead><tr><th>Aspect</th><th>Comportement en embed</th></tr></thead>
+      <tbody>
+        <tr><td>Détection</td><td><code>window.top !== window.self</code> ; un accès qui <em>throw</em> compte aussi comme embed (cross-origin) → classe <code>qz-embed</code> sur <code>&lt;html&gt;</code></td></tr>
+        <tr><td>Chrome LazyPO</td><td>Sidebar, burger, overlay, barre Focus FM et titre de page masqués — Jarvis a déjà sa topbar</td></tr>
+        <tr><td>Cookie <code>lazypo_jwt</code></td><td><strong>Jamais écrit ni effacé</strong> (<code>if (!IS_EMBED)</code>)</td></tr>
+        <tr><td>Timeout d'inactivité</td><td><code>session.js</code> désactivé — la session embed survit</td></tr>
+        <tr><td>Sign-out LazyPO</td><td>Sans effet sur l'embed (scope <code>local</code> + storage key distincte)</td></tr>
+        <tr><td>Absence de session</td><td>Carte de login <strong>dans</strong> l'iframe (<code>#qz-embed-gate</code>), jamais de navigation</td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <strong>⚠️ Invariant à respecter.</strong>
+      Tout code qui appelle <code>LazyAuth.requireAuth()</code> dans <code>quiz.html</code> doit d'abord <code>await window.__qzEmbedAuth</code>. Sinon il court-circuite la garde, voit une session <code>null</code>, et <strong>fait sortir l'iframe vers <code>login.html</code></strong> — exactement le bug corrigé par <code>cef5166</code> puis <code>3eba74b</code>.
+      <br><br>
+      De même : <strong>une page embarquée ne doit jamais rediriger vers <code>login.html</code></strong>. La garde se joue toujours en place.
+    </div>
+
+    <p>L'isolation de session (<code>b83a4ac</code>) fait qu'on ne se logge <strong>qu'une seule fois</strong> : le refresh token de l'embed vit dans sa propre storage key, et n'est plus détruit ni par la politique d'inactivité de LazyPO ni par ses sign-out.</p>
+
+    <p>Détail complet du module : <a href="https://github.com/Ndashiz/pro/blob/main/KNOWLEDGE_QUIZ.md" target="_blank"><code>KNOWLEDGE_QUIZ.md</code></a> §13.</p>
   </section>
 
   <!-- ══════════════════════════════════════════
@@ -1715,6 +1865,21 @@ flowchart TD
     </div>
 
     <p>Le module Quiz gère du vocabulaire multilingue avec <strong>répétition espacée SM-2</strong>, quiz bidirectionnel, et distinction mots système / utilisateur.</p>
+
+    <p>La page compte <strong>5 onglets</strong> : 🧠 Quiz · 📚 Vocabulary · 📊 Progress · 🌍 Multi · <strong>📖 Grammaire</strong>. C'est aussi le seul module <strong>partagé avec Jarvis</strong>, embarqué en iframe (<a href="#embed">§8D</a>).</p>
+
+    <h3>Module Grammaire</h3>
+
+    <p>Cours de néerlandais noté, ajouté en juillet 2026 (<code>c235f2f</code>). <strong>23 chapitres</strong> définis inline dans <code>quiz.html</code> (<code>var TOPICS = [...]</code>) — pluriel, pronoms, adjectifs, comparaison, temps verbaux (OTT/OVT/VTT/OTkT/VTkT/OVkT/VVTkT), phrase simple &amp; complexe, négation, relatives, infinitives, <em>kunnen</em>/<em>moeten</em>, interrogatives, prépositions, et les verbes irréguliers en chapitre 23.</p>
+
+    <ul style="padding-left:24px; margin-bottom:14px;">
+      <li><strong>Deux panneaux</strong> — grille de cartes (statut, meilleur score, « N / 23 maîtrisés »), puis détail théorie + exercices notés.</li>
+      <li><strong>Correction</strong> (<code>grCheck()</code>) — normalisation stricte : casse, espaces, apostrophes typographiques, point final ; alternatives séparées par <code>/</code>. Contrairement au quiz vocabulaire, <strong>pas</strong> de tolérance aux accents ni de distance de typo.</li>
+      <li><strong>Maîtrise</strong> — moyenne des 10 derniers scores ≥ 80 % (voir <a href="#tables"><code>grammar_progress</code></a>), pas le meilleur score.</li>
+      <li><strong>Verbes irréguliers</strong> — l'ancien onglet dédié est devenu le chapitre 23 (<code>isVerbesModule</code> → <code>grShowVerbesEmbed()</code>), qui réutilise l'entraîneur de conjugaison existant.</li>
+    </ul>
+
+    <p>Les 22 premières théories sont alignées sur le PDF du cours (<code>eaba158</code>).</p>
 
     <div class="diagram-wrap">
       <div class="mermaid">
@@ -2164,7 +2329,7 @@ graph TB
         <tr>
           <td>Librairies front-end</td>
           <td><code>supabase.min.js</code> · <code>xlsx.min.js</code> · <code>pptxgen.min.js</code> · <code>codemirror.min.js</code> · <code>html2pdf.min.js</code> · <code>three.min.js</code> · <code>vanta.net.min.js</code> · <code>papaparse.min.js</code></td>
-          <td>Self-hosted depuis juin 2026 (PR <a href="https://github.com/Ndashiz/lazypo/commit/c823105" target="_blank">c823105</a> + <a href="https://github.com/Ndashiz/lazypo/commit/1294cbc" target="_blank">1294cbc</a>) — supprime dépendance jsDelivr/cdnjs/Cloudflare CDN, élimine risque supply-chain CDN tiers</td>
+          <td>Self-hosted depuis juin 2026 (PR <a href="https://github.com/Ndashiz/pro/commit/c823105" target="_blank">c823105</a> + <a href="https://github.com/Ndashiz/pro/commit/1294cbc" target="_blank">1294cbc</a>) — supprime dépendance jsDelivr/cdnjs/Cloudflare CDN, élimine risque supply-chain CDN tiers</td>
           <td><span class="badge badge-purple">Self-hosted</span></td>
         </tr>
         <tr>
@@ -2224,6 +2389,109 @@ graph TB
 
     <p>Changements significatifs des dernières releases — pour le détail complet voir <code>git log</code> ou les PR mergées sur <code>main</code>.</p>
 
+    <h3>Août 2026 — 🔍 Quiz : corriger ou flagger un mot depuis l'Error Review</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li><strong>Le problème.</strong> L'écran de review montrait <em>❌ ta réponse</em> vs <em>✅ la bonne</em>
+          sans rien offrir quand c'est la <em>bonne réponse</em> qui est fausse. Corriger le mot demandait
+          de quitter la session, d'aller dans l'onglet Vocabulary, de retrouver la ligne — donc en pratique
+          personne ne le faisait.</li>
+      <li><strong>Deux gestes, en place</strong> : <code>✏️ Fix this word</code> édite
+          <code>source_word</code> / <code>target_translation</code> / <code>example_sentence</code>,
+          <code>🚩 Flag</code> signale une mauvaise question avec un motif
+          (<code>wrong_translation</code>, <code>typo</code>, <code>bad_example</code>, <code>other</code>)
+          et une note libre. Corriger quand on sait, flagger quand on ne sait pas.</li>
+      <li><strong>Panneaux dépliés, jamais une modale</strong> : la page tourne en iframe chez Jarvis, une
+          modale centrée sur le viewport se placerait de travers. <code>reviewIndex</code> ne bouge pas,
+          aucune navigation, la session n'est pas relancée.</li>
+      <li><strong>Le score n'est jamais recalculé</strong> — décision assumée. La réponse reste comptée
+          fausse et <code>quiz_progress</code> n'est pas retouché ; la correction ne vaut que pour les
+          sessions suivantes. Le toast le dit. Le flag ne touche ni au score ni au SRS.</li>
+      <li><strong>Nouvelle fonction <code>reviewSaveWord()</code></strong>, délibérément pas
+          <code>updateWord()</code> : celle-ci enchaîne <code>loadVocab()</code> (repagination complète)
+          puis <code>renderVocab()</code> sur un onglet caché. Un flag <code>vocabDirty</code> diffère le
+          rechargement à <code>showSummary()</code> ou au retour sur l'onglet Vocabulary — une seule fois.</li>
+      <li><strong>Mutation en place, jamais de réassignation</strong> : <code>vocab[]</code>,
+          <code>quizQueue[].word</code>, <code>reviewQueue[].word</code> et
+          <code>sessionAnswers[].word</code> pointent vers le même objet. Un <code>Object.assign</code> les
+          met tous à jour ; réassigner en laisserait la moitié périmés.</li>
+      <li><strong>Trois colonnes sur <code>vocabulary</code></strong> (<code>flagged_at</code>,
+          <code>flag_reason</code>, <code>flag_note</code>), pas de nouvelle table : un seul flag actif par
+          mot, pas d'historique. <code>own_vocabulary</code> les couvre déjà. Migration
+          <strong>à lancer à la main</strong> ; tant qu'elle ne l'est pas, l'écriture échoue avec un toast
+          lisible au lieu d'une exception.</li>
+      <li><strong>Le flag reste visible</strong> : badge 🚩 sur la ligne de vocabulaire et filtre
+          <code>🚩 Flagged</code> dans la barre de filtres. Sans ça le flag serait un trou noir.</li>
+      <li><strong>Gardes</strong> : <code>.select()</code> après l'<code>update</code> (sans lui un refus RLS
+          ressemble à un succès), boutons masqués quand <code>word.id</code> est <code>null</code>
+          (Challenge Back, snapshot cross-user), <code>stopPropagation()</code> sur les champs pour qu'un
+          <code>Enter</code> en pleine correction ne fasse pas avancer le quiz, et reconstruction de la
+          phrase à trou en mode <code>cloze</code> quand l'exemple change.</li>
+      <li><strong>Aucun déploiement Worker nécessaire</strong> : tout est dans <code>quiz.html</code>.
+          Un <code>git push</code> suffit — <strong>après</strong> la migration SQL.</li>
+    </ul>
+
+    <h3>Août 2026 — 🎯 Réglages PI : une seule définition du Program Increment</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li><strong>Le problème.</strong> Trois définitions du PI coexistaient sans se connaître :
+          <code>gantt.html</code> dans <code>localStorage['lazypo_gantt_v1']</code>,
+          <code>jira_dashboard.html</code> dans <code>jiraDashboardPI_v1</code>, et
+          <code>sprintplanner.html</code> dans deux <code>&lt;input&gt;</code> lus impérativement — donc perdues
+          à chaque rechargement. <code>lazypo_generator.html</code> en avait une quatrième, en texte libre.</li>
+      <li><strong>Nouveau module <code>pi.js</code></strong> (<code>window.LazyPI</code>) : il possède l'objet PI et sa
+          persistance. <code>LazyPI.get()</code> est <strong>synchrone et ne renvoie jamais <code>null</code></strong> — les pages
+          rendent avant même que <code>auth.js</code> soit chargé. La copie Supabase arrive ensuite et
+          rediffuse l'évènement <code>lazypo:pi</code>, exactement comme <code>countdown.js</code>.</li>
+      <li><strong>Nouvelle page <code>pi.html</code></strong> : fenêtre du PI, grille de sprints dérivée, releases datées,
+          import du backlog Jira, liste unifiée éditable des features, aller-retour Excel, et un cockpit
+          « aujourd'hui » (jours restants, sprint en cours, prochaine release).</li>
+      <li><strong>Stockage</strong> : <code>localStorage['lazypo_pi_v1']</code> pour la copie de travail synchrone,
+          <code>profiles.pi</code> (jsonb) pour le multi-appareil. Voir <code>pi_schema.sql</code>, <strong>à exécuter à la main</strong>
+          dans l'éditeur SQL Supabase. Tant qu'il ne l'est pas, l'écriture cloud échoue, est rattrapée,
+          et la page affiche « This device only » — la fonctionnalité reste utilisable.</li>
+      <li><strong>Consommateurs recâblés</strong> : <code>gantt.html</code> (grille, jalons de release, barres colorées
+          par epic), <code>sprintplanner.html</code> (sprints dérivés), <code>lazypo_generator.html</code> (features,
+          bénéfices et releases du PI) et un widget cockpit sur <code>index.html</code>. Aucun ne garde de copie ;
+          chacun offre un lien direct vers <code>pi.html</code>.</li>
+      <li><strong>Convention de dates</strong> : <code>pi.end</code> est le <strong>dernier jour, inclus</strong>.
+          <code>LazyPI.buildSprints()</code> renvoie un <code>end</code> <strong>exclusif</strong> plus <code>endInclusive</code> pour
+          l'affichage. Mélanger les deux = un décalage d'un jour garanti. Un PI qui ne tombe pas sur un
+          nombre entier de sprints est <strong>signalé, jamais arrondi</strong>.</li>
+      <li><strong>Piège de l'export standalone</strong> : <code>buildExportHTML()</code> supprime tous les
+          <code>&lt;script src&gt;</code>, donc <code>LazyPI</code> est absent d'un fichier exporté. Chaque usage dans
+          <code>gantt.html</code> passe par un garde <code>HAS_PI</code>, et le bloc de boot neutralise
+          <code>LazyPI.setReadOnly(true)</code> par précaution : une copie hors-ligne ouverte depuis la même
+          origine ne doit jamais réécrire le vrai PI.</li>
+      <li><strong>Pas de nouveau module gaté</strong> : <code>pi.html</code> utilise <code>LazyAuth.requireAuth()</code>. Le PI
+          alimente <code>scope</code>, <code>sprint</code> et <code>jira</code> à la fois — le cacher derrière l'un d'eux
+          priverait l'utilisateur de la définition que ses propres outils lisent.</li>
+      <li><strong>Aucun déploiement Worker nécessaire</strong> : <code>pi.html</code> est une page gatée ordinaire et
+          <code>pi.js</code> tombe dans <code>PUBLIC_EXTENSIONS</code>. Un <code>git push</code> suffit.</li>
+    </ul>
+
+    <h3>Juillet 2026 · <code>f304246</code> — 📊 PI Timeline (<code>gantt.html</code>)</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li>Vue Gantt du program increment, ajoutée au hub Jira (<code>jira.html</code>) aux côtés de Query Saver, Dashboard et File Cleaner.</li>
+    </ul>
+
+    <h3>Juillet 2026 · <code>999440d</code> → <code>b83a4ac</code> — 🖼️ Embed du quiz dans Jarvis</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li><strong><code>quiz.html</code> devient un composant partagé</strong> : la même page sert d'onglet LazyPO et de module natif dans le front Jarvis (<code>jarvis.ndashiz.be</code>), en iframe cross-origin mais same-site. Détail : <a href="#embed">§8D</a>.</li>
+      <li><strong>CSP</strong> <code>frame-ancestors 'self' https://jarvis.ndashiz.be</code> et <strong>suppression de <code>X-Frame-Options</code></strong> — XFO ne sait pas autoriser un sous-domaine précis (<code>e7729b2</code>).</li>
+      <li><strong><code>/pro/quiz.html</code> passe dans <code>PUBLIC_PAGES</code></strong> : un 302 du gate aurait navigué l'iframe vers <code>login.html</code>. La RLS Supabase reste la vraie frontière.</li>
+      <li><strong>Garde d'auth en place</strong> (<code>cef5166</code>, <code>3eba74b</code>) : carte de login rendue <em>dans</em> l'iframe. Tout appel à <code>LazyAuth.requireAuth()</code> doit <code>await window.__qzEmbedAuth</code>, sinon il fait sortir l'iframe.</li>
+      <li><strong>Isolation de session</strong> (<code>b83a4ac</code>) : en embed, <code>auth.js</code> utilise le <code>storageKey</code> <code>sb-lazypo-embed-auth-token</code>, n'écrit pas le cookie de gate et saute le timeout d'inactivité. On ne se logge plus qu'une fois.</li>
+      <li><strong>Régression CDN</strong> (<code>629f154</code>, <code>8abda52</code>) : des merges ont réintroduit des libs en CDN sur <code>login.html</code> et <code>quiz.html</code> — bloquées par <code>script-src 'self'</code>. Les libs vendorisées ont dû être restaurées deux fois.</li>
+    </ul>
+
+    <h3>Juillet 2026 · <code>c235f2f</code> + <code>8744422</code> + <code>eaba158</code> — 📖 Module Grammaire</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li>Nouvel onglet dans <code>quiz.html</code> : <strong>23 chapitres</strong> de grammaire NL (théorie + exercices notés), alignés sur le PDF du cours.</li>
+      <li>Nouvelle table <code>grammar_progress</code> ; maîtrise sur la <strong>moyenne des 10 derniers scores</strong> (≥ 80 %), <strong>+40 XP</strong> à la première maîtrise d'un chapitre.</li>
+      <li>Les sessions postent dans <code>quiz_sessions</code> avec <code>mode: 'grammar'</code> → visibles dans le fil Multi.</li>
+      <li>L'onglet <em>Verbes NL</em> disparaît : il devient le chapitre 23 du module.</li>
+      <li><code>f6fed22</code> / <code>7d2d863</code> : <code>getSession()</code> au lieu de <code>getUser()</code> — ce dernier provoquait un timeout de 30 s et un <code>SIGNED_OUT</code> parasite.</li>
+    </ul>
+
     <h3>Juin 2026 · <code>1294cbc</code> + <code>c823105</code> — 🛡️ Self-host de tous les assets CDN</h3>
     <ul style="padding-left: 24px; margin-bottom: 18px;">
       <li><strong>Suppression jsDelivr / cdnjs / Cloudflare CDN</strong> : <code>supabase.min.js</code>, <code>xlsx</code>, <code>pptxgen</code>, <code>codemirror</code>, <code>html2pdf</code>, <code>three</code>, <code>vanta.net</code>, <code>papaparse</code> sont désormais dans le repo et servis depuis <code>/pro/*.js</code>.</li>
@@ -2241,7 +2509,7 @@ graph TB
     <h3>Juin 2026 · <code>ec20e1a</code> — 🚚 Migration <code>/lazypo</code> → <code>/pro</code></h3>
     <ul style="padding-left: 24px; margin-bottom: 18px;">
       <li>Tous les paths URL hardcodés <code>/lazypo/...</code> migrent vers <code>/pro/...</code> : route du Worker, <code>Path</code> du cookie <code>lazypo_jwt</code>, redirect URI Spotify, liens du footer, callbacks.</li>
-      <li>Le repo GitHub reste nommé <code>Ndashiz/lazypo</code> — c'est l'URL publique qui change pour une route plus courte/lisible.</li>
+      <li>Le repo GitHub a depuis été renommé <code>Ndashiz/lazypo</code> → <code>Ndashiz/pro</code>. Le clone local reste <code>~/Documents/lazypo</code>.</li>
       <li>Fichiers touchés : <code>auth.js</code>, <code>email_confirm.html</code>, <code>focusfm.js</code>, <code>login.html</code>, <code>spotify-callback.html</code>, <code>sprintplanner.html</code>, <code>worker/src/worker.js</code>, <code>worker/wrangler.toml</code>.</li>
     </ul>
 
@@ -2300,9 +2568,38 @@ graph TB
 
   <!-- ─── Footer ─── -->
   <div style="text-align:center; color: var(--muted); font-size: 13px; font-family: 'DM Mono', monospace; padding-top: 16px;">
-    LazyPO · Documentation Technique · v2.2 · Juin 2026
+    LazyPO · Documentation Technique · v2.3 · Août 2026
   </div>
 
+<!-- AUTOCOMMITS_START -->
+  <section class="section" id="auto-commits">
+    <div class="section-header">
+      <div class="section-num">★</div>
+      <h2>Derniers commits</h2>
+    </div>
+    <p>Bloc régénéré automatiquement à chaque push sur <code>main</code>
+       (dernière mise à jour&nbsp;: 01/08/2026 16:59 UTC). Pour les changements
+       <em>expliqués</em>, voir <a href="#changelog">§18 — Dernières modifs</a>,
+       maintenue à la main.</p>
+    <table class="data-table" style="font-size:13px;">
+      <thead>
+        <tr><th>Commit</th><th>Description</th><th>Auteur</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cl-sha"><a href="https://github.com/Ndashiz/pro/commit/f30424611b10f17e641a8cbf2910c05d407568d7" target="_blank" rel="noopener">f304246</a></td><td class="cl-msg">feat(jira): PI Timeline — a Gantt for the program increment</td><td class="cl-author">ndashiz</td><td class="cl-date">2 days ago</td></tr>
+        <tr><td class="cl-sha"><a href="https://github.com/Ndashiz/pro/commit/b83a4acd73e7963d5585d09e48239bd2cd8e91af" target="_blank" rel="noopener">b83a4ac</a></td><td class="cl-msg">fix(quiz/embed): isolate the embed session — login once, for good</td><td class="cl-author">ndashiz</td><td class="cl-date">2 days ago</td></tr>
+        <tr><td class="cl-sha"><a href="https://github.com/Ndashiz/pro/commit/3eba74b417db3b6b1f6998f86c878889e72a9c8c" target="_blank" rel="noopener">3eba74b</a></td><td class="cl-msg">fix(quiz/embed): auth gate in-place — stop the iframe bouncing to login.html</td><td class="cl-author">ndashiz</td><td class="cl-date">4 days ago</td></tr>
+        <tr><td class="cl-sha"><a href="https://github.com/Ndashiz/pro/commit/6639803276791f909211f57af11e5f637540a4a4" target="_blank" rel="noopener">6639803</a></td><td class="cl-msg">fix(worker): sign JWT directly instead of signInWithPassword</td><td class="cl-author">ndashiz</td><td class="cl-date">2 weeks ago</td></tr>
+        <tr><td class="cl-sha"><a href="https://github.com/Ndashiz/pro/commit/d86c2466d53d8022a0cfa5ab0edb725fa95d122e" target="_blank" rel="noopener">d86c246</a></td><td class="cl-msg">fix(quiz/embed): silent auto-login via worker — zero user interaction</td><td class="cl-author">ndashiz</td><td class="cl-date">2 weeks ago</td></tr>
+        <tr><td class="cl-sha"><a href="https://github.com/Ndashiz/pro/commit/cef51669b9af14e7e0268997247f7567d6ac233d" target="_blank" rel="noopener">cef5166</a></td><td class="cl-msg">fix(quiz/embed): inline login gate — no redirect to login.html in iframe</td><td class="cl-author">ndashiz</td><td class="cl-date">2 weeks ago</td></tr>
+        <tr><td class="cl-sha"><a href="https://github.com/Ndashiz/pro/commit/8abda52eeea3ea5bd8f99308d31052b8bfdf5649" target="_blank" rel="noopener">8abda52</a></td><td class="cl-msg">fix: restore vendored libs (supabase, xlsx, three, vanta, fonts) — CDN blocked by worker CSP</td><td class="cl-author">ndashiz</td><td class="cl-date">2 weeks ago</td></tr>
+        <tr><td class="cl-sha"><a href="https://github.com/Ndashiz/pro/commit/629f1546ed5ec443d85aab5e757fa2ea31ec537d" target="_blank" rel="noopener">629f154</a></td><td class="cl-msg">fix(csp): libs vendorisées sur login+quiz — le merge avait réintroduit les CDN bloqués</td><td class="cl-author">ndashiz</td><td class="cl-date">2 weeks ago</td></tr>
+        <tr><td class="cl-sha"><a href="https://github.com/Ndashiz/pro/commit/31556c3d4524544ef91da3792b90438814fce108" target="_blank" rel="noopener">31556c3</a></td><td class="cl-msg">merge: quiz embed Jarvis (iframe sans chrome + silent login next/return_to)</td><td class="cl-author">ndashiz</td><td class="cl-date">2 weeks ago</td></tr>
+        <tr><td class="cl-sha"><a href="https://github.com/Ndashiz/pro/commit/366b5c125aa54701c9e01e30fa8d3a9e18db3c08" target="_blank" rel="noopener">366b5c1</a></td><td class="cl-msg">fix(quiz/embed): login next= honoré + chrome LazyPO entièrement masqué en iframe</td><td class="cl-author">ndashiz</td><td class="cl-date">2 weeks ago</td></tr>
+      </tbody>
+    </table>
+  </section>
+<!-- AUTOCOMMITS_END -->
 </main>
 
 <script>
