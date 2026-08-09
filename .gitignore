@@ -1,0 +1,7 @@
+# Wrangler local state — caches the Cloudflare account id, never commit it
+worker/.wrangler/
+.wrangler/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

@@ -16,66 +16,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-          fetch-depth: 20   # enough history for the changelog
+          fetch-depth: 20   # enough history for the commit list
 
-      - name: Update documentation metadata
-        run: |
-          FILE="docs/architecture.html"
-
-          # ── 1. Update "last updated" date in hero ──────────────────────────
-          TODAY=$(date +'%B %Y' | LC_ALL=fr_FR.UTF-8 date -f - +'%B %Y' 2>/dev/null || date +'%B %Y')
-          # Fallback: always English month if locale unavailable, that's fine
-          MONTH_YEAR=$(date +'%B %Y')
-
-          sed -i "s|v2\.0 · [A-Za-zéèêà]* [0-9]\{4\}|v2.0 · ${MONTH_YEAR}|g" "$FILE"
-          sed -i "s|LazyPO · Documentation Technique · [A-Za-zéèêà]* [0-9]\{4\}|LazyPO · Documentation Technique · ${MONTH_YEAR}|g" "$FILE"
-
-          # ── 2. Build a recent-commits block (last 10 commits) ─────────────
-          COMMITS=$(git log -10 --pretty=format:'<tr><td class="cl-sha"><a href="https://github.com/${{ github.repository }}/commit/%H" target="_blank" rel="noopener">%h</a></td><td class="cl-msg">%s</td><td class="cl-author">%an</td><td class="cl-date">%cr</td></tr>' | sed "s/'/\&#39;/g")
-
-          CHANGELOG_BLOCK='<!-- CHANGELOG_START -->
-          <section class="section" id="changelog">
-            <div class="section-header">
-              <div class="section-num">★</div>
-              <h2>Dernières modifications</h2>
-            </div>
-            <p>Mis à jour automatiquement à chaque push sur <code>main</code>.</p>
-            <table class="data-table" style="font-size:13px;">
-              <thead>
-                <tr><th>Commit</th><th>Description</th><th>Auteur</th><th>Date</th></tr>
-              </thead>
-              <tbody>
-          '"${COMMITS}"'
-              </tbody>
-            </table>
-          </section>
-          <!-- CHANGELOG_END -->'
-
-          # Replace existing CHANGELOG block or insert before closing </main>
-          if grep -q 'CHANGELOG_START' "$FILE"; then
-            # Remove old block
-            sed -i '/<!-- CHANGELOG_START -->/,/<!-- CHANGELOG_END -->/d' "$FILE"
-          fi
-
-          # Insert new block just before </main>
-          sed -i "s|</main>|${CHANGELOG_BLOCK}\n</main>|" "$FILE"
-
-          # ── 3. Add changelog TOC entry if missing ─────────────────────────
-          if ! grep -q 'href="#changelog"' "$FILE"; then
-            sed -i 's|<div class="toc-section">Référence</div>|<div class="toc-section">Référence</div>\n  <a href="#changelog">★ Dernières modifs</a>|' "$FILE"
-          fi
-
-          echo "✅ Documentation updated"
-
-      - name: Add changelog CSS if missing
-        run: |
-          FILE="docs/architecture.html"
-          if ! grep -q 'cl-sha' "$FILE"; then
-            CSS='.cl-sha { font-family:"DM Mono",monospace; font-size:12px; } .cl-sha a { color:var(--accent2); text-decoration:none; } .cl-sha a:hover { text-decoration:underline; } .cl-msg { color:var(--text); } .cl-author { color:var(--muted); font-size:12px; } .cl-date { color:var(--muted); font-size:12px; white-space:nowrap; }'
-            sed -i "s|</style>|${CSS}\n</style>|" "$FILE"
-          fi
+      - name: Refresh the auto-generated commit list
+        env:
+          REPO: ${{ github.repository }}
+        run: python3 .github/scripts/update_docs.py
 
       - name: Commit updated docs
         run: |

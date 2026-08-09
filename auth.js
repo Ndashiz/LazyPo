@@ -235,14 +235,16 @@
   }
 
   /* ── Session cookie (read by the Cloudflare Worker gate) ─────────
-     The Worker on ndashiz.be/lazypo/* requires a `lazypo_jwt` cookie
+     The Worker on ndashiz.be/pro/* requires a `lazypo_jwt` cookie
      containing a valid Supabase access_token to serve any non-public
      HTML. We set/refresh/clear this cookie in sync with the Supabase
      session — Supabase JS still stores its session in localStorage as
      usual, we just mirror the access_token into a cookie scoped to
-     /lazypo so the edge can read it. */
+     /pro so the edge can read it.
+     Note: never written in embed mode (see IS_EMBED above) — the Jarvis
+     iframe runs on its own storage key and quiz.html is ungated. */
   const SESSION_COOKIE = 'lazypo_jwt';
-  // Cookie path mirrors where the Worker is deployed in prod (/lazypo/*).
+  // Cookie path mirrors where the Worker is deployed in prod (/pro/*).
   // In local dev the site is served from /, so use / and skip the Secure
   // flag (browsers reject Secure cookies on http://localhost).
   function _cookiePath() {

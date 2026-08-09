@@ -4,32 +4,93 @@
     {
       "name": "lazypo-static",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-l", "3000", "."],
+      "runtimeArgs": [
+        "serve",
+        "-l",
+        "3000",
+        "."
+      ],
       "port": 3000
+    },
+    {
+      "name": "lazypo-static-3020",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "serve",
+        "-l",
+        "3020",
+        "."
+      ],
+      "port": 3020
+    },
+    {
+      "name": "lazypo-static-3031",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "serve",
+        "-l",
+        "3031",
+        "."
+      ],
+      "port": 3031
     },
     {
       "name": "lazysyndic-static",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-l", "8099", "/Users/ndashiz/Documents/lazysyndic"],
+      "runtimeArgs": [
+        "serve",
+        "-l",
+        "8099",
+        "/Users/ndashiz/Documents/lazysyndic"
+      ],
       "port": 8099
     },
     {
       "name": "jarvis-dev",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd /Users/ndashiz/Documents/jarvis && PORT=3007 npm run dev"],
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/ndashiz/Documents/jarvis && PORT=3007 LOCAL_AUTH_ENABLED=true npm run dev"
+      ],
       "port": 5173
     },
     {
       "name": "jarvis-dev-alt",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd /Users/ndashiz/Documents/jarvis && PORT=3009 BACKEND_URL=http://localhost:3009 npm run dev"],
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/ndashiz/Documents/jarvis && PORT=3009 BACKEND_URL=http://localhost:3009 npm run dev"
+      ],
       "port": 5174
+    },
+    {
+      "name": "jarvis-front-5180",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/ndashiz/Documents/jarvis && PORT=3011 LOCAL_AUTH_ENABLED=true npx concurrently -n be,fe -c blue,magenta \"npm:dev:backend\" \"cd frontend && BACKEND_URL=http://localhost:3011 npx vite --port 5180 --strictPort\""
+      ],
+      "port": 5180
     },
     {
       "name": "rikiki-static",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-l", "8123", "/Users/ndashiz/Downloads"],
+      "runtimeArgs": [
+        "serve",
+        "-l",
+        "8123",
+        "/Users/ndashiz/Downloads"
+      ],
       "port": 8123
+    },
+    {
+      "name": "jarvis-dev-iso",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/ndashiz/Documents/jarvis && PORT=3009 BACKEND_URL=http://localhost:3009 DATA_DIR=/private/tmp/claude-501/-Users-ndashiz-Documents-lazypo/d6b19ebd-2c46-4fde-9afe-19acaeb7f09a/scratchpad/data-iso npm run dev"
+      ],
+      "port": 5174
     }
   ]
 }
