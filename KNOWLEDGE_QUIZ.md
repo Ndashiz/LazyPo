@@ -194,6 +194,17 @@ Implémentation : `launchChallengeQuiz(wordSnapshots, wordIdsFallback, originalM
 
 **Quiz actif** : timer 30 s par question, exemple + tip optionnels, saisie + Enter/Check, feedback ✅/❌, auto-advance, compteur de streak.
 
+> **Le compte à rebours suit une échéance, il n'accumule pas de ticks.** Un `secs--` par tick de
+> `setInterval` est faux dès que le navigateur régule les timers — onglet en arrière-plan, iframe
+> masquée côté Jarvis, machine en veille : les callbacks en attente sont rejoués en rafale au
+> retour et le compteur s'effondre d'un coup (23 → 5 = 18 ticks d'affilée). `tickQuizTimer()`
+> recalcule `Math.ceil((quizTimerDeadline - Date.now()) / 1000)` toutes les 250 ms : une rafale
+> recalcule simplement plusieurs fois la même valeur.
+>
+> Le compte est **gelé pendant que la page est masquée** (`visibilitychange` → `quizHiddenAt`), et
+> le temps passé masqué est rendu à l'échéance. Sans ça, l'échéance en temps réel ferait expirer la
+> question dès le retour sur l'onglet : regarder ailleurs coûterait la question.
+
 **Fin de session** : Review des erreurs (si présentes) → résumé (score, %, temps, badge streak) → panneau d'ajout (si Challenge Back) → auto-post au fil (sauf mode Challenge).
 
 **Vocabulary** : formulaire d'ajout rapide, import/export Excel, actions bulk, table triable **au clic sur n'importe quel en-tête**, filtres.
@@ -272,6 +283,22 @@ jamais revu.
 Re-cliquer sur **🚩 Flagged** rouvre le panneau prérempli avec `Update flag` et `Remove flag` —
 confirmation par second clic, jamais de `confirm()` (on est en iframe).
 
+### Le flag fait ressortir le mot
+
+Flagger ne sert pas qu'à signaler une question douteuse : le cas d'usage principal est
+**« ce mot, je dois l'étudier »**. Deux conséquences dans le moteur :
+
+- `buildQuizQueue()` place les mots flaggés dans un bucket **prioritaire, avant les mots dus** :
+  flaggé → dû → nouveau (plafonné) → déjà vu. Ils échappent volontairement au plafond
+  `NEW_WORDS_PER_DAY` : c'est un choix explicite de l'utilisateur, pas une découverte subie.
+  Tri par flag le plus récent d'abord, pour survivre au `slice(0, n)`.
+- Filtre **🚩 À étudier** dans « Words to include » (`filter === 'flagged'`) pour une session
+  composée uniquement de mots flaggés.
+
+La bannière du setup annonce les deux priorités (`🚩 N mots à étudier`, `🔔 N mots à réviser`).
+Le flag n'est **jamais retiré automatiquement** après une bonne réponse — c'est à l'utilisateur de
+décider qu'un mot est acquis.
+
 ### Flagger depuis la liste de vocabulaire
 
 Le même geste est disponible hors session, via le bouton 🚩 de la colonne Actions. La ligne est
@@ -305,7 +332,7 @@ let vocabDirty = false      // mot corrigé/flaggé en review → recharger plus
 
 | Fonction | Rôle |
 |----------|------|
-| `startQuizTimer()` | Compte à rebours 30 s, skip auto à 0. |
+| `startQuizTimer()` / `tickQuizTimer()` | Compte à rebours 30 s basé sur une échéance, gelé si la page est masquée, skip auto à 0 (§7). |
 | `showQuestion()` | Rendu de la question courante. |
 | `checkAnswer()` | Validation, enregistrement, mise à jour SM-2. |
 | `advanceQuiz()` | Question suivante ou fin de session. |

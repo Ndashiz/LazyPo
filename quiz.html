@@ -343,6 +343,7 @@ body { padding-left: 64px; }
 
 .qz-pill-group {
   display: flex;
+  flex-wrap: wrap;   /* 6 filtres ne tiennent plus sur une ligne en 375px */
   gap: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2297,6 +2298,7 @@ tr.row-selected { background: rgba(59,130,246,.05); }
             <button class="qz-pill"        data-filter="NL→FR">NL→FR</button>
             <button class="qz-pill"        data-filter="nl-fr">🇳🇱 Néerlandais</button>
             <button class="qz-pill"        data-filter="practice">Needs practice</button>
+            <button class="qz-pill"        data-filter="flagged">🚩 À étudier</button>
           </div>
         </div>
 
@@ -2430,6 +2432,8 @@ tr.row-selected { background: rgba(59,130,246,.05); }
           <input class="review-input" id="review-edit-target" autocomplete="off">
           <div class="review-panel-label">Example sentence <span class="review-panel-opt">(optional)</span></div>
           <input class="review-input" id="review-edit-example" autocomplete="off">
+          <div class="review-panel-label">💡 Hint <span class="review-panel-opt">(optional)</span></div>
+          <input class="review-input" id="review-edit-tips" autocomplete="off" placeholder="Mnémotechnique, faux ami, genre du mot…">
           <div class="review-panel-actions">
             <button class="btn-primary"   id="review-edit-save"   style="padding:8px 16px;font-size:13px;">Save</button>
             <button class="btn-secondary" id="review-edit-cancel" style="padding:8px 14px;font-size:13px;">Cancel</button>
@@ -3138,27 +3142,60 @@ let quizTimer     = null;
 let quizTimerSecs = 30;
 const QUIZ_TIMER_TOTAL = 30;
 
+/* Le compte à rebours se déduit d'une ÉCHÉANCE, il n'accumule pas de ticks.
+   Un `secs--` par tick est faux dès que le navigateur régule les timers : onglet
+   en arrière-plan, iframe masquée côté Jarvis, machine en veille. Les callbacks
+   en attente sont alors rejoués en rafale au retour et le compteur s'effondre
+   d'un coup (23 → 5 = 18 ticks d'affilée). Ici, une rafale recalcule simplement
+   plusieurs fois la même valeur : elle ne peut plus faire dériver le compte. */
+let quizTimerDeadline = 0;
+let quizHiddenAt      = null;   // instant où la page a été masquée, sinon null
+
 function startQuizTimer() {
   clearQuizTimer();
-  quizTimerSecs = QUIZ_TIMER_TOTAL;
+  quizTimerSecs     = QUIZ_TIMER_TOTAL;
+  quizTimerDeadline = Date.now() + QUIZ_TIMER_TOTAL * 1000;
+  quizHiddenAt      = document.hidden ? Date.now() : null;
   updateTimerUI(quizTimerSecs);
-  quizTimer = setInterval(() => {
-    quizTimerSecs--;
-    updateTimerUI(quizTimerSecs);
-    if (quizTimerSecs <= 0) {
-      clearQuizTimer();
-      // Auto-skip
-      const item = quizQueue[quizIndex];
-      sessionAnswers.push({ word: item.word, correct: false, skipped: true, givenAnswer: '', direction: item.direction, question: item.question, answer: item.answer });
-      recordAnswer(item.word.id, false);
-      advanceQuiz();
-    }
-  }, 1000);
+  // 250 ms : l'affichage se recale vite au retour d'arrière-plan sans coûter cher
+  quizTimer = setInterval(tickQuizTimer, 250);
 }
+
+function tickQuizTimer() {
+  if (quizHiddenAt !== null) return;   // gelé tant que la page est masquée
+  const left = Math.max(0, Math.ceil((quizTimerDeadline - Date.now()) / 1000));
+  if (left !== quizTimerSecs) {
+    quizTimerSecs = left;
+    updateTimerUI(left);
+  }
+  if (left > 0) return;
+
+  clearQuizTimer();
+  const item = quizQueue[quizIndex];
+  if (!item) return;                   // file vidée entre-temps
+  sessionAnswers.push({ word: item.word, correct: false, skipped: true, givenAnswer: '', direction: item.direction, question: item.question, answer: item.answer });
+  recordAnswer(item.word.id, false);
+  advanceQuiz();
+}
+
+/* Regarder ailleurs ne doit pas coûter la question : le temps passé masqué est
+   rendu à l'échéance plutôt que décompté. Sans ça, revenir sur l'onglet après
+   30 s ferait expirer la question instantanément. */
+document.addEventListener('visibilitychange', () => {
+  if (!quizTimer) return;
+  if (document.hidden) {
+    if (quizHiddenAt === null) quizHiddenAt = Date.now();
+  } else if (quizHiddenAt !== null) {
+    quizTimerDeadline += Date.now() - quizHiddenAt;
+    quizHiddenAt = null;
+    tickQuizTimer();                   // recale l'affichage sans attendre 250 ms
+  }
+});
 
 function clearQuizTimer() {
   clearInterval(quizTimer);
-  quizTimer = null;
+  quizTimer    = null;
+  quizHiddenAt = null;
 }
 
 function updateTimerUI(secs) {
@@ -4290,26 +4327,37 @@ function updateAvailNote() {
   });
   const newAllowance = Math.max(0, NEW_WORDS_PER_DAY - newWordsIntroducedToday());
 
+  const flaggedCount = filtered.filter(w => w.flagged_at).length;
+
   if (note) {
-    let txt = `${avail} word${avail !== 1 ? 's' : ''} available`;
-    if (freshCount > 0 && newAllowance === 0) {
-      txt += ` · limite de nouveaux mots atteinte (${NEW_WORDS_PER_DAY}/jour)`;
-    } else if (freshCount > newAllowance) {
-      txt += ` · ${newAllowance} nouveau${newAllowance > 1 ? 'x' : ''} mot${newAllowance > 1 ? 's' : ''} max aujourd'hui`;
+    let txt;
+    if (avail === 0 && quizFilter === 'flagged') {
+      // Dire quoi faire, pas seulement qu'il n'y a rien
+      txt = 'Aucun mot flaggé — signale un mot avec 🚩 depuis la liste de vocabulaire ou l\'Error Review.';
+    } else {
+      txt = `${avail} word${avail !== 1 ? 's' : ''} available`;
+      if (freshCount > 0 && newAllowance === 0) {
+        txt += ` · limite de nouveaux mots atteinte (${NEW_WORDS_PER_DAY}/jour)`;
+      } else if (freshCount > newAllowance) {
+        txt += ` · ${newAllowance} nouveau${newAllowance > 1 ? 'x' : ''} mot${newAllowance > 1 ? 's' : ''} max aujourd'hui`;
+      }
     }
     note.textContent = txt;
   }
   if (startBtn) startBtn.disabled = avail === 0;
 
-  // Bannière révisions dues
+  // Bannière : mots flaggés d'abord, puis révisions dues
   const banner = document.getElementById('due-banner');
   if (banner) {
-    if (dueCount > 0) {
-      banner.style.display = 'block';
-      banner.textContent = `🔔 ${dueCount} mot${dueCount > 1 ? 's' : ''} à réviser aujourd'hui — ils seront priorisés dans ta session.`;
-    } else {
-      banner.style.display = 'none';
+    const msgs = [];
+    if (flaggedCount > 0 && quizFilter !== 'flagged') {
+      msgs.push(`🚩 ${flaggedCount} mot${flaggedCount > 1 ? 's' : ''} à étudier — ${flaggedCount > 1 ? 'ils passeront' : 'il passera'} en premier.`);
     }
+    if (dueCount > 0) {
+      msgs.push(`🔔 ${dueCount} mot${dueCount > 1 ? 's' : ''} à réviser aujourd'hui — ${dueCount > 1 ? 'priorisés' : 'prioritaire'} ensuite.`);
+    }
+    banner.style.display = msgs.length ? 'block' : 'none';
+    banner.textContent   = msgs.join(' ');
   }
 }
 
@@ -4327,6 +4375,7 @@ function filterVocabForQuiz(filter) {
       return wordRate(p) < 0.6;
     });
   }
+  else if (filter === 'flagged') list = list.filter(w => w.flagged_at);
 
   // System filter
   if (systemFilter === 'exclude') list = list.filter(w => !w.is_system);
@@ -4352,21 +4401,31 @@ function buildQuizQueue(filter, count, mode) {
   // 1. dus (last_tested + interval dépassé) — le moment optimal de révision
   // 2. nouveaux (jamais testés), plafonnés à NEW_WORDS_PER_DAY
   // 3. déjà vus mais pas encore dus, en remplissage
-  const due = [], fresh = [], notDue = [];
+  // 0. flaggés — passent avant tout le reste : on flagge un mot précisément
+  //    parce qu'on veut le travailler, il doit ressortir dès la session suivante.
+  //    Ils échappent volontairement au plafond de nouveaux mots du jour : c'est
+  //    un choix explicite de l'utilisateur, pas une découverte subie.
+  const flagged = [], due = [], fresh = [], notDue = [];
   list.forEach(w => {
+    if (w.flagged_at) { flagged.push(w); return; }
     const p = progress[w.id];
     if (!p || !p.attempts)      fresh.push(w);
     else if (isDueWord(p, now)) due.push(w);
     else                        notDue.push(w);
   });
 
+  // Flag le plus récent d'abord — c'est celui qu'on a en tête
+  flagged.sort((a, b) => new Date(b.flagged_at) - new Date(a.flagged_at));
   // Dus les plus fragiles d'abord (fenêtre glissante), pour survivre au slice
   due.sort((a, b) => wordRate(progress[a.id]) - wordRate(progress[b.id]));
   shuffle(fresh);
   shuffle(notDue);
 
   const newAllowance = Math.max(0, NEW_WORDS_PER_DAY - newWordsIntroducedToday());
-  let selected = due.slice(0, n);
+  let selected = flagged.slice(0, n);
+  if (selected.length < n) {
+    selected = selected.concat(due.slice(0, n - selected.length));
+  }
   if (selected.length < n) {
     selected = selected.concat(fresh.slice(0, Math.min(newAllowance, n - selected.length)));
   }
@@ -4946,6 +5005,7 @@ document.getElementById('review-btn-edit').addEventListener('click', () => {
   document.getElementById('review-edit-source').value  = word.source_word || '';
   document.getElementById('review-edit-target').value  = word.target_translation || '';
   document.getElementById('review-edit-example').value = word.example_sentence || '';
+  document.getElementById('review-edit-tips').value    = word.tips || '';
   document.getElementById('review-edit-source').focus();
 });
 
@@ -4955,12 +5015,14 @@ async function reviewCommitEdit() {
   const source  = document.getElementById('review-edit-source').value.trim();
   const target  = document.getElementById('review-edit-target').value.trim();
   const example = document.getElementById('review-edit-example').value.trim();
+  const tips    = document.getElementById('review-edit-tips').value.trim();
   if (!source || !target) { showToast('Source and translation are required'); return; }
 
   const ok = await saveWordPatch(word.id, {
     source_word:        source,
     target_translation: target,
     example_sentence:   example || null,
+    tips:               tips || null,
   });
   if (!ok) return;
 
@@ -4981,7 +5043,7 @@ document.getElementById('review-edit-cancel').addEventListener('click', reviewCl
 
 /* Enter = Save, Escape = Cancel. stopPropagation() pour qu'un Enter en pleine
    correction ne puisse jamais faire avancer le quiz. */
-['review-edit-source', 'review-edit-target', 'review-edit-example', 'review-flag-note']
+['review-edit-source', 'review-edit-target', 'review-edit-example', 'review-edit-tips', 'review-flag-note']
   .forEach(id => {
     document.getElementById(id).addEventListener('keydown', e => {
       if (e.key !== 'Enter' && e.key !== 'Escape') return;

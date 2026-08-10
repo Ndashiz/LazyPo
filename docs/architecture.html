@@ -2389,6 +2389,25 @@ graph TB
 
     <p>Changements significatifs des dernières releases — pour le détail complet voir <code>git log</code> ou les PR mergées sur <code>main</code>.</p>
 
+    <h3>Août 2026 — ⏱️ Quiz : compte à rebours fiable, et le flag fait ressortir le mot</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li><strong>Correction du compteur qui s'effondrait</strong> (23 → 5 d'un coup). Il décrémentait
+          un compteur à chaque tick de <code>setInterval</code>. Dès que le navigateur régule les
+          timers — onglet en arrière-plan, iframe masquée côté Jarvis, machine en veille — les
+          callbacks en attente sont rejoués en rafale au retour : 18 ticks d'affilée, 18 secondes
+          perdues. Le temps restant se déduit maintenant d'une <strong>échéance</strong>
+          (<code>quizTimerDeadline</code>), recalculée toutes les 250 ms ; une rafale recalcule
+          plusieurs fois la même valeur au lieu de faire dériver le compte.</li>
+      <li><strong>Compte gelé pendant que la page est masquée</strong> et temps rendu à l'échéance.
+          Sans ce gel, l'échéance en temps réel aurait fait expirer la question dès le retour sur
+          l'onglet — regarder ailleurs aurait coûté la question.</li>
+      <li><strong>Les mots flaggés passent en premier</strong> dans <code>buildQuizQueue()</code> :
+          flaggé → dû → nouveau → déjà vu, en échappant au plafond de nouveaux mots du jour. On
+          flagge un mot parce qu'on veut le travailler, il doit ressortir dès la session suivante.</li>
+      <li>Filtre <strong>🚩 À étudier</strong> pour une session composée uniquement de mots flaggés,
+          et <strong>champ indice</strong> ajouté au panneau de correction de l'Error Review.</li>
+    </ul>
+
     <h3>Août 2026 — ↕️ Quiz : tri au clic sur les colonnes, et plage de mots à réviser</h3>
     <ul style="padding-left: 24px; margin-bottom: 18px;">
       <li><strong>Tri au clic sur n'importe quel en-tête</strong> de la table Vocabulary, à la Excel :
