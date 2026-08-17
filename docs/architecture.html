@@ -2389,6 +2389,29 @@ graph TB
 
     <p>Changements significatifs des dernières releases — pour le détail complet voir <code>git log</code> ou les PR mergées sur <code>main</code>.</p>
 
+    <h3>Août 2026 — 🖨️ Quiz : mode impression / étude du vocabulaire</h3>
+    <ul style="padding-left: 24px; margin-bottom: 18px;">
+      <li>Le bouton <strong>Imprimer</strong> sortait un tableau brut de tout ce que la liste affichait.
+          Il ouvre maintenant un panneau — <strong>format · plage de n° · contenu</strong> — et chaque
+          sortie porte le <strong>mot, la traduction et la phrase de contexte</strong> (astuce et langue
+          en option).</li>
+      <li>Trois mises en page : <strong>📄 Liste d'étude</strong> (2 colonnes, une entrée jamais coupée
+          entre deux pages), <strong>🃏 Fiches à découper</strong> (grille 2 × 5, recto mot + phrase,
+          verso traduction) et <strong>✍️ Test à trous</strong> (colonne traduction à remplir, corrigé
+          rejeté sur une page à part).</li>
+      <li>On imprime <strong>ce que la liste affiche</strong> — mêmes filtres, même tri — borné par la
+          plage de numéros permanents. Exception : trié par <code>#</code>, la feuille part du n° 1 ;
+          le papier se lit dans ce sens, l'écran montre les derniers ajouts en premier.</li>
+      <li><strong>Le verso des fiches est en miroir</strong> et le format n'a pas de titre de document.
+          Un titre décalerait le recto de la première feuille vers le bas alors que son verso démarre
+          en haut : tout ce qu'on découpe ressortirait de travers, chaque carte portant la traduction
+          de sa voisine.</li>
+      <li>La feuille de style d'impression masque les autres enfants de <code>&lt;body&gt;</code> en
+          <code>display:none</code> et non plus en <code>visibility:hidden</code> : un élément invisible
+          occupe encore ses pages, et Chrome clippe un <code>position:fixed</code> à la première
+          feuille — au-delà d'une page, l'ancien rendu partait à la poubelle.</li>
+    </ul>
+
     <h3>Août 2026 — ⏱️ Quiz : compte à rebours fiable, et le flag fait ressortir le mot</h3>
     <ul style="padding-left: 24px; margin-bottom: 18px;">
       <li><strong>Correction du compteur qui s'effondrait</strong> (23 → 5 d'un coup). Il décrémentait

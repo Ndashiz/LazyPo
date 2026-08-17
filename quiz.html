@@ -1511,24 +1511,84 @@ tr.row-selected { background: rgba(59,130,246,.05); }
 .weak-dot { display:inline-block; width:7px; height:7px; border-radius:50%;
   background:var(--warning); margin-left:6px; vertical-align:middle; flex-shrink:0; }
 
-/* Print styles */
+/* ── Panneau d'impression / étude ── */
+.print-panel {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 14px 16px; margin-bottom: 12px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.print-panel[hidden] { display: none; }
+.pp-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pp-label {
+  font-size: 11.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted); min-width: 74px;
+}
+.pp-check {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--text); cursor: pointer; user-select: none;
+}
+.pp-check input { accent-color: var(--accent); cursor: pointer; }
+.pp-actions { border-top: 1px solid var(--border); padding-top: 12px; }
+
+/* Print styles — #print-area est le SEUL enfant de <body> laissé visible.
+   `display:none` sur les autres plutôt que `visibility:hidden` : un élément
+   simplement invisible occupe encore ses pages, et Chrome clippe un
+   `position:fixed` à la première feuille (les fiches partaient à la poubelle). */
+#print-area { display: none; }
 @media print {
-  body * { visibility: hidden; }
-  #print-area, #print-area * { visibility: visible; }
-  #print-area { position: fixed; inset: 0; background: white; color: black;
-    font-family: sans-serif; font-size: 12px; padding: 24px; }
-  #print-area h2 { font-size: 16px; margin-bottom: 4px; }
-  #print-area .print-subtitle { font-size: 11px; color: #666; margin-bottom: 16px; }
-  #print-area table { width: 100%; border-collapse: collapse; }
-  #print-area th { background: #f0f0f0; font-weight: 700; padding: 6px 8px;
+  @page { margin: 12mm; }
+  body > *:not(#print-area) { display: none !important; }
+  #print-area {
+    display: block; background: white; color: black;
+    font-family: sans-serif; font-size: 12px;
+  }
+  #print-area h2 { font-size: 16px; margin: 0 0 4px; }
+  #print-area .print-subtitle { font-size: 11px; color: #666; margin-bottom: 14px; }
+
+  /* Liste d'étude — 2 colonnes, une entrée jamais coupée en deux */
+  #print-area .pa-list { column-count: 2; column-gap: 10mm; }
+  #print-area .pa-item {
+    break-inside: avoid; page-break-inside: avoid;
+    border-bottom: 1px solid #e2e2e2; padding: 5px 0 6px; margin-bottom: 2px;
+  }
+  #print-area .pa-num { color: #999; font-size: 9.5px; margin-right: 5px; }
+  #print-area .pa-word { font-weight: 700; font-size: 12.5px; }
+  #print-area .pa-lang { color: #999; font-size: 9px; margin-left: 5px; }
+  #print-area .pa-trans { font-size: 11.5px; color: #222; }
+  #print-area .pa-ex { font-size: 10.5px; color: #555; font-style: italic; margin-top: 2px; }
+  #print-area .pa-tip { font-size: 10px; color: #8a6d1f; margin-top: 2px; }
+
+  /* Fiches à découper — 2 × 5 par page, verso miroir pour le recto-verso */
+  #print-area .pa-page { page-break-after: always; break-after: page; }
+  #print-area .pa-page:last-child { page-break-after: auto; break-after: auto; }
+  #print-area .pa-page-label { font-size: 9px; color: #999; margin-bottom: 3mm; }
+  #print-area .pa-cards {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 48mm; gap: 0;
+  }
+  #print-area .pa-card {
+    border: 1px dashed #bbb; padding: 5mm;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; overflow: hidden; break-inside: avoid;
+  }
+  #print-area .pa-card .pa-word { font-size: 15px; }
+  #print-area .pa-card .pa-trans { font-size: 14px; font-weight: 600; }
+  #print-area .pa-card .pa-ex { margin-top: 3mm; }
+  #print-area .pa-card.empty { border-color: #eee; }
+
+  /* Test à trous — la traduction est à écrire, le corrigé est en fin de doc */
+  #print-area .pa-test { width: 100%; border-collapse: collapse; }
+  #print-area .pa-test th { background: #f0f0f0; font-weight: 700; padding: 6px 8px;
     border: 1px solid #ccc; text-align: left; font-size: 11px; }
-  #print-area td { padding: 5px 8px; border: 1px solid #ddd; vertical-align: top; }
-  #print-area tr.pr-failed td { background: #fff0f0; }
-  #print-area tr.pr-weak   td { background: #fffbe6; }
-  #print-area .pr-rate-fail { color: #dc2626; font-weight: 700; }
-  #print-area .pr-rate-weak { color: #ca8a04; font-weight: 700; }
-  #print-area .pr-rate-ok   { color: #16a34a; }
-  #print-area .pr-rate-none { color: #999; }
+  #print-area .pa-test td { padding: 7px 8px; border: 1px solid #ddd; vertical-align: top; }
+  #print-area .pa-test tr { break-inside: avoid; page-break-inside: avoid; }
+  #print-area .pa-blank { border-bottom: 1px solid #999; display: block; min-height: 14px; }
+  #print-area .pa-key { margin-top: 8mm; break-before: page; page-break-before: always; }
+  #print-area .pa-key h3 { font-size: 13px; margin: 0 0 6px; }
+  #print-area .pa-key ul { column-count: 3; column-gap: 8mm; font-size: 10.5px;
+    margin: 0; padding: 0; list-style: none; }
+  #print-area .pa-key li { break-inside: avoid; margin-bottom: 2px; }
+  #print-area .pa-key .pa-num { color: #999; }
 }
 .excel-hint {
   font-size: 11.5px; color: var(--muted); font-family: 'DM Mono', monospace;
@@ -2218,9 +2278,45 @@ tr.row-selected { background: rgba(59,130,246,.05); }
     <div class="qz-excel-row">
       <button class="btn-excel export" id="btn-export-xl">📥 Exporter Excel</button>
       <button class="btn-excel import" id="btn-import-xl">📤 Importer Excel</button>
-      <button class="btn-excel print"  id="btn-print-vocab">🖨️ Imprimer</button>
+      <button class="btn-excel print"  id="btn-print-vocab" aria-expanded="false" aria-controls="print-panel">🖨️ Imprimer / Étudier</button>
       <input type="file" id="xlsx-file-input" accept=".xlsx,.xls,.csv" style="display:none">
       <span class="excel-hint">L'export inclut le scoring SM-2 · L'import met à jour mots &amp; scores</span>
+    </div>
+
+    <!-- Panneau d'impression : format, plage, contenu. Imprime ce que la
+         liste affiche (filtres + tri courants), restreint à la plage de n°. -->
+    <div class="print-panel" id="print-panel" hidden>
+      <div class="pp-row">
+        <span class="pp-label">Format</span>
+        <div class="qz-pill-group" id="pp-format" role="group" aria-label="Format d'impression">
+          <button class="qz-pill active" data-pp-format="list">📄 Liste d'étude</button>
+          <button class="qz-pill"        data-pp-format="cards">🃏 Fiches à découper</button>
+          <button class="qz-pill"        data-pp-format="test">✍️ Test à trous</button>
+        </div>
+      </div>
+
+      <div class="pp-row">
+        <span class="pp-label">Plage</span>
+        <div class="qz-range-row">
+          <span class="qz-range-lab">du n°</span>
+          <input type="number" id="pp-from" class="qz-range-input" min="1" step="1" placeholder="1" inputmode="numeric">
+          <span class="qz-range-lab">au n°</span>
+          <input type="number" id="pp-to" class="qz-range-input" min="1" step="1" placeholder="—" inputmode="numeric">
+          <button class="qz-pill" id="pp-range-reset" type="button">Tout</button>
+        </div>
+      </div>
+
+      <div class="pp-row">
+        <span class="pp-label">Contenu</span>
+        <label class="pp-check"><input type="checkbox" id="pp-example" checked> Phrase de contexte</label>
+        <label class="pp-check"><input type="checkbox" id="pp-tips"> Astuce</label>
+        <label class="pp-check"><input type="checkbox" id="pp-lang"> Langue</label>
+      </div>
+
+      <div class="pp-row pp-actions">
+        <button class="btn-excel print" id="pp-go">🖨️ Imprimer</button>
+        <span class="excel-hint" id="pp-note"></span>
+      </div>
     </div>
 
     <!-- Bulk action bar -->
@@ -3754,45 +3850,201 @@ document.querySelectorAll('[data-flag-filter]').forEach(btn => {
   });
 });
 
-/* Print */
-document.getElementById('btn-print-vocab').addEventListener('click', () => {
-  computeVocabNumbers();
-  const list = getFilteredVocab();
-  const filterLabel = perfFilter === 'failed' ? ' — ❌ Mots ratés'
-    : perfFilter === 'weak' ? ' — ⚠️ Mots fragiles' : '';
-  const langLabel = filterLang !== 'all' ? ` · ${filterLang}` : '';
-  const now = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+/* ═══════════════════════════════════════════════════════════
+   IMPRIMER / ÉTUDIER
+   Le bouton ouvre un panneau (format · plage · contenu) au lieu
+   d'imprimer sec. Trois mises en page, un seul générateur de
+   #print-area — la feuille de style print fait le reste.
+   On imprime CE QUE LA LISTE AFFICHE : mêmes filtres, même tri,
+   restreint à la plage de numéros permanents (colonne #).
+═══════════════════════════════════════════════════════════ */
+let printFormat = 'list';   // 'list' | 'cards' | 'test'
+const PRINT_FORMAT_LABEL = {
+  list:  'Liste d\'étude',
+  cards: 'Fiches à découper',
+  test:  'Test à trous',
+};
+const CARDS_PER_PAGE = 10;  // grille 2 × 5, cf. .pa-cards
 
+function printOpts() {
+  const num = id => {
+    const v = parseInt(document.getElementById(id)?.value, 10);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  };
+  return {
+    from:    num('pp-from'),
+    to:      num('pp-to'),
+    example: !!document.getElementById('pp-example')?.checked,
+    tips:    !!document.getElementById('pp-tips')?.checked,
+    lang:    !!document.getElementById('pp-lang')?.checked,
+  };
+}
+
+/* Liste à imprimer = liste filtrée/triée de l'onglet, bornée par la plage. */
+function getPrintList(o) {
+  computeVocabNumbers();
+  let list = getFilteredVocab();
+  if (o.from !== null || o.to !== null) {
+    const lo = o.from ?? 1;
+    const hi = o.to   ?? Infinity;
+    list = list.filter(w => {
+      const n = vocabNum[w.id];
+      return n && n >= lo && n <= hi;
+    });
+  }
+  // Une feuille se lit du n° 1 vers la fin. Le tableau, lui, montre les
+  // derniers mots ajoutés en premier — on remet l'ordre croissant. Tout autre
+  // tri choisi dans l'en-tête (taux de réussite, alphabétique) est conservé.
+  if (sortCol === 'num') list.sort((a, b) => (vocabNum[a.id] || 0) - (vocabNum[b.id] || 0));
+  return list;
+}
+
+function updatePrintNote() {
+  const note = document.getElementById('pp-note');
+  if (!note) return;
+  const n = getPrintList(printOpts()).length;
+  if (!n) { note.textContent = 'Aucun mot à imprimer — élargis les filtres ou la plage.'; return; }
+  const pages = printFormat === 'cards'
+    ? ` · ${Math.ceil(n / CARDS_PER_PAGE) * 2} pages (recto-verso)` : '';
+  note.textContent = `${n} mot${n > 1 ? 's' : ''} · ${PRINT_FORMAT_LABEL[printFormat]}${pages}`;
+}
+
+/* ── Mise en page 1 : liste d'étude ── */
+function buildPrintListHtml(list, o) {
+  return `<div class="pa-list">${list.map(w => {
+    const lang = o.lang ? `<span class="pa-lang">${escHtml(w.language_pair || '')}</span>` : '';
+    const ex   = o.example && w.example_sentence
+      ? `<div class="pa-ex">${escHtml(w.example_sentence)}</div>` : '';
+    const tip  = o.tips && w.tips ? `<div class="pa-tip">💡 ${escHtml(w.tips)}</div>` : '';
+    return `<div class="pa-item">
+      <div><span class="pa-num">${vocabNum[w.id] || '—'}</span><span class="pa-word">${escHtml(w.source_word)}</span>${lang}</div>
+      <div class="pa-trans">${escHtml(w.target_translation)}</div>
+      ${ex}${tip}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+/* ── Mise en page 2 : fiches à découper ──
+   Verso miroir : sur une page recto-verso, la colonne de gauche du recto
+   ressort à droite au verso. On inverse donc chaque paire, sinon chaque
+   fiche découpée porte la traduction de sa voisine.
+   Pas de gros titre en tête de document ici : il décalerait le recto de la
+   première feuille vers le bas alors que son verso démarre en haut, et tout
+   ce qu'on découpe se retrouve de travers. Chaque page porte la même
+   étiquette d'une ligne, recto comme verso. */
+function buildPrintCardsHtml(list, o, docLabel) {
+  const card = (w, back) => {
+    if (!w) return '<div class="pa-card empty"></div>';
+    const ex = o.example && w.example_sentence
+      ? `<div class="pa-ex">${escHtml(w.example_sentence)}</div>` : '';
+    const tip = o.tips && w.tips ? `<div class="pa-tip">💡 ${escHtml(w.tips)}</div>` : '';
+    return back
+      ? `<div class="pa-card"><div class="pa-trans">${escHtml(w.target_translation)}</div>${tip}</div>`
+      : `<div class="pa-card"><div><span class="pa-num">${vocabNum[w.id] || ''}</span><span class="pa-word">${escHtml(w.source_word)}</span></div>${ex}</div>`;
+  };
+
+  const sheets = Math.ceil(list.length / CARDS_PER_PAGE);
+  let html = '';
+  for (let i = 0; i < list.length; i += CARDS_PER_PAGE) {
+    const chunk = list.slice(i, i + CARDS_PER_PAGE);
+    // Compléter jusqu'à une ligne pleine : le miroir travaille par paires.
+    // Inutile d'aller jusqu'à 10, une dernière page à moitié vide suffit.
+    if (chunk.length % 2) chunk.push(null);
+    const mirrored = [];
+    for (let r = 0; r < chunk.length; r += 2) mirrored.push(chunk[r + 1], chunk[r]);
+    const page = i / CARDS_PER_PAGE + 1;
+    html += `<div class="pa-page">
+        <div class="pa-page-label">${docLabel} · Recto — feuille ${page}/${sheets}</div>
+        <div class="pa-cards">${chunk.map(w => card(w, false)).join('')}</div>
+      </div>
+      <div class="pa-page">
+        <div class="pa-page-label">${docLabel} · Verso — feuille ${page}/${sheets}</div>
+        <div class="pa-cards">${mirrored.map(w => card(w, true)).join('')}</div>
+      </div>`;
+  }
+  return html;
+}
+
+/* ── Mise en page 3 : test à trous ── */
+function buildPrintTestHtml(list, o) {
   const rows = list.map(w => {
-    const p  = progress[w.id];
-    const r  = rateOf(w.id);
-    const pct = r < 0 ? '—' : Math.round(r * 100) + '%';
-    const rateCls = r < 0 ? 'pr-rate-none' : r < 0.5 ? 'pr-rate-fail' : r < 0.75 ? 'pr-rate-weak' : 'pr-rate-ok';
-    const rowCls  = r >= 0 && r < 0.5 ? 'pr-failed' : r >= 0.5 && r < 0.75 ? 'pr-weak' : '';
-    return `<tr class="${rowCls}">
+    const ex  = o.example && w.example_sentence
+      ? `<div class="pa-ex">${escHtml(w.example_sentence)}</div>` : '';
+    const tip = o.tips && w.tips ? `<div class="pa-tip">💡 ${escHtml(w.tips)}</div>` : '';
+    return `<tr>
       <td>${vocabNum[w.id] || '—'}</td>
-      <td>${escHtml(w.source_word)}</td>
-      <td>${escHtml(w.target_translation)}</td>
-      <td>${escHtml(w.language_pair)}</td>
-      <td>${escHtml(w.example_sentence || '—')}</td>
+      <td><span class="pa-word">${escHtml(w.source_word)}</span>${ex}${tip}</td>
+      <td><span class="pa-blank"></span></td>
     </tr>`;
   }).join('');
+  const key = list.map(w =>
+    `<li><span class="pa-num">${vocabNum[w.id] || '—'}</span> ${escHtml(w.source_word)} → ${escHtml(w.target_translation)}</li>`
+  ).join('');
+  return `<table class="pa-test">
+      <thead><tr><th style="width:8%">#</th><th style="width:52%">Mot</th><th>Traduction</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="pa-key"><h3>Corrigé</h3><ul>${key}</ul></div>`;
+}
+
+function runPrint() {
+  const o    = printOpts();
+  const list = getPrintList(o);
+  if (!list.length) { showToast('Aucun mot à imprimer avec ces filtres'); return; }
+
+  const langLabel  = filterLang !== 'all' ? ` · ${filterLang}` : '';
+  const flagLabel  = flagFilter === 'flagged' ? ' · 🚩 flaggés' : '';
+  const rangeLabel = (o.from !== null || o.to !== null)
+    ? ` · n° ${o.from ?? 1} à ${o.to ?? '…'}` : '';
+  const now = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+
+  const head = `<h2>📚 Vocabulaire LazyPO — ${PRINT_FORMAT_LABEL[printFormat]}${langLabel}${flagLabel}</h2>
+    <div class="print-subtitle">${list.length} mot${list.length !== 1 ? 's' : ''}${rangeLabel} · Imprimé le ${now}</div>`;
+
+  // Les fiches portent leur en-tête page par page (cf. buildPrintCardsHtml)
+  const body = printFormat === 'cards'
+    ? buildPrintCardsHtml(list, o, escHtml(`Vocabulaire LazyPO${langLabel}${rangeLabel}`))
+    : printFormat === 'test' ? buildPrintTestHtml(list, o)
+    : buildPrintListHtml(list, o);
 
   let area = document.getElementById('print-area');
   if (area) area.remove();
   area = document.createElement('div');
   area.id = 'print-area';
-  area.innerHTML = `
-    <h2>📚 Vocabulaire LazyPO${filterLabel}${langLabel}</h2>
-    <div class="print-subtitle">${list.length} mot${list.length !== 1 ? 's' : ''} · Imprimé le ${now}</div>
-    <table>
-      <thead><tr><th>#</th><th>Mot</th><th>Traduction</th><th>Langue</th><th>Exemple</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+  area.innerHTML = (printFormat === 'cards' ? '' : head) + body;
   document.body.appendChild(area);
   window.print();
   setTimeout(() => area.remove(), 1000);
+}
+
+document.getElementById('btn-print-vocab').addEventListener('click', () => {
+  const panel = document.getElementById('print-panel');
+  const open  = panel.hasAttribute('hidden');
+  panel.toggleAttribute('hidden', !open);
+  document.getElementById('btn-print-vocab').setAttribute('aria-expanded', String(open));
+  if (open) updatePrintNote();
 });
+
+document.querySelectorAll('#pp-format .qz-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#pp-format .qz-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    printFormat = btn.dataset.ppFormat;
+    updatePrintNote();
+  });
+});
+
+['pp-from', 'pp-to', 'pp-example', 'pp-tips', 'pp-lang'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', updatePrintNote);
+});
+
+document.getElementById('pp-range-reset').addEventListener('click', () => {
+  document.getElementById('pp-from').value = '';
+  document.getElementById('pp-to').value   = '';
+  updatePrintNote();
+});
+
+document.getElementById('pp-go').addEventListener('click', runPrint);
 
 // Row checkboxes (delegated — kept for potential future use, currently no checkboxes in table)
 document.getElementById('vocab-tbody').addEventListener('change', e => {
@@ -3944,6 +4196,12 @@ function renderVocab() {
   const fil   = list.length;
   document.getElementById('word-count').textContent =
     (fil < total) ? `${fil} / ${total} mots` : `${total} mot${total !== 1 ? 's' : ''}`;
+
+  // Le panneau d'impression annonce un nombre de mots : le garder en phase
+  // avec les filtres, y compris quand ils ne laissent rien passer (les sorties
+  // anticipées ci-dessous). Ignoré tant qu'il est fermé — il l'est au
+  // chargement, avant que son état ne soit initialisé.
+  if (document.getElementById('print-panel')?.hidden === false) updatePrintNote();
 
   if (!vocab.length) {
     tbody.innerHTML = `<tr><td colspan="8"><div class="qz-empty">

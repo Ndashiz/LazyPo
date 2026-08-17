@@ -224,6 +224,30 @@ Implémentation : `launchChallengeQuiz(wordSnapshots, wordIdsFallback, originalM
 > sinon un import en masse (même `created_at` sur 1000 lignes) donnerait un ordre différent à
 > chaque requête. Supprimer un mot décale les suivants — seul cas où un numéro bouge.
 
+> **Imprimer / Étudier** (`#print-panel`, `runPrint()`) — le bouton ouvre un panneau au lieu
+> d'imprimer sec : **format**, **plage de n°**, **contenu**. Chaque sortie porte toujours le mot,
+> la traduction et la phrase de contexte (cochable), plus l'astuce et la langue en option.
+>
+> | Format | Rendu |
+> |---|---|
+> | 📄 Liste d'étude | 2 colonnes, une entrée = mot / traduction / phrase, jamais coupée entre deux pages. |
+> | 🃏 Fiches à découper | Grille 2 × 5, recto = mot + phrase, verso = traduction. |
+> | ✍️ Test à trous | Mot + phrase, colonne traduction vide à remplir, **corrigé sur une page à part**. |
+>
+> On imprime **ce que la liste affiche** — mêmes filtres (langue, niveau, flag, recherche), même
+> tri — restreint à la plage de numéros permanents. Seule exception : trié par `#`, la feuille
+> part du n° 1 (un support papier se lit dans ce sens ; l'écran montre les derniers ajouts en
+> premier). Le compteur du panneau suit les filtres en direct, via `renderVocab()`.
+>
+> Deux contraintes d'impression, apprises à la dure :
+> - `#print-area` est le seul enfant de `<body>` laissé visible, en `display:none` pour les
+>   autres — pas en `visibility:hidden` : un élément invisible occupe encore ses pages, et un
+>   `position:fixed` se fait clipper à la première feuille par Chrome.
+> - Le format fiches **n'a pas de titre de document**. Il décalerait le recto de la première
+>   feuille vers le bas alors que son verso démarre en haut : tout ce qu'on découpe ressort de
+>   travers. Chaque page porte la même étiquette d'une ligne, et le verso inverse chaque paire
+>   de fiches (miroir), sinon chaque carte découpée porte la traduction de sa voisine.
+
 **Progress** : carte streak, stats (mots totaux, maîtrisés, taux), donut système/user, barres EN↔NL, heatmap 28 jours.
 
 **Multi** : classement (top 5 + user), fil scroll infini, réactions, Challenge Back, commentaires.
@@ -345,6 +369,8 @@ let vocabDirty = false      // mot corrigé/flaggé en review → recharger plus
 | `computeVocabNumbers()` | Numéro permanent de chaque mot = rang de création (§7). Appelée par `loadVocab()`. |
 | `sortVocabList(list)` | Tri de la liste selon `sortCol` / `sortDir`, vides en bas (§7). |
 | `filterVocabForQuiz(filter)` | Filtres du quiz : langue, système, **plage de numéros** (§7). |
+| `getPrintList(o)` / `runPrint()` | Sélection puis génération de `#print-area` — impression/étude (§7). |
+| `buildPrintListHtml()` / `buildPrintCardsHtml()` / `buildPrintTestHtml()` | Les trois mises en page imprimables (§7). |
 | `postMultiSession()` | INSERT dans `quiz_sessions`. |
 | `launchChallengeQuiz()` | Mise en place du Challenge Back. |
 | `publishChallengeResult()` | Publie le score en commentaire. |
